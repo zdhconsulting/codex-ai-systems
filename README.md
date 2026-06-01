@@ -56,6 +56,12 @@ Check the current repo before commit/push:
 .\scripts\git-guard.cmd
 ```
 
+Sync the live Codex setup into this repo, commit, and push:
+
+```powershell
+.\scripts\save-codex-systems.cmd
+```
+
 ## GitHub Remote Setup
 
 If this repo is only local, create a GitHub repo named `codex-ai-systems`, then run:
@@ -64,3 +70,5 @@ If this repo is only local, create a GitHub repo named `codex-ai-systems`, then 
 git remote add origin https://github.com/zdhconsulting/codex-ai-systems.git
 git push -u origin main
 ```
+
+After that, Codex can run `C:\Users\zev\.codex\scripts\save-codex-systems.cmd` after workflow changes to auto-save them to GitHub.

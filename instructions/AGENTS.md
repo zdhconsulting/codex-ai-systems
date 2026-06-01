@@ -52,3 +52,11 @@ Before any commit, push, deploy, branch creation, PR creation, or destructive gi
 `C:\Users\zev\.codex\scripts\git-guard.cmd`
 
 Use the output to verify the repo root, branch, origin remote, latest commit, and dirty files match the project Zev is talking about. If anything looks mismatched, stop and ask for `Commander approval needed` before proceeding.
+
+## Codex Systems Auto-Save
+
+After changing user-level Codex workflow files under `C:\Users\zev\.codex` such as `AGENTS.md`, scripts, reasoning profiles, queues, or personal skills, run:
+
+`C:\Users\zev\.codex\scripts\save-codex-systems.cmd`
+
+This syncs the live setup into `C:\Repos\codex-ai-systems`, commits changes, and pushes to `https://github.com/zdhconsulting/codex-ai-systems.git` once the remote exists.
