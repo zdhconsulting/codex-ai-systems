@@ -1,0 +1,11 @@
+logs/
+*.log
+*.tmp
+*.bak
+owner-buttons.json
+.env
+.env.*
+auth.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

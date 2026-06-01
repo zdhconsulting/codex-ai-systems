@@ -1,0 +1,7 @@
+interface:
+  display_name: "Owner Button Workflow"
+  short_description: "Codex drives work; Zev handles real-world gates."
+  default_prompt: "Use $owner-button-workflow to drive this project while escalating only true owner buttons or commander approvals."
+
+policy:
+  allow_implicit_invocation: true
