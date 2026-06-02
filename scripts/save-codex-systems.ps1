@@ -16,18 +16,19 @@ New-Item -ItemType Directory -Force `
     (Join-Path $RepoPath "profiles"), `
     (Join-Path $RepoPath "scripts"), `
     (Join-Path $RepoPath "queues"), `
+    (Join-Path $RepoPath "skills"), `
     (Join-Path $RepoPath "skills\owner-button-workflow\agents") | Out-Null
 
 Copy-Item -LiteralPath (Join-Path $codexHome "AGENTS.md") `
     -Destination (Join-Path $RepoPath "instructions\AGENTS.md") -Force
 
-Copy-Item -LiteralPath (Join-Path $codexHome "scripts\*.ps1") `
+Copy-Item -Path (Join-Path $codexHome "scripts\*.ps1") `
     -Destination (Join-Path $RepoPath "scripts") -Force
 
-Copy-Item -LiteralPath (Join-Path $codexHome "scripts\*.cmd") `
+Copy-Item -Path (Join-Path $codexHome "scripts\*.cmd") `
     -Destination (Join-Path $RepoPath "scripts") -Force
 
-Copy-Item -LiteralPath (Join-Path $codexHome "*.config.toml") `
+Copy-Item -Path (Join-Path $codexHome "*.config.toml") `
     -Destination (Join-Path $RepoPath "profiles") -Force
 
 Copy-Item -LiteralPath (Join-Path $codexHome "skills\owner-button-workflow\SKILL.md") `
@@ -35,6 +36,14 @@ Copy-Item -LiteralPath (Join-Path $codexHome "skills\owner-button-workflow\SKILL
 
 Copy-Item -LiteralPath (Join-Path $codexHome "skills\owner-button-workflow\agents\openai.yaml") `
     -Destination (Join-Path $RepoPath "skills\owner-button-workflow\agents\openai.yaml") -Force
+
+Get-ChildItem -LiteralPath (Join-Path $codexHome "skills") -Directory |
+    Where-Object { $_.Name -ne ".system" } |
+    ForEach-Object {
+        $dest = Join-Path $RepoPath ("skills\" + $_.Name)
+        New-Item -ItemType Directory -Force $dest | Out-Null
+        Copy-Item -Path (Join-Path $_.FullName "*") -Destination $dest -Recurse -Force
+    }
 
 $queueExample = Join-Path $RepoPath "queues\owner-buttons.example.json"
 if (-not (Test-Path $queueExample)) {
