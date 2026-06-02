@@ -8,7 +8,6 @@ import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import font
-from urllib.parse import quote
 
 from cpu_memory_widget import SystemSampler
 from pinned_project_tracker import ProjectSampler
@@ -21,6 +20,7 @@ TOPMOST_REFRESH_MS = 5000
 CODEX_TOPMOST_PAUSE_SECONDS = 10
 CODEX_FOCUS_RETRY_MS = 1400
 CODEX_APP_SERVER_TIMEOUT_SECONDS = 18
+CODEX_APP_LAUNCH_TIMEOUT_SECONDS = 12
 DRAGON_CLICK_COUNT = 4
 DRAGON_CLICK_WINDOW_MS = 1600
 DRAGON_DURATION_MS = 1000
@@ -94,88 +94,78 @@ def find_codex_exe():
     return None
 
 
-def powershell_output_lines(command, timeout_seconds=8):
-    try:
-        completed = subprocess.run(
-            [
-                "powershell.exe",
-                "-NoProfile",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-Command",
-                command,
-            ],
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return []
+def codex_home_dir():
+    env_path = os.environ.get("CODEX_HOME")
+    if env_path:
+        return Path(env_path)
+    return Path.home() / ".codex"
 
+
+def add_unique_path(values, project_path):
+    normalized = project_path.lower()
+    if not any(str(value).lower() == normalized for value in values):
+        values.append(project_path)
+    return values
+
+
+def remember_codex_thread_workspace(thread_id, project_path):
+    project_path = str(Path(project_path).resolve())
+    state_path = codex_home_dir() / ".codex-global-state.json"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if state_path.exists():
+        with state_path.open("r", encoding="utf-8") as state_file:
+            state = json.load(state_file)
+        if not isinstance(state, dict):
+            state = {}
+    else:
+        state = {}
+
+    thread_hints = state.get("thread-workspace-root-hints")
+    if not isinstance(thread_hints, dict):
+        thread_hints = {}
+    thread_hints[thread_id] = project_path
+    state["thread-workspace-root-hints"] = thread_hints
+
+    for key in ("electron-saved-workspace-roots", "project-order"):
+        values = state.get(key)
+        if not isinstance(values, list):
+            values = []
+        state[key] = add_unique_path(values, project_path)
+
+    state["active-workspace-roots"] = [project_path]
+
+    temp_path = state_path.with_name(f"{state_path.name}.tmp")
+    with temp_path.open("w", encoding="utf-8") as state_file:
+        json.dump(state, state_file, ensure_ascii=True, separators=(",", ":"))
+    os.replace(temp_path, state_path)
+    log_action(f"recorded codex thread workspace: {thread_id} -> {project_path}")
+
+
+def launch_codex_project_workspace(project_path):
+    codex_exe = find_codex_exe()
+    if not codex_exe:
+        raise RuntimeError("Codex CLI not found for app launch")
+
+    project_path = str(Path(project_path).resolve())
+    log_action(f"launch codex workspace: {codex_exe} app {project_path}")
+    completed = subprocess.run(
+        [codex_exe, "app", project_path],
+        cwd=project_path,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        timeout=CODEX_APP_LAUNCH_TIMEOUT_SECONDS,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    stdout = completed.stdout.strip()
+    stderr = completed.stderr.strip()
+    if stdout:
+        log_action(f"codex app stdout: {stdout}")
+    if stderr:
+        log_action(f"codex app stderr: {stderr}")
     if completed.returncode != 0:
-        return []
-
-    return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
-
-
-def is_codex_desktop_candidate(path):
-    if path.name.lower() != "codex.exe":
-        return False
-
-    normalized = str(path).lower()
-    if "windowsapps" in normalized and "openai.codex_" in normalized:
-        return path.parent.name.lower() == "app"
-
-    return True
-
-
-def find_codex_desktop_exe():
-    env_path = os.environ.get("CODEX_DESKTOP_PATH")
-    if env_path and Path(env_path).exists():
-        return str(Path(env_path).resolve())
-
-    candidates = []
-
-    process_paths = powershell_output_lines(
-        "Get-Process -Name Codex -ErrorAction SilentlyContinue | "
-        "Where-Object { $_.Path -like '*\\OpenAI.Codex_*\\app\\Codex.exe' } | "
-        "Select-Object -ExpandProperty Path -Unique"
-    )
-    candidates.extend(Path(path) for path in process_paths)
-
-    local_app_data = os.environ.get("LOCALAPPDATA")
-    if local_app_data:
-        local_candidates = [
-            Path(local_app_data) / "Programs" / "Codex" / "Codex.exe",
-            Path(local_app_data) / "OpenAI" / "Codex" / "Codex.exe",
-        ]
-        candidates.extend(local_candidates)
-
-    program_files = os.environ.get("ProgramFiles")
-    if program_files:
-        windows_apps = Path(program_files) / "WindowsApps"
-        try:
-            candidates.extend(windows_apps.glob("OpenAI.Codex_*\\app\\Codex.exe"))
-        except OSError:
-            pass
-
-    package_paths = powershell_output_lines(
-        "$pkg = Get-AppxPackage -Name OpenAI.Codex -ErrorAction SilentlyContinue | "
-        "Sort-Object Version -Descending | Select-Object -First 1; "
-        "if ($pkg) { Join-Path $pkg.InstallLocation 'app\\Codex.exe' }"
-    )
-    candidates.extend(Path(path) for path in package_paths)
-
-    existing = [
-        path for path in candidates if path.exists() and is_codex_desktop_candidate(path)
-    ]
-    existing.sort(key=lambda path: path.stat().st_mtime, reverse=True)
-    if existing:
-        return str(existing[0].resolve())
-
-    return None
+        raise RuntimeError(f"codex app exited with {completed.returncode}")
 
 
 def dashboard_app_dir():
@@ -192,26 +182,6 @@ def log_action(message):
             log_file.write(f"[{stamp}] {message}\n")
     except OSError:
         pass
-
-
-def action_log_path():
-    return dashboard_app_dir() / ACTION_LOG_FILE
-
-
-def launch_shell_target(target):
-    try:
-        os.startfile(target)
-        return
-    except (AttributeError, OSError):
-        pass
-
-    subprocess.Popen(
-        ["explorer.exe", target],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-    )
 
 
 def read_jsonrpc_response(process, request_id):
@@ -798,101 +768,33 @@ class ZDHDashboard:
     def create_and_open_project_thread(self, project_name, project_path, launch_key):
         try:
             thread_id = create_codex_project_thread(project_path, project_name)
-            deep_link = f"codex://threads/{thread_id}"
             log_action(f"created codex thread: {thread_id} -> {project_path}")
-            log_action(f"open codex thread link: {deep_link}")
-
-            desktop_exe = find_codex_desktop_exe()
-            if desktop_exe:
-                log_action(f"launch codex desktop direct: {desktop_exe} {deep_link}")
-                subprocess.Popen(
-                    [desktop_exe, deep_link],
-                    cwd=str(Path(desktop_exe).parent),
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                )
-            else:
-                log_action("codex desktop direct path unavailable; using protocol")
-                launch_shell_target(deep_link)
+            remember_codex_thread_workspace(thread_id, project_path)
+            launch_codex_project_workspace(project_path)
 
             self.root.after(
                 0,
                 lambda: self.show_alert(f"Opened Codex chat: {project_name}", lift=False),
             )
-        except (OSError, RuntimeError, KeyError, json.JSONDecodeError) as exc:
+        except (
+            OSError,
+            RuntimeError,
+            KeyError,
+            json.JSONDecodeError,
+            subprocess.TimeoutExpired,
+        ) as exc:
             log_action(f"project thread launch failed: {exc}")
             self.root.after(
                 0,
                 lambda: self.show_alert(
-                    f"Could not create chat; opening project: {project_name}",
+                    f"Could not open Codex chat: {project_name}",
                     lift=False,
                 ),
             )
-            self.open_project_fallback(project_name, project_path)
 
         self.root.after(CODEX_FOCUS_RETRY_MS, self.focus_codex_after_launch)
         self.root.after(CODEX_FOCUS_RETRY_MS * 2, self.focus_codex_after_launch)
         self.root.after(0, lambda: self.launching_project_paths.discard(launch_key))
-
-    def open_project_fallback(self, project_name, project_path):
-        log_file = None
-        try:
-            log_file = action_log_path().open("ab")
-            deep_link = f"codex://threads/new?path={quote(str(project_path), safe='')}"
-            log_file.write(
-                f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] fallback codex new thread link: {deep_link}\n".encode(
-                    "utf-8"
-                )
-            )
-            desktop_exe = find_codex_desktop_exe()
-            if desktop_exe:
-                process = subprocess.Popen(
-                    [desktop_exe, deep_link],
-                    cwd=str(Path(desktop_exe).parent),
-                    stdin=subprocess.DEVNULL,
-                    stdout=log_file,
-                    stderr=log_file,
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                )
-                log_action(f"codex new thread fallback direct pid: {process.pid}")
-                return
-
-            try:
-                launch_shell_target(deep_link)
-                log_action("codex new thread fallback opened through protocol")
-                return
-            except OSError as exc:
-                log_action(f"protocol fallback failed: {exc}")
-
-            codex_exe = find_codex_exe()
-            if not codex_exe:
-                raise RuntimeError("Codex Desktop and CLI not found")
-
-            log_file.write(
-                f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] fallback codex cli: {codex_exe} app {project_path}\n".encode(
-                    "utf-8"
-                )
-            )
-            process = subprocess.Popen(
-                [codex_exe, "app", str(project_path)],
-                cwd=str(Path(codex_exe).parent),
-                stdin=subprocess.DEVNULL,
-                stdout=log_file,
-                stderr=log_file,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-            log_action(f"codex cli fallback pid: {process.pid}")
-        except (OSError, RuntimeError) as exc:
-            log_action(f"fallback launch failed: {exc}")
-            self.root.after(
-                0,
-                lambda: self.show_alert(f"Could not open Codex: {project_name}"),
-            )
-        finally:
-            if log_file is not None:
-                log_file.close()
 
     def pause_topmost(self):
         self.topmost_paused_until = time.monotonic() + CODEX_TOPMOST_PAUSE_SECONDS

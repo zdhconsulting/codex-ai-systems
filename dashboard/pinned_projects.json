@@ -1,0 +1,66 @@
+{
+  "projects": [
+    {
+      "name": "English Comedy TLV",
+      "active_seconds": 120,
+      "stale_seconds": 300,
+      "session_terms": [
+        "English Comedy TLV",
+        "EnglishComedyTLV"
+      ],
+      "paths": [
+        "C:\\repos\\EnglishComedyTLV",
+        "C:\\Users\\zev\\OneDrive\\Desktop\\English Comedy TLV"
+      ]
+    },
+    {
+      "name": "Zev Hecht",
+      "active_seconds": 120,
+      "stale_seconds": 300,
+      "include_dirs": [
+        ".next"
+      ],
+      "session_terms": [
+        "zevhecht.com",
+        "Zev Hecht",
+        "zevhecht"
+      ],
+      "paths": [
+        "C:\\Users\\zev\\OneDrive\\Documents\\zevhecht.com",
+        "C:\\Users\\zev\\OneDrive\\Desktop\\zevhecht.com"
+      ]
+    },
+    {
+      "name": "Botox Line",
+      "active_seconds": 120,
+      "stale_seconds": 300,
+      "session_terms": [
+        "Botox-Israel",
+        "Israel Botox",
+        "Botox Line",
+        "botox"
+      ],
+      "paths": [
+        "C:\\repos\\Botox-Israel",
+        "C:\\Users\\zev\\OneDrive\\Desktop\\Israel Botox"
+      ]
+    },
+    {
+      "name": "Codex Systems",
+      "active_seconds": 120,
+      "stale_seconds": 300,
+      "session_terms": [
+        "codex-ai-systems",
+        "Codex AI Systems",
+        "owner-button-workflow"
+      ],
+      "paths": [
+        "C:\\Repos\\codex-ai-systems"
+      ]
+    },
+    {
+      "name": "ZDH Site",
+      "path": "C:\\Users\\zev\\OneDrive\\Desktop\\ZDH"
+    }
+  ]
+}

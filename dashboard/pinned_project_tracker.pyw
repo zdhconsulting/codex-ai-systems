@@ -49,6 +49,9 @@ NON_PROJECT_FOLDER_NAMES = {
     "onedrive",
     "repos",
     "repositories",
+    "zdh dashboard",
+    "zdh dashboard app",
+    "_internal",
 }
 PROJECT_MARKERS = {
     ".git",
@@ -318,6 +321,8 @@ class ProjectSampler:
                     continue
                 if self.is_non_project_name(folder.name):
                     continue
+                if self.is_dashboard_app_path(folder):
+                    continue
                 if self.is_inside_existing_project(folder, known_roots):
                     continue
 
@@ -408,6 +413,7 @@ class ProjectSampler:
             ".git",
             ".venv",
             "__pycache__",
+            "_internal",
             "build",
             "dist",
             "node_modules",
@@ -456,6 +462,14 @@ class ProjectSampler:
         if not paths:
             return False
         return all(self.is_non_project_name(path.name) for path in paths)
+
+    def is_dashboard_app_path(self, path):
+        try:
+            resolved = Path(path).resolve()
+            own_dir = app_dir().resolve()
+        except OSError:
+            return False
+        return resolved == own_dir or own_dir in resolved.parents
 
     def project_path_keys(self, projects):
         keys = set()
