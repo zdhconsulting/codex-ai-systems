@@ -13,7 +13,8 @@ How to run:
 2. Or double-click "Start ZDH Dashboard.bat" from this folder.
 
 Projects:
-- The dashboard reads "pinned_projects.json" from the same folder as the app.
+- The dashboard reads pinned projects from C:\Users\zev\.codex\dashboard\pinned_projects.json.
+- If that file is missing, the dashboard migrates a valid pinned_projects.json from the app folder.
 - Project activity refreshes every 30 seconds.
 - CPU and memory refresh every second.
 - Single-click a project name to create a fresh Codex chat for that repo and open it in Codex Desktop.

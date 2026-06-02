@@ -42,6 +42,7 @@ CLOSE_HOVER_COLOR = "#5f1f2a"
 
 UI_SCALE = 1.0
 CONFIG_FILE = "pinned_projects.json"
+CONFIG_DIR = Path.home() / ".codex" / "dashboard"
 NON_PROJECT_FOLDER_NAMES = {
     "desktop",
     "documents",
@@ -79,6 +80,10 @@ def app_dir():
 
 def codex_sessions_dir():
     return Path.home() / ".codex" / "sessions"
+
+
+def dashboard_config_path():
+    return CONFIG_DIR / CONFIG_FILE
 
 
 def short_path(path):
@@ -230,23 +235,14 @@ class ProjectState:
 
 class ProjectSampler:
     def __init__(self):
-        self.config_path = app_dir() / CONFIG_FILE
+        self.config_path = dashboard_config_path()
         self.auto_project_cache = {}
         self.session_file_cache = None
         self.owner_buttons_cache = None
 
     def load_config(self):
         if not self.config_path.exists():
-            self.config_path.write_text(
-                json.dumps(
-                    {
-                        "auto_discover": True,
-                        "projects": []
-                    },
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
+            self.create_or_migrate_config()
 
         try:
             data = json.loads(self.config_path.read_text(encoding="utf-8"))
@@ -256,6 +252,32 @@ class ProjectSampler:
         if not isinstance(data, dict):
             return {}
         return data
+
+    def create_or_migrate_config(self):
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+
+        legacy_path = app_dir() / CONFIG_FILE
+        if legacy_path.exists() and legacy_path != self.config_path:
+            try:
+                content = legacy_path.read_text(encoding="utf-8")
+                data = json.loads(content)
+            except (OSError, json.JSONDecodeError):
+                data = None
+
+            if isinstance(data, dict):
+                self.config_path.write_text(content, encoding="utf-8")
+                return
+
+        self.config_path.write_text(
+            json.dumps(
+                {
+                    "auto_discover": True,
+                    "projects": [],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
     def load_projects(self):
         data = self.load_config()

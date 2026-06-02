@@ -330,6 +330,7 @@ class ZDHDashboard:
     def __init__(self):
         self.system_sampler = SystemSampler()
         self.project_sampler = ProjectSampler()
+        log_action(f"project config: {self.project_sampler.config_path}")
 
         self.root = tk.Tk()
         self.root.title(WIDGET_TITLE)
