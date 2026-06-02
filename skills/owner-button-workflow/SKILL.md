@@ -62,6 +62,27 @@ Confirm the repo root, branch, origin remote, latest commit, and dirty files mat
 - If blocked, make the blocker concrete and give the shortest useful action list.
 - After completing a task, summarize results, tests, commits, pushes, and any remaining owner buttons.
 
+## Next Protocol
+
+When the user says `Next`, treat it as an instruction to continue the current mission with the best next action. Do not ask what `Next` means, and do not turn it into a menu of options unless a real approval decision is required.
+
+Choose the next action by this priority order:
+
+1. Continue the active goal's next unfinished success criterion.
+2. Clear any concrete blocker that Codex can clear without the user.
+3. Verify the work that was just done with tests, builds, smoke checks, screenshots, logs, or repo state as appropriate.
+4. Save durable progress: commit, push, create/update handoff notes, sync reusable systems, or document the changed workflow.
+5. Make the result portable to another Codex or computer.
+6. Clean up generated clutter only after classifying it and avoiding loss of useful work.
+7. Improve automation so the user has to press fewer buttons next time.
+8. If no active goal exists, infer the most useful continuation from recent context, owner-button queue, git status, and handoff state.
+
+For visible execution, start substantial `Next` turns with:
+
+`Next = SPECIFIC_ACTION. Gear: low|medium|high|xhigh - brief reason.`
+
+Then execute. Stop only for `Owner button needed`, `Commander approval needed`, or a genuine lack of recoverable context after checking local state.
+
 ## Reasoning Gear
 
 Default to the lightest gear that can do the job safely. Begin substantial tasks with:
