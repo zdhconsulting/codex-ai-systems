@@ -78,9 +78,10 @@ Rules:
 "@
 
     Write-Host "Running xhigh self-bounce preflight..."
-    $bouncePrompt | & $CodexPath exec -C $Workspace --sandbox read-only --ephemeral -p max -o $outFile "-"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Self-bounce preflight failed with exit code $LASTEXITCODE"
+    $bouncePrompt | & $CodexPath exec -C $Workspace --sandbox read-only --ephemeral -p max -o $outFile "-" 2>&1 | Out-Host
+    $preflightExitCode = $LASTEXITCODE
+    if ($preflightExitCode -ne 0) {
+        throw "Self-bounce preflight failed with exit code $preflightExitCode"
     }
     if (-not (Test-Path -LiteralPath $outFile)) {
         throw "Self-bounce output was not created: $outFile"
@@ -113,11 +114,11 @@ if ($gear.Command -eq "review") {
     }
 
     if ($bounceEnabled) {
-        $bounce = Invoke-SelfBounce -CodexPath $codex -Workspace $Cwd -TaskPrompt $prompt -OutputDir $logDir
+        $bounceResult = Invoke-SelfBounce -CodexPath $codex -Workspace $Cwd -TaskPrompt $prompt -OutputDir $logDir
         if ($BounceOnly) {
             Write-Host ""
             Write-Host "Bounce-only mode complete. No implementation was started."
-            Write-Host "Read: $($bounce.Path)"
+            Write-Host "Read: $($bounceResult.Path)"
             exit 0
         }
 
@@ -126,7 +127,7 @@ Original task:
 $prompt
 
 XHIGH SELF-BOUNCE PREFLIGHT:
-$($bounce.Text)
+$($bounceResult.Text)
 
 Now execute the task. Use the preflight as planning input, but validate it against the repository before changing files.
 "@
