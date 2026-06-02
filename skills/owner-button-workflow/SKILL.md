@@ -62,6 +62,66 @@ Confirm the repo root, branch, origin remote, latest commit, and dirty files mat
 - If blocked, make the blocker concrete and give the shortest useful action list.
 - After completing a task, summarize results, tests, commits, pushes, and any remaining owner buttons.
 
+## Reasoning Gear
+
+Default to the lightest gear that can do the job safely. Begin substantial tasks with:
+
+`Gear: low|medium|high|xhigh - brief reason.`
+
+If a task mixes easy and risky parts, choose the gear for the riskiest part, then move back down once that part is done.
+
+Use `low` for quick, obvious work:
+
+- Fix typos, labels, headings, button text, or README wording.
+- Add or update a simple link when the target is already known.
+- Change one color, spacing value, icon, or small CSS rule.
+- Run status commands like `git status`, `owner-button.cmd list`, or `git-guard.cmd`.
+- Add a single static config value when the source and destination are clear.
+- Rename a local variable or update a small obvious import.
+- Re-run a known build command after a tiny change.
+- Copy a known file into the right folder.
+- Check whether a file, branch, or remote exists.
+- Answer a narrow question from visible local context.
+
+Use `medium` for normal build work:
+
+- Add a small page, component, form, dashboard panel, or route.
+- Implement a straightforward feature with tests.
+- Fix an ordinary bug when the cause is local and easy to reproduce.
+- Wire an API response into UI when the contract is already known.
+- Add validation, loading states, empty states, or simple error handling.
+- Update project docs after a feature change.
+- Make routine responsive layout improvements.
+- Add a script or CLI helper that follows an existing pattern.
+- Integrate a known library in a small, low-risk way.
+- Prepare a normal commit after verifying the repo with `git-guard.cmd`.
+
+Use `high` when diagnosis or blast radius matters:
+
+- Debug failing tests, failing CI, broken builds, or runtime crashes.
+- Investigate regressions after a change.
+- Review code for bugs, missing tests, or behavioral risk.
+- Touch several files or shared helpers where side effects are possible.
+- Fix deployment problems, build packaging, or app launch behavior.
+- Optimize performance when measurement or tradeoffs are involved.
+- Resolve merge conflicts or dirty worktree complications.
+- Debug GitHub Actions logs or failing checks.
+- Change data flow, caching, routing, or state management.
+- Verify a fix across desktop/mobile/browser/app surfaces.
+
+Use `xhigh` for high-stakes or ambiguous decisions:
+
+- Architecture changes, major refactors, or framework migration.
+- Auth, permissions, roles, sessions, OAuth, SSO, or account linking.
+- Billing, payments, subscriptions, invoices, or paid-plan limits.
+- Security-sensitive code, secrets, tokens, webhooks, or private data.
+- Database migrations, schema changes, destructive data operations, or backups.
+- Production deploys with user impact, downtime, or rollback risk.
+- DNS, domain ownership, email authentication, or SSL/certificate changes.
+- Legal/compliance/privacy implications.
+- Cross-account access decisions or new third-party permissions.
+- Ambiguous complex failures where the wrong fix could make things worse.
+
 ## Examples
 
 Owner-only blocker:
