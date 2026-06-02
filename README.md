@@ -18,6 +18,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `skills/owner-button-workflow/`: reusable Codex skill.
 - `scripts/codex-auto.cmd`: auto-selects reasoning gear for CLI tasks.
 - `scripts/codex-gear.cmd`: shows which model/profile a task will use.
+- `scripts/codex-low.cmd`, `codex-medium.cmd`, `codex-high.cmd`, `codex-xhigh.cmd`, `codex-review.cmd`: force a specific model/profile route.
 - `scripts/codex-handoff.cmd`: creates a portable handoff note for another Codex or computer.
 - `scripts/owner-button.cmd`: lists/adds/completes owner-only blockers.
 - `scripts/git-guard.cmd`: checks repo, branch, remote, dirty files before git/deploy actions.
@@ -54,6 +55,16 @@ Inspect the model/profile route:
 .\scripts\codex-gear.cmd "debug failing CI"
 ```
 
+Force a specific model/profile route:
+
+```powershell
+.\scripts\codex-low.cmd "fix typo in README"
+.\scripts\codex-medium.cmd "add dashboard panel"
+.\scripts\codex-high.cmd "debug failing tests"
+.\scripts\codex-xhigh.cmd "change auth permissions"
+.\scripts\codex-review.cmd "review current diff"
+```
+
 ## Gear Model Plan
 
 - `low` / `fast`: `gpt-5.3-codex-spark`, low reasoning, for ultra-fast simple coding and mechanical tasks.
@@ -61,6 +72,8 @@ Inspect the model/profile route:
 - `high` / `deep`: `gpt-5.5`, high reasoning, for debugging, CI, regressions, multi-file work, deploy issues, and verification-heavy tasks.
 - `xhigh` / `max`: `gpt-5.5`, xhigh reasoning, for architecture, auth, security, billing, database, permissions, and production-risk work.
 - `review`: `codex-auto-review`, medium reasoning, for explicit code review, PR review, diff review, or commit review.
+
+`gpt-5.4-mini` is available but not used by default; keep it as a low/medium fallback if Spark is too shallow or unavailable.
 
 Create a handoff note for another Codex:
 

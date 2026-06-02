@@ -99,6 +99,14 @@ To inspect the selected route without launching work:
 
 `C:\Users\zev\.codex\scripts\codex-gear.cmd "TASK"`
 
+To force a route:
+
+- `C:\Users\zev\.codex\scripts\codex-low.cmd "TASK"`
+- `C:\Users\zev\.codex\scripts\codex-medium.cmd "TASK"`
+- `C:\Users\zev\.codex\scripts\codex-high.cmd "TASK"`
+- `C:\Users\zev\.codex\scripts\codex-xhigh.cmd "TASK"`
+- `C:\Users\zev\.codex\scripts\codex-review.cmd "TASK"`
+
 Model/profile plan:
 
 - `low` / `fast`: `gpt-5.3-codex-spark`, low reasoning, for ultra-fast simple coding and mechanical tasks.
@@ -106,6 +114,10 @@ Model/profile plan:
 - `high` / `deep`: `gpt-5.5`, high reasoning, for debugging, CI, regressions, multi-file work, deploy issues, and verification-heavy tasks.
 - `xhigh` / `max`: `gpt-5.5`, xhigh reasoning, for architecture, auth, security, billing, database, permissions, and production-risk work.
 - `review`: `codex-auto-review`, medium reasoning, for explicit code review, PR review, diff review, or commit review.
+
+Available but not the default:
+
+- `gpt-5.4-mini`: future low/medium fallback if `gpt-5.3-codex-spark` is too shallow or unavailable.
 
 In an already-open Desktop chat, a gear label is a working-mode signal unless the session itself was launched with the matching profile. Actual model switching happens through `codex-auto.cmd` or a Codex profile.
 

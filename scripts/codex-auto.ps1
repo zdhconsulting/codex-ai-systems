@@ -40,7 +40,12 @@ if ($DryRun) {
 $codex = Get-CodexExecutable
 if ($gear.Command -eq "review") {
     $configArgs = New-CodexConfigArgs -Gear $gear
-    & $codex review @configArgs $prompt
+    Push-Location -LiteralPath $Cwd
+    try {
+        & $codex review @configArgs $prompt
+    } finally {
+        Pop-Location
+    }
 } else {
     & $codex exec -C $Cwd -p $profile $prompt
 }
