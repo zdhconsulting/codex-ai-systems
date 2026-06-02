@@ -107,6 +107,10 @@ To show current repo, owner buttons, gear routes, and systems backup state:
 
 `C:\Users\zev\.codex\scripts\codex-systems-status.cmd`
 
+To run the full local Codex systems health check:
+
+`C:\Users\zev\.codex\scripts\codex-doctor.cmd`
+
 To force a route:
 
 - `C:\Users\zev\.codex\scripts\codex-low.cmd "TASK"`

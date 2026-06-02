@@ -17,6 +17,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `instructions/AGENTS.md`: global Codex breadcrumb.
 - `skills/owner-button-workflow/`: reusable Codex skill.
 - `scripts/codex-auto.cmd`: auto-selects reasoning gear for CLI tasks.
+- `scripts/codex-doctor.cmd`: runs the local systems health check.
 - `scripts/codex-gear.cmd`: shows which model/profile a task will use.
 - `scripts/codex-gear-test.cmd`: verifies profile files, forced commands, route selection, and optional real smoke tests.
 - `scripts/codex-systems-status.cmd`: shows current repo, owner buttons, gear routes, and systems backup state.
@@ -38,6 +39,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
 ## Common Commands
+
+Run the local systems health check:
+
+```powershell
+.\scripts\codex-doctor.cmd
+.\scripts\codex-doctor.cmd -Smoke
+```
 
 Auto-route a Codex task:
 

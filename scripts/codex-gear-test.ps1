@@ -76,6 +76,8 @@ $expected = @(
 $requiredScripts = @(
     "codex-auto.cmd",
     "codex-auto.ps1",
+    "codex-doctor.cmd",
+    "codex-doctor.ps1",
     "codex-gear.cmd",
     "codex-gear.ps1",
     "codex-gear-test.cmd",
