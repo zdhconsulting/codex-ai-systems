@@ -122,6 +122,12 @@ Use `xhigh` for high-stakes or ambiguous decisions:
 - Cross-account access decisions or new third-party permissions.
 - Ambiguous complex failures where the wrong fix could make things worse.
 
+## Design Work Rules
+
+Use `low` for tiny visual tweaks, `medium` for normal page/component polish, `high` for multi-screen UX/accessibility/responsive verification, and `xhigh` for brand systems, design architecture, checkout/signup/auth, revenue, trust, or production-risk design.
+
+For design or image-editing tasks involving a real person's face, do not redraw, regenerate, stylize, beautify, smooth, age, or reinterpret the face. Preserve the original face pixels exactly by masking, cutting, copying, and pasting the source face into the final composition. If the source face is unavailable, or the requested edit would require generating a new face, ask for the needed source image or explain that exact preservation is not possible. Backgrounds, layout, clothing, framing, and surrounding design can change; the face itself stays untouched unless Zev explicitly asks to edit the face.
+
 ## Examples
 
 Owner-only blocker:
