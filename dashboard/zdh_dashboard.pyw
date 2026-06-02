@@ -145,6 +145,22 @@ def action_log_path():
     return dashboard_app_dir() / ACTION_LOG_FILE
 
 
+def launch_shell_target(target):
+    try:
+        os.startfile(target)
+        return
+    except (AttributeError, OSError):
+        pass
+
+    subprocess.Popen(
+        ["explorer.exe", target],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+
+
 def read_jsonrpc_response(process, request_id):
     while True:
         line = process.stdout.readline()
@@ -310,6 +326,7 @@ class ZDHDashboard:
         self.dragon_hide_job = None
         self.dragon_click_times = []
         self.previous_project_statuses = {}
+        self.launching_project_paths = set()
 
         self.base_font = font.Font(family="Segoe UI", size=scaled(10))
         self.label_font = font.Font(
@@ -708,43 +725,31 @@ class ZDHDashboard:
             self.show_alert(f"Cannot open {state.name}: folder missing")
             return
 
+        launch_key = str(project_path).lower()
+        if launch_key in self.launching_project_paths:
+            log_action(f"already creating codex chat: {state.name} -> {project_path}")
+            self.show_alert(f"Already creating Codex chat: {state.name}", lift=False)
+            return
+        self.launching_project_paths.add(launch_key)
+
         self.pause_topmost()
         self.show_alert(f"Creating Codex chat: {state.name}", lift=False)
 
         thread = threading.Thread(
             target=self.create_and_open_project_thread,
-            args=(state.name, project_path),
+            args=(state.name, project_path, launch_key),
             daemon=True,
         )
         thread.start()
 
-    def create_and_open_project_thread(self, project_name, project_path):
-        log_file = None
-
+    def create_and_open_project_thread(self, project_name, project_path, launch_key):
         try:
-            desktop_exe = find_codex_desktop_exe()
-            if not desktop_exe:
-                raise RuntimeError("Codex Desktop executable not found")
-
             thread_id = create_codex_project_thread(project_path, project_name)
             deep_link = f"codex://threads/{thread_id}"
             log_action(f"created codex thread: {thread_id} -> {project_path}")
+            log_action(f"open codex thread link: {deep_link}")
 
-            log_file = action_log_path().open("ab")
-            log_file.write(
-                f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] open codex thread: {desktop_exe} {deep_link}\n".encode(
-                    "utf-8"
-                )
-            )
-            process = subprocess.Popen(
-                [desktop_exe, deep_link],
-                cwd=str(Path(desktop_exe).parent),
-                stdin=subprocess.DEVNULL,
-                stdout=log_file,
-                stderr=log_file,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-            log_action(f"codex thread deep link pid: {process.pid}")
+            launch_shell_target(deep_link)
             self.root.after(
                 0,
                 lambda: self.show_alert(f"Opened Codex chat: {project_name}", lift=False),
@@ -759,35 +764,27 @@ class ZDHDashboard:
                 ),
             )
             self.open_project_fallback(project_name, project_path)
-        finally:
-            if log_file is not None:
-                log_file.close()
 
         self.root.after(CODEX_FOCUS_RETRY_MS, self.focus_codex_after_launch)
         self.root.after(CODEX_FOCUS_RETRY_MS * 2, self.focus_codex_after_launch)
+        self.root.after(0, lambda: self.launching_project_paths.discard(launch_key))
 
     def open_project_fallback(self, project_name, project_path):
         log_file = None
         try:
             log_file = action_log_path().open("ab")
-            desktop_exe = find_codex_desktop_exe()
-            if desktop_exe:
-                deep_link = f"codex://threads/new?path={quote(str(project_path))}"
-                log_file.write(
-                    f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] fallback codex new thread link: {desktop_exe} {deep_link}\n".encode(
-                        "utf-8"
-                    )
+            deep_link = f"codex://threads/new?path={quote(str(project_path), safe='')}"
+            log_file.write(
+                f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] fallback codex new thread link: {deep_link}\n".encode(
+                    "utf-8"
                 )
-                process = subprocess.Popen(
-                    [desktop_exe, deep_link],
-                    cwd=str(Path(desktop_exe).parent),
-                    stdin=subprocess.DEVNULL,
-                    stdout=log_file,
-                    stderr=log_file,
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                )
-                log_action(f"codex new thread fallback pid: {process.pid}")
+            )
+            try:
+                launch_shell_target(deep_link)
+                log_action("codex new thread fallback opened through protocol")
                 return
+            except OSError as exc:
+                log_action(f"protocol fallback failed: {exc}")
 
             codex_exe = find_codex_exe()
             if not codex_exe:
