@@ -94,12 +94,56 @@ def find_codex_exe():
     return None
 
 
+def powershell_output_lines(command, timeout_seconds=8):
+    try:
+        completed = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                command,
+            ],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+
+    if completed.returncode != 0:
+        return []
+
+    return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+
+
+def is_codex_desktop_candidate(path):
+    if path.name.lower() != "codex.exe":
+        return False
+
+    normalized = str(path).lower()
+    if "windowsapps" in normalized and "openai.codex_" in normalized:
+        return path.parent.name.lower() == "app"
+
+    return True
+
+
 def find_codex_desktop_exe():
     env_path = os.environ.get("CODEX_DESKTOP_PATH")
     if env_path and Path(env_path).exists():
         return str(Path(env_path).resolve())
 
     candidates = []
+
+    process_paths = powershell_output_lines(
+        "Get-Process -Name Codex -ErrorAction SilentlyContinue | "
+        "Where-Object { $_.Path -like '*\\OpenAI.Codex_*\\app\\Codex.exe' } | "
+        "Select-Object -ExpandProperty Path -Unique"
+    )
+    candidates.extend(Path(path) for path in process_paths)
 
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
@@ -117,7 +161,16 @@ def find_codex_desktop_exe():
         except OSError:
             pass
 
-    existing = [path for path in candidates if path.exists()]
+    package_paths = powershell_output_lines(
+        "$pkg = Get-AppxPackage -Name OpenAI.Codex -ErrorAction SilentlyContinue | "
+        "Sort-Object Version -Descending | Select-Object -First 1; "
+        "if ($pkg) { Join-Path $pkg.InstallLocation 'app\\Codex.exe' }"
+    )
+    candidates.extend(Path(path) for path in package_paths)
+
+    existing = [
+        path for path in candidates if path.exists() and is_codex_desktop_candidate(path)
+    ]
     existing.sort(key=lambda path: path.stat().st_mtime, reverse=True)
     if existing:
         return str(existing[0].resolve())
@@ -749,7 +802,21 @@ class ZDHDashboard:
             log_action(f"created codex thread: {thread_id} -> {project_path}")
             log_action(f"open codex thread link: {deep_link}")
 
-            launch_shell_target(deep_link)
+            desktop_exe = find_codex_desktop_exe()
+            if desktop_exe:
+                log_action(f"launch codex desktop direct: {desktop_exe} {deep_link}")
+                subprocess.Popen(
+                    [desktop_exe, deep_link],
+                    cwd=str(Path(desktop_exe).parent),
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+            else:
+                log_action("codex desktop direct path unavailable; using protocol")
+                launch_shell_target(deep_link)
+
             self.root.after(
                 0,
                 lambda: self.show_alert(f"Opened Codex chat: {project_name}", lift=False),
@@ -779,6 +846,19 @@ class ZDHDashboard:
                     "utf-8"
                 )
             )
+            desktop_exe = find_codex_desktop_exe()
+            if desktop_exe:
+                process = subprocess.Popen(
+                    [desktop_exe, deep_link],
+                    cwd=str(Path(desktop_exe).parent),
+                    stdin=subprocess.DEVNULL,
+                    stdout=log_file,
+                    stderr=log_file,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+                log_action(f"codex new thread fallback direct pid: {process.pid}")
+                return
+
             try:
                 launch_shell_target(deep_link)
                 log_action("codex new thread fallback opened through protocol")
