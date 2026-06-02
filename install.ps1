@@ -13,10 +13,10 @@ New-Item -ItemType Directory -Force `
 Copy-Item -LiteralPath (Join-Path $repoRoot "instructions\AGENTS.md") `
     -Destination (Join-Path $CodexHome "AGENTS.md") -Force
 
-Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\*") `
+Copy-Item -Path (Join-Path $repoRoot "scripts\*") `
     -Destination (Join-Path $CodexHome "scripts") -Force
 
-Copy-Item -LiteralPath (Join-Path $repoRoot "profiles\*.config.toml") `
+Copy-Item -Path (Join-Path $repoRoot "profiles\*.config.toml") `
     -Destination $CodexHome -Force
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "skills\owner-button-workflow\SKILL.md") `

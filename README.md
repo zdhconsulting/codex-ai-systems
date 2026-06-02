@@ -17,6 +17,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `instructions/AGENTS.md`: global Codex breadcrumb.
 - `skills/owner-button-workflow/`: reusable Codex skill.
 - `scripts/codex-auto.cmd`: auto-selects reasoning gear for CLI tasks.
+- `scripts/codex-handoff.cmd`: creates a portable handoff note for another Codex or computer.
 - `scripts/owner-button.cmd`: lists/adds/completes owner-only blockers.
 - `scripts/git-guard.cmd`: checks repo, branch, remote, dirty files before git/deploy actions.
 - `profiles/*.config.toml`: Codex reasoning profiles.
@@ -43,6 +44,12 @@ Dry-run the routing decision:
 
 ```powershell
 .\scripts\codex-auto.cmd -DryRun "debug failing CI"
+```
+
+Create a handoff note for another Codex:
+
+```powershell
+.\scripts\codex-handoff.cmd
 ```
 
 List owner-only blockers:
