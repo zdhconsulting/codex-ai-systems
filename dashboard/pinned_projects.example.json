@@ -1,0 +1,25 @@
+{
+  "auto_discover": true,
+  "auto_discover_seconds": 300,
+  "auto_keep_seconds": 900,
+  "auto_max_projects": 8,
+  "auto_root_scan_depth": 2,
+  "auto_discover_roots": [
+    "C:\\Users\\zev\\OneDrive\\Documents",
+    "C:\\Users\\zev\\OneDrive\\Desktop",
+    "C:\\repos"
+  ],
+  "projects": [
+    {
+      "name": "Example Project",
+      "active_seconds": 120,
+      "stale_seconds": 300,
+      "session_terms": [
+        "Example Project"
+      ],
+      "paths": [
+        "C:\\Path\\To\\Example Project"
+      ]
+    }
+  ]
+}

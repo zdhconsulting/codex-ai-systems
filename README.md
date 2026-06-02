@@ -21,6 +21,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `scripts/git-guard.cmd`: checks repo, branch, remote, dirty files before git/deploy actions.
 - `profiles/*.config.toml`: Codex reasoning profiles.
 - `queues/owner-buttons.example.json`: empty queue template.
+- `dashboard/`: ZDH Dashboard source for project, git, and owner-button monitoring.
 
 ## Install
 
@@ -54,6 +55,12 @@ Check the current repo before commit/push:
 
 ```powershell
 .\scripts\git-guard.cmd
+```
+
+Run the dashboard from source:
+
+```powershell
+& ".\dashboard\Start ZDH Dashboard.bat"
 ```
 
 Sync the live Codex setup into this repo, commit, and push:
