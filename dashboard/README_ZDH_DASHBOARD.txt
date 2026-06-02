@@ -17,7 +17,7 @@ Projects:
 - If that file is missing, the dashboard migrates a valid pinned_projects.json from the app folder.
 - Project activity refreshes every 30 seconds.
 - CPU and memory refresh every second.
-- Single-click a project name to create a fresh Codex chat for that repo and open it in Codex Desktop.
+- Single-click a project row to create a fresh Codex chat for that repo and open it in Codex Desktop.
 - The "LAST LAUNCH" receipt shows the last launched project, repo path, and fresh thread ID.
 - Click and drag the rest of the row to move the dashboard.
 - Statuses: 🔥 HOT, 🟢 LIVE, 🟡 WAIT, 😴 SLEEP, ⚠ OFFLINE/ERROR.

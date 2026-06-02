@@ -21,6 +21,7 @@ CODEX_TOPMOST_PAUSE_SECONDS = 10
 CODEX_FOCUS_RETRY_MS = 1400
 CODEX_APP_SERVER_TIMEOUT_SECONDS = 18
 CODEX_APP_LAUNCH_TIMEOUT_SECONDS = 12
+PROJECT_CLICK_DRAG_THRESHOLD = 8
 DRAGON_CLICK_COUNT = 4
 DRAGON_CLICK_WINDOW_MS = 1600
 DRAGON_DURATION_MS = 1000
@@ -351,6 +352,7 @@ class ZDHDashboard:
         self.dragon_click_times = []
         self.previous_project_statuses = {}
         self.launching_project_paths = set()
+        self.project_click_candidate = None
 
         self.base_font = font.Font(family="Segoe UI", size=scaled(10))
         self.label_font = font.Font(
@@ -708,13 +710,11 @@ class ZDHDashboard:
         for state in states:
             row = tk.Frame(self.projects, bg=BACKGROUND_COLOR)
             row.pack(fill="x", pady=(0, scaled(5)))
-            row.bind("<ButtonPress-1>", self.start_drag)
-            row.bind("<B1-Motion>", self.drag)
+            self.bind_project_launch(row, state)
 
             top = tk.Frame(row, bg=BACKGROUND_COLOR)
             top.pack(fill="x")
-            top.bind("<ButtonPress-1>", self.start_drag)
-            top.bind("<B1-Motion>", self.drag)
+            self.bind_project_launch(top, state)
 
             dot = tk.Label(
                 top,
@@ -726,8 +726,7 @@ class ZDHDashboard:
                 width=2,
             )
             dot.pack(side="left")
-            dot.bind("<ButtonPress-1>", self.start_drag)
-            dot.bind("<B1-Motion>", self.drag)
+            self.bind_project_launch(dot, state)
 
             name = tk.Button(
                 top,
@@ -760,8 +759,7 @@ class ZDHDashboard:
                 width=9,
             )
             status.pack(side="right")
-            status.bind("<ButtonPress-1>", self.start_drag)
-            status.bind("<B1-Motion>", self.drag)
+            self.bind_project_launch(status, state)
 
             for detail_text in state.detail_lines:
                 detail = tk.Label(
@@ -773,10 +771,52 @@ class ZDHDashboard:
                     anchor="w",
                 )
                 detail.pack(fill="x", padx=(scaled(28), 0))
-                detail.bind("<ButtonPress-1>", self.start_drag)
-                detail.bind("<B1-Motion>", self.drag)
+                self.bind_project_launch(detail, state)
 
             self.project_rows.append(row)
+
+    def bind_project_launch(self, widget, state):
+        try:
+            widget.configure(cursor="hand2")
+        except tk.TclError:
+            pass
+        widget.bind(
+            "<ButtonPress-1>",
+            lambda event, item=state: self.start_project_click(event, item),
+        )
+        widget.bind("<B1-Motion>", self.track_project_click_motion)
+        widget.bind(
+            "<ButtonRelease-1>",
+            lambda event, item=state: self.finish_project_click(event, item),
+        )
+
+    def start_project_click(self, event, state):
+        self.project_click_candidate = {
+            "state": state,
+            "x": event.x_root,
+            "y": event.y_root,
+            "active": True,
+        }
+
+    def track_project_click_motion(self, event):
+        candidate = self.project_click_candidate
+        if not candidate:
+            return
+        dx = abs(event.x_root - candidate["x"])
+        dy = abs(event.y_root - candidate["y"])
+        if dx > PROJECT_CLICK_DRAG_THRESHOLD or dy > PROJECT_CLICK_DRAG_THRESHOLD:
+            candidate["active"] = False
+
+    def finish_project_click(self, event, state):
+        candidate = self.project_click_candidate
+        self.project_click_candidate = None
+        if not candidate or candidate["state"] is not state or not candidate["active"]:
+            return
+
+        dx = abs(event.x_root - candidate["x"])
+        dy = abs(event.y_root - candidate["y"])
+        if dx <= PROJECT_CLICK_DRAG_THRESHOLD and dy <= PROJECT_CLICK_DRAG_THRESHOLD:
+            self.open_project_in_codex(state)
 
     def open_project_in_codex(self, state):
         log_action(f"name click: {state.name} -> {state.path}")
