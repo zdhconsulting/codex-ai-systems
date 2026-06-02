@@ -15,6 +15,8 @@ SYSTEM_REFRESH_MS = 1000
 PROJECT_REFRESH_MS = 30000
 ALERT_DURATION_MS = 7000
 TOPMOST_REFRESH_MS = 5000
+CODEX_TOPMOST_PAUSE_SECONDS = 10
+CODEX_FOCUS_RETRY_MS = 1400
 DRAGON_CLICK_COUNT = 4
 DRAGON_CLICK_WINDOW_MS = 1600
 DRAGON_DURATION_MS = 1000
@@ -41,6 +43,7 @@ ALERT_TEXT_COLOR = "#f0c674"
 DRAGON_BG_COLOR = "#130b06"
 DRAGON_TEXT_COLOR = "#ff9f1c"
 DRAGON_CAPTION_COLOR = "#ffd166"
+ACTION_LOG_FILE = "zdh_dashboard_actions.log"
 
 UI_SCALE = 1.0
 
@@ -82,6 +85,70 @@ def find_codex_exe():
     return "codex"
 
 
+def dashboard_app_dir():
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def log_action(message):
+    try:
+        log_path = dashboard_app_dir() / ACTION_LOG_FILE
+        stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        with log_path.open("a", encoding="utf-8") as log_file:
+            log_file.write(f"[{stamp}] {message}\n")
+    except OSError:
+        pass
+
+
+def action_log_path():
+    return dashboard_app_dir() / ACTION_LOG_FILE
+
+
+def launch_shell_target(target):
+    subprocess.Popen(
+        ["explorer.exe", target],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+
+
+def focus_codex_window():
+    matches = []
+
+    enum_windows = user32.EnumWindows
+    enum_windows_proc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+    is_window_visible = user32.IsWindowVisible
+    get_window_text_length = user32.GetWindowTextLengthW
+    get_window_text = user32.GetWindowTextW
+
+    def collect(hwnd, _lparam):
+        if not is_window_visible(hwnd):
+            return True
+
+        length = get_window_text_length(hwnd)
+        if length <= 0:
+            return True
+
+        buffer = ctypes.create_unicode_buffer(length + 1)
+        get_window_text(hwnd, buffer, length + 1)
+        title = buffer.value
+        if "Codex" in title and WIDGET_TITLE not in title:
+            matches.append(hwnd)
+        return True
+
+    enum_windows(enum_windows_proc(collect), 0)
+    if not matches:
+        return False
+
+    hwnd = matches[0]
+    user32.ShowWindow(hwnd, 9)
+    user32.SetForegroundWindow(hwnd)
+    return True
+
+
 class ZDHDashboard:
     def __init__(self):
         self.system_sampler = SystemSampler()
@@ -101,6 +168,7 @@ class ZDHDashboard:
         self.project_rows = []
         self.project_refresh_job = None
         self.alert_hide_job = None
+        self.topmost_paused_until = 0
         self.dragon_hide_job = None
         self.dragon_click_times = []
         self.previous_project_statuses = {}
@@ -397,7 +465,7 @@ class ZDHDashboard:
             return f"⚠ {name} needs attention"
         return f"{name}: {new_status}"
 
-    def show_alert(self, message):
+    def show_alert(self, message, lift=True):
         if self.alert_hide_job is not None:
             try:
                 self.root.after_cancel(self.alert_hide_job)
@@ -408,8 +476,9 @@ class ZDHDashboard:
         if not self.alert.winfo_manager():
             self.alert.pack(fill="x", pady=(scaled(8), 0))
         self.alert_hide_job = self.root.after(ALERT_DURATION_MS, self.hide_alert)
-        self.root.attributes("-topmost", True)
-        self.root.lift()
+        if lift:
+            self.root.attributes("-topmost", True)
+            self.root.lift()
 
     def hide_alert(self):
         self.alert.pack_forget()
@@ -425,13 +494,11 @@ class ZDHDashboard:
             row.pack(fill="x", pady=(0, scaled(5)))
             row.bind("<ButtonPress-1>", self.start_drag)
             row.bind("<B1-Motion>", self.drag)
-            row.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             top = tk.Frame(row, bg=BACKGROUND_COLOR)
             top.pack(fill="x")
             top.bind("<ButtonPress-1>", self.start_drag)
             top.bind("<B1-Motion>", self.drag)
-            top.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             dot = tk.Label(
                 top,
@@ -445,21 +512,27 @@ class ZDHDashboard:
             dot.pack(side="left")
             dot.bind("<ButtonPress-1>", self.start_drag)
             dot.bind("<B1-Motion>", self.drag)
-            dot.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
-            name = tk.Label(
+            name = tk.Button(
                 top,
                 text=state.name[:34],
+                command=lambda item=state: self.open_project_in_codex(item),
                 fg=TEXT_COLOR,
                 bg=BACKGROUND_COLOR,
+                activeforeground="#ffffff",
+                activebackground=BORDER_COLOR,
                 font=self.label_font,
                 anchor="w",
                 width=20,
+                cursor="hand2",
+                relief="flat",
+                bd=0,
+                highlightthickness=0,
+                padx=0,
+                pady=0,
+                takefocus=0,
             )
             name.pack(side="left")
-            name.bind("<ButtonPress-1>", self.start_drag)
-            name.bind("<B1-Motion>", self.drag)
-            name.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             status = tk.Label(
                 top,
@@ -473,7 +546,6 @@ class ZDHDashboard:
             status.pack(side="right")
             status.bind("<ButtonPress-1>", self.start_drag)
             status.bind("<B1-Motion>", self.drag)
-            status.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             for detail_text in state.detail_lines:
                 detail = tk.Label(
@@ -487,27 +559,65 @@ class ZDHDashboard:
                 detail.pack(fill="x", padx=(scaled(28), 0))
                 detail.bind("<ButtonPress-1>", self.start_drag)
                 detail.bind("<B1-Motion>", self.drag)
-                detail.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             self.project_rows.append(row)
 
     def open_project_in_codex(self, state):
-        project_path = Path(state.path)
+        log_action(f"name click: {state.name} -> {state.path}")
+        project_path = Path(state.path).resolve()
         if not project_path.exists():
+            log_action(f"missing path: {state.name} -> {project_path}")
             self.show_alert(f"Cannot open {state.name}: folder missing")
             return
 
+        self.pause_topmost()
+        self.show_alert(f"Opening Codex: {state.name}", lift=False)
+
+        codex_exe = find_codex_exe()
+        log_file = None
         try:
-            subprocess.Popen(
-                [find_codex_exe(), "app", str(project_path)],
+            log_action("wake Codex Desktop with codex: protocol")
+            launch_shell_target("codex:")
+        except OSError as exc:
+            log_action(f"codex protocol wake failed: {exc}")
+
+        try:
+            log_file = action_log_path().open("ab")
+            log_file.write(
+                f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] launch codex cli: {codex_exe} app {project_path}\n".encode(
+                    "utf-8"
+                )
+            )
+            process = subprocess.Popen(
+                [codex_exe, "app", str(project_path)],
                 cwd=str(project_path),
+                stdin=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=log_file,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
+            log_action(f"codex cli pid: {process.pid}")
         except OSError as exc:
+            log_action(f"launch failed: {exc}")
             self.show_alert(f"Could not open Codex: {exc}")
             return
+        finally:
+            if log_file is not None:
+                log_file.close()
 
-        self.show_alert(f"Opening {state.name} in Codex")
+        self.root.after(CODEX_FOCUS_RETRY_MS, self.focus_codex_after_launch)
+        self.root.after(CODEX_FOCUS_RETRY_MS * 2, self.focus_codex_after_launch)
+
+    def pause_topmost(self):
+        self.topmost_paused_until = time.monotonic() + CODEX_TOPMOST_PAUSE_SECONDS
+        try:
+            self.root.attributes("-topmost", False)
+        except tk.TclError:
+            pass
+
+    def focus_codex_after_launch(self):
+        focused = focus_codex_window()
+        log_action(f"focus Codex window: {focused}")
 
     def start_drag(self, event):
         self.record_dragon_click()
@@ -527,8 +637,9 @@ class ZDHDashboard:
         self.root.geometry(f"+{max(0, x)}+{START_TOP_OFFSET}")
 
     def enforce_topmost(self):
-        self.root.attributes("-topmost", True)
-        self.root.lift()
+        if time.monotonic() >= self.topmost_paused_until:
+            self.root.attributes("-topmost", True)
+            self.root.lift()
         self.root.after(TOPMOST_REFRESH_MS, self.enforce_topmost)
 
     def record_dragon_click(self):
