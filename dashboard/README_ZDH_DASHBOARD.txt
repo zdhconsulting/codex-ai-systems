@@ -9,14 +9,15 @@ One always-on-top Windows widget for:
 - Codex status: working, waiting, waiting on owner, or needs attention
 
 How to run:
-1. Double-click "ZDH Dashboard.exe" on your Desktop after it is built.
+1. Double-click the "ZDH Dashboard" shortcut on your Desktop after it is built.
 2. Or double-click "Start ZDH Dashboard.bat" from this folder.
 
 Projects:
 - The dashboard reads "pinned_projects.json" from the same folder as the app.
 - Project activity refreshes every 30 seconds.
 - CPU and memory refresh every second.
-- Single-click project rows to drag the widget; double-click a row to open that project in Codex Desktop.
+- Single-click a project name to create a fresh Codex chat for that repo and open it in Codex Desktop.
+- Click and drag the rest of the row to move the dashboard.
 - Statuses: 🔥 HOT, 🟢 LIVE, 🟡 WAIT, 😴 SLEEP, ⚠ OFFLINE/ERROR.
 - Sleeping projects show how long they have been asleep.
 - Active projects are sorted toward the top automatically.

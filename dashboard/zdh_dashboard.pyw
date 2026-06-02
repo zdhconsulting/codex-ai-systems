@@ -1,11 +1,14 @@
 import ctypes
+import json
 import os
 import subprocess
 import sys
+import threading
 import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import font
+from urllib.parse import quote
 
 from cpu_memory_widget import SystemSampler
 from pinned_project_tracker import ProjectSampler
@@ -17,6 +20,7 @@ ALERT_DURATION_MS = 7000
 TOPMOST_REFRESH_MS = 5000
 CODEX_TOPMOST_PAUSE_SECONDS = 10
 CODEX_FOCUS_RETRY_MS = 1400
+CODEX_APP_SERVER_TIMEOUT_SECONDS = 18
 DRAGON_CLICK_COUNT = 4
 DRAGON_CLICK_WINDOW_MS = 1600
 DRAGON_DURATION_MS = 1000
@@ -139,6 +143,114 @@ def log_action(message):
 
 def action_log_path():
     return dashboard_app_dir() / ACTION_LOG_FILE
+
+
+def read_jsonrpc_response(process, request_id):
+    while True:
+        line = process.stdout.readline()
+        if not line:
+            raise RuntimeError("Codex app-server closed before responding")
+        message = json.loads(line)
+        if message.get("id") == request_id:
+            if "error" in message:
+                raise RuntimeError(json.dumps(message["error"], ensure_ascii=True))
+            return message.get("result")
+
+
+def send_jsonrpc_request(process, request_id, method, params=None):
+    payload = {"id": request_id, "method": method}
+    if params is not None:
+        payload["params"] = params
+    process.stdin.write(json.dumps(payload, separators=(",", ":")) + "\n")
+    process.stdin.flush()
+    return read_jsonrpc_response(process, request_id)
+
+
+def create_codex_project_thread(project_path, project_name):
+    codex_exe = find_codex_exe()
+    if not codex_exe:
+        raise RuntimeError("Codex CLI not found for app-server")
+
+    process = subprocess.Popen(
+        [codex_exe, "app-server", "--listen", "stdio://"],
+        cwd=str(Path(codex_exe).parent),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    timed_out = threading.Event()
+
+    def stop_stalled_process():
+        timed_out.set()
+        try:
+            process.kill()
+        except OSError:
+            pass
+
+    timeout_timer = threading.Timer(
+        CODEX_APP_SERVER_TIMEOUT_SECONDS,
+        stop_stalled_process,
+    )
+    timeout_timer.start()
+
+    try:
+        send_jsonrpc_request(
+            process,
+            1,
+            "initialize",
+            {
+                "clientInfo": {
+                    "name": "zdh-dashboard",
+                    "version": "0.1",
+                },
+                "capabilities": {
+                    "experimentalApi": False,
+                    "requestAttestation": False,
+                    "optOutNotificationMethods": ["thread/started"],
+                },
+            },
+        )
+        process.stdin.write(json.dumps({"method": "initialized"}) + "\n")
+        process.stdin.flush()
+
+        result = send_jsonrpc_request(
+            process,
+            2,
+            "thread/start",
+            {
+                "cwd": str(project_path),
+                "approvalPolicy": "never",
+                "sandbox": "danger-full-access",
+                "threadSource": "user",
+            },
+        )
+        thread_id = result["thread"]["id"]
+
+        send_jsonrpc_request(
+            process,
+            3,
+            "thread/name/set",
+            {
+                "threadId": thread_id,
+                "name": f"Dashboard: {project_name}",
+            },
+        )
+        return thread_id
+    finally:
+        timeout_timer.cancel()
+        try:
+            process.terminate()
+            process.wait(timeout=2)
+        except (OSError, subprocess.TimeoutExpired):
+            try:
+                process.kill()
+            except OSError:
+                pass
+        if timed_out.is_set():
+            raise RuntimeError("Codex app-server timed out while creating thread")
 
 
 def focus_codex_window():
@@ -597,60 +709,113 @@ class ZDHDashboard:
             return
 
         self.pause_topmost()
-        self.show_alert(f"Opening Codex: {state.name}", lift=False)
+        self.show_alert(f"Creating Codex chat: {state.name}", lift=False)
 
+        thread = threading.Thread(
+            target=self.create_and_open_project_thread,
+            args=(state.name, project_path),
+            daemon=True,
+        )
+        thread.start()
+
+    def create_and_open_project_thread(self, project_name, project_path):
         log_file = None
 
         try:
-            log_file = action_log_path().open("ab")
-
             desktop_exe = find_codex_desktop_exe()
-            if desktop_exe:
-                log_file.write(
-                    f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] launch codex desktop: {desktop_exe} --open-project {project_path}\n".encode(
-                        "utf-8"
-                    )
-                )
-                process = subprocess.Popen(
-                    [desktop_exe, "--open-project", str(project_path)],
-                    cwd=str(Path(desktop_exe).parent),
-                    stdin=subprocess.DEVNULL,
-                    stdout=log_file,
-                    stderr=log_file,
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                )
-                log_action(f"codex desktop pid: {process.pid}")
-            else:
-                codex_exe = find_codex_exe()
-                if not codex_exe:
-                    log_action("launch failed: Codex Desktop and CLI not found")
-                    self.show_alert("Could not find the Codex launcher")
-                    return
+            if not desktop_exe:
+                raise RuntimeError("Codex Desktop executable not found")
 
-                log_file.write(
-                    f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] fallback codex cli: {codex_exe} app {project_path}\n".encode(
-                        "utf-8"
-                    )
+            thread_id = create_codex_project_thread(project_path, project_name)
+            deep_link = f"codex://threads/{thread_id}"
+            log_action(f"created codex thread: {thread_id} -> {project_path}")
+
+            log_file = action_log_path().open("ab")
+            log_file.write(
+                f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] open codex thread: {desktop_exe} {deep_link}\n".encode(
+                    "utf-8"
                 )
-                process = subprocess.Popen(
-                    [codex_exe, "app", str(project_path)],
-                    cwd=str(Path(codex_exe).parent),
-                    stdin=subprocess.DEVNULL,
-                    stdout=log_file,
-                    stderr=log_file,
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                )
-                log_action(f"codex cli fallback pid: {process.pid}")
-        except OSError as exc:
-            log_action(f"launch failed: {exc}")
-            self.show_alert(f"Could not open Codex: {exc}")
-            return
+            )
+            process = subprocess.Popen(
+                [desktop_exe, deep_link],
+                cwd=str(Path(desktop_exe).parent),
+                stdin=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=log_file,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            log_action(f"codex thread deep link pid: {process.pid}")
+            self.root.after(
+                0,
+                lambda: self.show_alert(f"Opened Codex chat: {project_name}", lift=False),
+            )
+        except (OSError, RuntimeError, KeyError, json.JSONDecodeError) as exc:
+            log_action(f"project thread launch failed: {exc}")
+            self.root.after(
+                0,
+                lambda: self.show_alert(
+                    f"Could not create chat; opening project: {project_name}",
+                    lift=False,
+                ),
+            )
+            self.open_project_fallback(project_name, project_path)
         finally:
             if log_file is not None:
                 log_file.close()
 
         self.root.after(CODEX_FOCUS_RETRY_MS, self.focus_codex_after_launch)
         self.root.after(CODEX_FOCUS_RETRY_MS * 2, self.focus_codex_after_launch)
+
+    def open_project_fallback(self, project_name, project_path):
+        log_file = None
+        try:
+            log_file = action_log_path().open("ab")
+            desktop_exe = find_codex_desktop_exe()
+            if desktop_exe:
+                deep_link = f"codex://threads/new?path={quote(str(project_path))}"
+                log_file.write(
+                    f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] fallback codex new thread link: {desktop_exe} {deep_link}\n".encode(
+                        "utf-8"
+                    )
+                )
+                process = subprocess.Popen(
+                    [desktop_exe, deep_link],
+                    cwd=str(Path(desktop_exe).parent),
+                    stdin=subprocess.DEVNULL,
+                    stdout=log_file,
+                    stderr=log_file,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+                log_action(f"codex new thread fallback pid: {process.pid}")
+                return
+
+            codex_exe = find_codex_exe()
+            if not codex_exe:
+                raise RuntimeError("Codex Desktop and CLI not found")
+
+            log_file.write(
+                f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] fallback codex cli: {codex_exe} app {project_path}\n".encode(
+                    "utf-8"
+                )
+            )
+            process = subprocess.Popen(
+                [codex_exe, "app", str(project_path)],
+                cwd=str(Path(codex_exe).parent),
+                stdin=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=log_file,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            log_action(f"codex cli fallback pid: {process.pid}")
+        except (OSError, RuntimeError) as exc:
+            log_action(f"fallback launch failed: {exc}")
+            self.root.after(
+                0,
+                lambda: self.show_alert(f"Could not open Codex: {project_name}"),
+            )
+        finally:
+            if log_file is not None:
+                log_file.close()
 
     def pause_topmost(self):
         self.topmost_paused_until = time.monotonic() + CODEX_TOPMOST_PAUSE_SECONDS
