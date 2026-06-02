@@ -99,6 +99,10 @@ To inspect the selected route without launching work:
 
 `C:\Users\zev\.codex\scripts\codex-gear.cmd "TASK"`
 
+To verify the whole gear setup:
+
+`C:\Users\zev\.codex\scripts\codex-gear-test.cmd`
+
 To force a route:
 
 - `C:\Users\zev\.codex\scripts\codex-low.cmd "TASK"`

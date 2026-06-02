@@ -64,6 +64,10 @@ Check the selected route without launching work:
 
 `C:\Users\zev\.codex\scripts\codex-gear.cmd "TASK"`
 
+Verify the whole gear setup:
+
+`C:\Users\zev\.codex\scripts\codex-gear-test.cmd`
+
 Force a specific route:
 
 - `C:\Users\zev\.codex\scripts\codex-low.cmd "TASK"`
