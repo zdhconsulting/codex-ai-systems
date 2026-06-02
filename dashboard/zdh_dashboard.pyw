@@ -455,6 +455,40 @@ class ZDHDashboard:
         self.projects = tk.Frame(self.content, bg=BACKGROUND_COLOR)
         self.projects.pack(fill="both", expand=True)
 
+        self.receipt = tk.Frame(
+            self.content,
+            bg=PANEL_COLOR,
+            highlightthickness=1,
+            highlightbackground=BORDER_COLOR,
+        )
+        self.receipt.pack(fill="x", pady=(scaled(8), 0))
+
+        self.receipt_title = tk.Label(
+            self.receipt,
+            text="LAST LAUNCH",
+            fg=MUTED_TEXT_COLOR,
+            bg=PANEL_COLOR,
+            font=self.base_font,
+            anchor="w",
+            padx=scaled(8),
+            pady=scaled(3),
+        )
+        self.receipt_title.pack(fill="x")
+
+        self.receipt_detail = tk.Label(
+            self.receipt,
+            text="No project launched yet",
+            fg=TEXT_COLOR,
+            bg=PANEL_COLOR,
+            font=self.base_font,
+            anchor="w",
+            justify="left",
+            padx=scaled(8),
+            pady=scaled(5),
+            wraplength=scaled(430),
+        )
+        self.receipt_detail.pack(fill="x")
+
         self.alert = tk.Label(
             self.content,
             text="",
@@ -503,6 +537,9 @@ class ZDHDashboard:
             self.content,
             self.projects_title,
             self.projects,
+            self.receipt,
+            self.receipt_title,
+            self.receipt_detail,
         ):
             widget.bind("<ButtonPress-1>", self.start_drag)
             widget.bind("<B1-Motion>", self.drag)
@@ -775,6 +812,14 @@ class ZDHDashboard:
 
             self.root.after(
                 0,
+                lambda: self.show_launch_receipt(
+                    project_name,
+                    project_path,
+                    thread_id,
+                ),
+            )
+            self.root.after(
+                0,
                 lambda: self.show_alert(f"Opened Codex chat: {project_name}", lift=False),
             )
         except (
@@ -796,6 +841,15 @@ class ZDHDashboard:
         self.root.after(CODEX_FOCUS_RETRY_MS, self.focus_codex_after_launch)
         self.root.after(CODEX_FOCUS_RETRY_MS * 2, self.focus_codex_after_launch)
         self.root.after(0, lambda: self.launching_project_paths.discard(launch_key))
+
+    def show_launch_receipt(self, project_name, project_path, thread_id):
+        self.receipt_detail.config(
+            text=(
+                f"Project: {project_name}\n"
+                f"Repo: {project_path}\n"
+                f"Thread: {thread_id}"
+            )
+        )
 
     def pause_topmost(self):
         self.topmost_paused_until = time.monotonic() + CODEX_TOPMOST_PAUSE_SECONDS
