@@ -76,6 +76,7 @@ $expected = @(
 $requiredScripts = @(
     "codex-auto.cmd",
     "codex-auto.ps1",
+    "codex-bounce.cmd",
     "codex-doctor.cmd",
     "codex-doctor.ps1",
     "codex-gear.cmd",
@@ -88,6 +89,7 @@ $requiredScripts = @(
     "codex-medium.cmd",
     "codex-high.cmd",
     "codex-xhigh.cmd",
+    "codex-xhigh-bounce.cmd",
     "codex-review.cmd",
     "CodexGear.psm1"
 )
@@ -128,6 +130,12 @@ $routeTests = @(
 foreach ($case in $routeTests) {
     Assert-Equal (Select-CodexGear -Text $case.Prompt) $case.Profile "Route '$($case.Prompt)'"
 }
+
+$bounceDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -Bounce -Cwd $CodexHome "[xhigh] change auth permissions" 2>&1 6>&1 | Out-String)
+Assert-True ($bounceDryRun -match "Self-bounce: bounce-then-execute") "Bounce dry-run enables max preflight"
+
+$bounceOnlyDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -BounceOnly -Cwd $CodexHome "change auth permissions" 2>&1 6>&1 | Out-String)
+Assert-True ($bounceOnlyDryRun -match "Self-bounce: bounce-only") "BounceOnly dry-run enables max preflight"
 
 try {
     $codex = Get-CodexExecutable

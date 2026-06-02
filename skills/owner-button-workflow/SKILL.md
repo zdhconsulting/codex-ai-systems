@@ -117,6 +117,8 @@ To force a route:
 - `C:\Users\zev\.codex\scripts\codex-medium.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-high.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-xhigh.cmd "TASK"`
+- `C:\Users\zev\.codex\scripts\codex-xhigh-bounce.cmd "TASK"`
+- `C:\Users\zev\.codex\scripts\codex-bounce.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-review.cmd "TASK"`
 
 Model/profile plan:
@@ -126,6 +128,12 @@ Model/profile plan:
 - `high` / `deep`: `gpt-5.5`, high reasoning, for debugging, CI, regressions, multi-file work, deploy issues, and verification-heavy tasks.
 - `xhigh` / `max`: `gpt-5.5`, xhigh reasoning, for architecture, auth, security, billing, database, permissions, and production-risk work.
 - `review`: `codex-auto-review`, medium reasoning, for explicit code review, PR review, diff review, or commit review.
+
+Highest-gear self-bounce:
+
+- Use `codex-xhigh-bounce.cmd "TASK"` when xhigh work should first compare approaches, critique risks, define validation, then execute.
+- Use `codex-bounce.cmd "TASK"` when only the xhigh preflight ideas are needed and no implementation should start.
+- Self-bounce runs the preflight in read-only ephemeral mode before execution. Use it for architecture, auth, security, billing, database, production-risk, ambiguous failures, and other work where trying the first idea is too risky.
 
 Available but not the default:
 

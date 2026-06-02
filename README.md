@@ -17,11 +17,12 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `instructions/AGENTS.md`: global Codex breadcrumb.
 - `skills/owner-button-workflow/`: reusable Codex skill.
 - `scripts/codex-auto.cmd`: auto-selects reasoning gear for CLI tasks.
+- `scripts/codex-bounce.cmd`: runs xhigh self-bounce preflight only.
 - `scripts/codex-doctor.cmd`: runs the local systems health check.
 - `scripts/codex-gear.cmd`: shows which model/profile a task will use.
 - `scripts/codex-gear-test.cmd`: verifies profile files, forced commands, route selection, and optional real smoke tests.
 - `scripts/codex-systems-status.cmd`: shows current repo, owner buttons, gear routes, and systems backup state.
-- `scripts/codex-low.cmd`, `codex-medium.cmd`, `codex-high.cmd`, `codex-xhigh.cmd`, `codex-review.cmd`: force a specific model/profile route.
+- `scripts/codex-low.cmd`, `codex-medium.cmd`, `codex-high.cmd`, `codex-xhigh.cmd`, `codex-xhigh-bounce.cmd`, `codex-review.cmd`: force a specific model/profile route.
 - `scripts/codex-handoff.cmd`: creates a portable handoff note for another Codex or computer.
 - `scripts/owner-button.cmd`: lists/adds/completes owner-only blockers.
 - `scripts/git-guard.cmd`: checks repo, branch, remote, dirty files before git/deploy actions.
@@ -85,7 +86,14 @@ Force a specific model/profile route:
 .\scripts\codex-medium.cmd "add dashboard panel"
 .\scripts\codex-high.cmd "debug failing tests"
 .\scripts\codex-xhigh.cmd "change auth permissions"
+.\scripts\codex-xhigh-bounce.cmd "change auth permissions"
 .\scripts\codex-review.cmd "review current diff"
+```
+
+Run xhigh self-bounce without implementation:
+
+```powershell
+.\scripts\codex-bounce.cmd "plan database migration safely"
 ```
 
 ## Gear Model Plan
@@ -95,6 +103,8 @@ Force a specific model/profile route:
 - `high` / `deep`: `gpt-5.5`, high reasoning, for debugging, CI, regressions, multi-file work, deploy issues, and verification-heavy tasks.
 - `xhigh` / `max`: `gpt-5.5`, xhigh reasoning, for architecture, auth, security, billing, database, permissions, and production-risk work.
 - `review`: `codex-auto-review`, medium reasoning, for explicit code review, PR review, diff review, or commit review.
+
+Self-bounce is available for xhigh work. It runs a read-only ephemeral preflight where Builder, Skeptic, and Verifier compare approaches before implementation starts.
 
 `gpt-5.4-mini` is available but not used by default; keep it as a low/medium fallback if Spark is too shallow or unavailable.
 

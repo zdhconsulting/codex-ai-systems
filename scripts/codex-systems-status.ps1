@@ -121,6 +121,7 @@ if (Test-Path -LiteralPath $SystemsRepo) {
 
 Write-Section "Useful Commands"
 Write-Host "$scriptRoot\codex-systems-status.cmd"
+Write-Host "$scriptRoot\codex-bounce.cmd `"plan database migration safely`""
 Write-Host "$scriptRoot\codex-gear.cmd `"debug failing CI`""
 Write-Host "$scriptRoot\codex-gear-test.cmd"
 Write-Host "$scriptRoot\codex-gear-test.cmd -Smoke"
