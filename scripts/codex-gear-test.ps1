@@ -1,8 +1,9 @@
 param(
-    [string] $CodexHome = (Join-Path $env:USERPROFILE ".codex"),
+    [string] $CodexHome = "",
     [switch] $Smoke
 )
 
+$CodexHome = if ($CodexHome) { $CodexHome } else { Split-Path -Parent $PSScriptRoot }
 $ErrorActionPreference = "Stop"
 $script:Failures = New-Object System.Collections.Generic.List[string]
 $script:Warnings = New-Object System.Collections.Generic.List[string]

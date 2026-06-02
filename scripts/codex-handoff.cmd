@@ -1,2 +1,2 @@
 @echo off
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.codex\scripts\codex-handoff.ps1" %*
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0codex-handoff.ps1" %*

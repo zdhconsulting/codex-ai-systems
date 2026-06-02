@@ -1,2 +1,2 @@
 @echo off
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%USERPROFILE%\.codex\scripts\codex-auto.ps1" [xhigh] %*
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0codex-auto.ps1" [xhigh] %*

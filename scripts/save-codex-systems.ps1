@@ -4,7 +4,7 @@ param(
     [switch] $NoPush
 )
 
-$codexHome = Join-Path $env:USERPROFILE ".codex"
+$codexHome = Split-Path -Parent $PSScriptRoot
 
 if (-not (Test-Path $RepoPath)) {
     Write-Error "Repo path not found: $RepoPath"

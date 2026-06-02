@@ -9,7 +9,8 @@ param(
     [string] $Next = ""
 )
 
-$queuePath = Join-Path $env:USERPROFILE ".codex\queues\owner-buttons.json"
+$codexHome = Split-Path -Parent $PSScriptRoot
+$queuePath = Join-Path $codexHome "queues\owner-buttons.json"
 New-Item -ItemType Directory -Force (Split-Path $queuePath) | Out-Null
 if (-not (Test-Path $queuePath)) {
     "[]" | Set-Content -Path $queuePath -Encoding UTF8

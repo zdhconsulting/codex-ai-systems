@@ -1,9 +1,10 @@
 param(
-    [string] $CodexHome = (Join-Path $env:USERPROFILE ".codex"),
+    [string] $CodexHome = "",
     [string] $SystemsRepo = "C:\Repos\codex-ai-systems",
     [string] $Task = ""
 )
 
+$CodexHome = if ($CodexHome) { $CodexHome } else { Split-Path -Parent $PSScriptRoot }
 $ErrorActionPreference = "Continue"
 
 function Write-Section {
@@ -54,11 +55,33 @@ if ($repoRoot) {
 }
 
 Write-Section "Owner Buttons"
-$ownerButton = Join-Path $scriptRoot "owner-button.cmd"
-if (Test-Path -LiteralPath $ownerButton) {
-    & $ownerButton list
+$queuePath = Join-Path $CodexHome "queues\owner-buttons.json"
+if (Test-Path -LiteralPath $queuePath) {
+    $rawQueue = Get-Content -Path $queuePath -Raw
+    $queueItems = @()
+    if (-not [string]::IsNullOrWhiteSpace($rawQueue)) {
+        $parsedQueue = $rawQueue | ConvertFrom-Json
+        if ($null -ne $parsedQueue) { $queueItems = @($parsedQueue) }
+    }
+    $openButtons = @($queueItems | Where-Object { $_.Status -eq "open" })
+    if ($openButtons.Count -eq 0) {
+        Write-Host "Owner Button Queue: no open owner buttons."
+    } else {
+        Write-Host "Owner Button Queue: $($openButtons.Count) open"
+        foreach ($item in $openButtons) {
+            Write-Host ""
+            Write-Host "ID: $($item.Id)"
+            Write-Host "Project: $($item.Project)"
+            Write-Host "Site/tool: $($item.Site)"
+            Write-Host "Needed: $($item.Needed)"
+            if ($item.Why) { Write-Host "Why Codex is blocked: $($item.Why)" }
+            if ($item.Next) { Write-Host "Codex next: $($item.Next)" }
+            Write-Host "Created: $($item.CreatedAt)"
+        }
+    }
+    Write-Host "Queue file: $queuePath"
 } else {
-    Write-Host "owner-button.cmd not found."
+    Write-Host "Queue file not found: $queuePath"
 }
 
 Write-Section "Gear Routes"

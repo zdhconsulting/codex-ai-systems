@@ -25,7 +25,8 @@ Write-Host "Service tier: $tier"
 Write-Host "Workspace: $Cwd"
 Write-Host "Command: codex $($gear.Command)"
 
-$logDir = Join-Path $env:USERPROFILE ".codex\logs"
+$codexHome = Split-Path -Parent $PSScriptRoot
+$logDir = Join-Path $codexHome "logs"
 $logPath = Join-Path $logDir "reasoning-gear.log"
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"

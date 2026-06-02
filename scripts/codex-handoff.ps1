@@ -4,7 +4,7 @@ param(
     [switch] $NoClipboard
 )
 
-$codexHome = Join-Path $env:USERPROFILE ".codex"
+$codexHome = Split-Path -Parent $PSScriptRoot
 $handoffDir = Join-Path $codexHome "handoffs"
 $systemsRepo = "C:\Repos\codex-ai-systems"
 
