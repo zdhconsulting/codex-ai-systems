@@ -79,6 +79,8 @@ $requiredScripts = @(
     "codex-gear.ps1",
     "codex-gear-test.cmd",
     "codex-gear-test.ps1",
+    "codex-systems-status.cmd",
+    "codex-systems-status.ps1",
     "codex-low.cmd",
     "codex-medium.cmd",
     "codex-high.cmd",

@@ -19,6 +19,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `scripts/codex-auto.cmd`: auto-selects reasoning gear for CLI tasks.
 - `scripts/codex-gear.cmd`: shows which model/profile a task will use.
 - `scripts/codex-gear-test.cmd`: verifies profile files, forced commands, route selection, and optional real smoke tests.
+- `scripts/codex-systems-status.cmd`: shows current repo, owner buttons, gear routes, and systems backup state.
 - `scripts/codex-low.cmd`, `codex-medium.cmd`, `codex-high.cmd`, `codex-xhigh.cmd`, `codex-review.cmd`: force a specific model/profile route.
 - `scripts/codex-handoff.cmd`: creates a portable handoff note for another Codex or computer.
 - `scripts/owner-button.cmd`: lists/adds/completes owner-only blockers.
@@ -61,6 +62,12 @@ Verify the installed gear setup:
 ```powershell
 .\scripts\codex-gear-test.cmd
 .\scripts\codex-gear-test.cmd -Smoke
+```
+
+Show current repo, owner buttons, gear routes, and systems backup state:
+
+```powershell
+.\scripts\codex-systems-status.cmd
 ```
 
 Force a specific model/profile route:

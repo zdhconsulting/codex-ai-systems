@@ -103,6 +103,10 @@ To verify the whole gear setup:
 
 `C:\Users\zev\.codex\scripts\codex-gear-test.cmd`
 
+To show current repo, owner buttons, gear routes, and systems backup state:
+
+`C:\Users\zev\.codex\scripts\codex-systems-status.cmd`
+
 To force a route:
 
 - `C:\Users\zev\.codex\scripts\codex-low.cmd "TASK"`
