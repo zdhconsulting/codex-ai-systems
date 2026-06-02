@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Custom UI</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-theme="night" data-density="comfortable">
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Codex workspace">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">C</div>
+          <div class="brand-copy">
+            <strong>Codex</strong>
+            <span>Custom UI</span>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Primary">
+          <button class="nav-item is-active" type="button" data-view="chat">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+            </svg>
+            <span>Chat</span>
+          </button>
+          <button class="nav-item" type="button" data-view="review">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
+            <span>Review</span>
+          </button>
+          <button class="nav-item" type="button" data-view="context">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 6h18" />
+              <path d="M3 12h18" />
+              <path d="M3 18h18" />
+            </svg>
+            <span>Context</span>
+          </button>
+          <button class="nav-item" type="button" data-view="ship">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7z" />
+            </svg>
+            <span>Ship</span>
+          </button>
+        </nav>
+
+        <div class="workspace-switcher">
+          <span class="section-label">Workspace</span>
+          <button class="project-button" type="button" id="projectButton">
+            <span class="project-dot" aria-hidden="true"></span>
+            <span id="activeThreadName">New chat</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-panel">
+        <header class="topbar">
+          <div class="title-stack">
+            <div class="session-meta">
+              <span id="sessionMode">Chat</span>
+              <span>local</span>
+              <span id="localClock">--:--</span>
+            </div>
+            <h1 id="viewTitle">Custom UI</h1>
+          </div>
+
+          <div class="topbar-actions">
+            <div class="segmented-control" aria-label="Density">
+              <button class="segment is-active" type="button" data-density-choice="comfortable">Comfort</button>
+              <button class="segment" type="button" data-density-choice="compact">Compact</button>
+            </div>
+            <button class="icon-button" type="button" id="paletteButton" aria-label="Open command palette" title="Command palette">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h16" />
+                <path d="M4 12h16" />
+                <path d="M4 17h10" />
+              </svg>
+            </button>
+            <button class="icon-button" type="button" id="themeToggle" aria-label="Toggle theme" title="Theme">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2" />
+                <path d="M12 20v2" />
+                <path d="M4.93 4.93l1.41 1.41" />
+                <path d="M17.66 17.66l1.41 1.41" />
+                <path d="M2 12h2" />
+                <path d="M20 12h2" />
+                <path d="M4.93 19.07l1.41-1.41" />
+                <path d="M17.66 6.34l1.41-1.41" />
+              </svg>
+            </button>
+            <button class="primary-action" type="button" id="runButton">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M22 2L11 13" />
+                <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+              </svg>
+              <span>Send</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="work-grid">
+          <section class="session-panel" aria-label="Session">
+            <div class="timeline" id="timeline" aria-live="polite"></div>
+
+            <form class="chat-composer" id="chatForm">
+              <div class="composer-toolbar">
+                <label for="chatInput">Message</label>
+                <div class="model-picker">
+                  <span class="status-dot" id="connectionDot" aria-hidden="true"></span>
+                  <select id="modelSelect" aria-label="Model">
+                    <option>gpt-5.2</option>
+                    <option>gpt-5</option>
+                    <option>gpt-5-codex</option>
+                    <option>gpt-4.1</option>
+                  </select>
+                </div>
+              </div>
+              <textarea id="chatInput" rows="3" placeholder="Message Codex"></textarea>
+              <div class="composer-footer">
+                <div class="context-chips" aria-label="Context toggles">
+                  <button class="context-chip is-active" type="button" data-context="repo">repo</button>
+                  <button class="context-chip is-active" type="button" data-context="terminal">terminal</button>
+                  <button class="context-chip" type="button" data-context="browser">browser</button>
+                  <button class="context-chip is-active" type="button" data-context="github">github</button>
+                </div>
+                <button class="ghost-action" type="button" id="clearButton">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4h8v2" />
+                    <path d="M19 6l-1 14H6L5 6" />
+                  </svg>
+                  <span>Clear</span>
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <aside class="inspector" aria-label="Run details">
+            <section class="inspector-section visual-section">
+              <div class="section-heading">
+                <span class="section-label">Map</span>
+                <span class="live-pill">live</span>
+              </div>
+              <img src="assets/codex-workbench-map.png" alt="Custom UI context map" class="map-image" />
+            </section>
+
+            <section class="inspector-section">
+              <div class="section-heading">
+                <span class="section-label">Chats</span>
+                <button class="mini-icon" type="button" id="refreshThreadsButton" aria-label="Refresh chats" title="Refresh chats">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                    <path d="M3 21v-5h5" />
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                    <path d="M16 8h5V3" />
+                  </svg>
+                </button>
+              </div>
+              <div class="thread-list" id="threadList">
+                <button class="thread-row is-empty" type="button">
+                  <span>Loading chats</span>
+                  <small>codex</small>
+                </button>
+              </div>
+              <button class="thread-new" type="button" id="newThreadButton">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5v14" />
+                  <path d="M5 12h14" />
+                </svg>
+                <span>New chat</span>
+              </button>
+            </section>
+
+            <section class="inspector-section">
+              <div class="section-heading">
+                <span class="section-label">Connection</span>
+                <span class="live-pill" id="connectionStatus">checking</span>
+              </div>
+              <div class="connection-list">
+                <div>
+                  <span>Server</span>
+                  <strong id="serverMode">local</strong>
+                </div>
+                <div>
+                  <span>Model</span>
+                  <strong id="activeModel">gpt-5.2</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="inspector-section">
+              <div class="section-heading">
+                <span class="section-label">Plan</span>
+                <span id="planCount">2/5</span>
+              </div>
+              <div class="progress-track" aria-hidden="true">
+                <span id="planProgress"></span>
+              </div>
+              <div class="plan-list" id="planList">
+                <label class="check-row">
+                  <input type="checkbox" checked />
+                  <span class="check-box" aria-hidden="true"></span>
+                  <span>Read workspace</span>
+                </label>
+                <label class="check-row">
+                  <input type="checkbox" checked />
+                  <span class="check-box" aria-hidden="true"></span>
+                  <span>Define UI shell</span>
+                </label>
+                <label class="check-row">
+                  <input type="checkbox" />
+                  <span class="check-box" aria-hidden="true"></span>
+                  <span>Build interactions</span>
+                </label>
+                <label class="check-row">
+                  <input type="checkbox" />
+                  <span class="check-box" aria-hidden="true"></span>
+                  <span>Verify layout</span>
+                </label>
+                <label class="check-row">
+                  <input type="checkbox" />
+                  <span class="check-box" aria-hidden="true"></span>
+                  <span>Package handoff</span>
+                </label>
+              </div>
+            </section>
+
+            <section class="inspector-section">
+              <div class="section-heading">
+                <span class="section-label">Files</span>
+                <button class="mini-icon" type="button" id="addFileButton" aria-label="Add file" title="Add file">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                </button>
+              </div>
+              <div class="file-list" id="fileList">
+                <button class="file-row is-selected" type="button">
+                  <span>index.html</span>
+                  <small>shell</small>
+                </button>
+                <button class="file-row is-selected" type="button">
+                  <span>styles.css</span>
+                  <small>layout</small>
+                </button>
+                <button class="file-row" type="button">
+                  <span>app.js</span>
+                  <small>logic</small>
+                </button>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <footer class="terminal-strip" aria-label="Terminal">
+          <div class="terminal-title">
+            <span class="terminal-led" aria-hidden="true"></span>
+            <span>terminal</span>
+          </div>
+          <pre id="terminalLog">&gt; custom ui ready
+&gt; context: repo, terminal
+&gt; awaiting run</pre>
+        </footer>
+      </main>
+    </div>
+
+    <div class="palette" id="palette" hidden>
+      <div class="palette-dialog" role="dialog" aria-modal="true" aria-labelledby="paletteTitle">
+        <div class="palette-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+          <input id="paletteInput" type="search" autocomplete="off" aria-labelledby="paletteTitle" />
+        </div>
+        <h2 id="paletteTitle">Commands</h2>
+        <div class="palette-list" id="paletteList">
+          <button type="button" data-command="run">Send message</button>
+          <button type="button" data-command="theme">Toggle theme</button>
+          <button type="button" data-command="focus">Focus message</button>
+          <button type="button" data-command="clear">Clear timeline</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

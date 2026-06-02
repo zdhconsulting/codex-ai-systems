@@ -23,6 +23,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `profiles/*.config.toml`: Codex reasoning profiles.
 - `queues/owner-buttons.example.json`: empty queue template.
 - `dashboard/`: ZDH Dashboard source for project, git, and owner-button monitoring.
+- `codexui/`: standalone Codex custom UI prototype and launcher source.
 
 ## Install
 
@@ -68,6 +69,13 @@ Run the dashboard from source:
 
 ```powershell
 & ".\dashboard\Start ZDH Dashboard.bat"
+```
+
+Run the custom Codex UI prototype:
+
+```powershell
+cd .\codexui
+python .\server.py
 ```
 
 Sync the live Codex setup into this repo, commit, and push:
