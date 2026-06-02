@@ -16,7 +16,7 @@ Projects:
 - The dashboard reads "pinned_projects.json" from the same folder as the app.
 - Project activity refreshes every 30 seconds.
 - CPU and memory refresh every second.
-- Clicking project rows only drags the widget or counts toward dragon mode; it does not open folders.
+- Single-click project rows to drag the widget; double-click a row to open that project in Codex Desktop.
 - Statuses: 🔥 HOT, 🟢 LIVE, 🟡 WAIT, 😴 SLEEP, ⚠ OFFLINE/ERROR.
 - Sleeping projects show how long they have been asleep.
 - Active projects are sorted toward the top automatically.

@@ -1,7 +1,10 @@
 import ctypes
+import os
+import subprocess
 import sys
 import time
 import tkinter as tk
+from pathlib import Path
 from tkinter import font
 
 from cpu_memory_widget import SystemSampler
@@ -58,6 +61,25 @@ def is_already_running():
         None, True, SINGLE_INSTANCE_MUTEX_NAME
     )
     return kernel32.GetLastError() == 183
+
+
+def find_codex_exe():
+    env_path = os.environ.get("CODEX_CLI_PATH")
+    if env_path and Path(env_path).exists():
+        return env_path
+
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        bin_root = Path(local_app_data) / "OpenAI" / "Codex" / "bin"
+        candidates = sorted(
+            bin_root.glob("*/codex.exe"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        if candidates:
+            return str(candidates[0])
+
+    return "codex"
 
 
 class ZDHDashboard:
@@ -403,11 +425,13 @@ class ZDHDashboard:
             row.pack(fill="x", pady=(0, scaled(5)))
             row.bind("<ButtonPress-1>", self.start_drag)
             row.bind("<B1-Motion>", self.drag)
+            row.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             top = tk.Frame(row, bg=BACKGROUND_COLOR)
             top.pack(fill="x")
             top.bind("<ButtonPress-1>", self.start_drag)
             top.bind("<B1-Motion>", self.drag)
+            top.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             dot = tk.Label(
                 top,
@@ -421,6 +445,7 @@ class ZDHDashboard:
             dot.pack(side="left")
             dot.bind("<ButtonPress-1>", self.start_drag)
             dot.bind("<B1-Motion>", self.drag)
+            dot.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             name = tk.Label(
                 top,
@@ -434,6 +459,7 @@ class ZDHDashboard:
             name.pack(side="left")
             name.bind("<ButtonPress-1>", self.start_drag)
             name.bind("<B1-Motion>", self.drag)
+            name.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             status = tk.Label(
                 top,
@@ -447,6 +473,7 @@ class ZDHDashboard:
             status.pack(side="right")
             status.bind("<ButtonPress-1>", self.start_drag)
             status.bind("<B1-Motion>", self.drag)
+            status.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             for detail_text in state.detail_lines:
                 detail = tk.Label(
@@ -460,8 +487,27 @@ class ZDHDashboard:
                 detail.pack(fill="x", padx=(scaled(28), 0))
                 detail.bind("<ButtonPress-1>", self.start_drag)
                 detail.bind("<B1-Motion>", self.drag)
+                detail.bind("<Double-Button-1>", lambda _event, item=state: self.open_project_in_codex(item))
 
             self.project_rows.append(row)
+
+    def open_project_in_codex(self, state):
+        project_path = Path(state.path)
+        if not project_path.exists():
+            self.show_alert(f"Cannot open {state.name}: folder missing")
+            return
+
+        try:
+            subprocess.Popen(
+                [find_codex_exe(), "app", str(project_path)],
+                cwd=str(project_path),
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except OSError as exc:
+            self.show_alert(f"Could not open Codex: {exc}")
+            return
+
+        self.show_alert(f"Opening {state.name} in Codex")
 
     def start_drag(self, event):
         self.record_dragon_click()
