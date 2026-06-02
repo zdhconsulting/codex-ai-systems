@@ -28,6 +28,9 @@ Copy-Item -Path (Join-Path $codexHome "scripts\*.ps1") `
 Copy-Item -Path (Join-Path $codexHome "scripts\*.cmd") `
     -Destination (Join-Path $RepoPath "scripts") -Force
 
+Copy-Item -Path (Join-Path $codexHome "scripts\*.psm1") `
+    -Destination (Join-Path $RepoPath "scripts") -Force
+
 Copy-Item -Path (Join-Path $codexHome "*.config.toml") `
     -Destination (Join-Path $RepoPath "profiles") -Force
 
