@@ -69,20 +69,56 @@ def is_already_running():
 def find_codex_exe():
     env_path = os.environ.get("CODEX_CLI_PATH")
     if env_path and Path(env_path).exists():
-        return env_path
+        return str(Path(env_path).resolve())
 
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
         bin_root = Path(local_app_data) / "OpenAI" / "Codex" / "bin"
+        candidates = list(bin_root.glob("*/codex.exe"))
+        direct_exe = bin_root / "codex.exe"
+        if direct_exe.exists():
+            candidates.append(direct_exe)
+
         candidates = sorted(
-            bin_root.glob("*/codex.exe"),
+            [path for path in candidates if path.exists()],
             key=lambda path: path.stat().st_mtime,
             reverse=True,
         )
         if candidates:
             return str(candidates[0])
 
-    return "codex"
+    return None
+
+
+def find_codex_desktop_exe():
+    env_path = os.environ.get("CODEX_DESKTOP_PATH")
+    if env_path and Path(env_path).exists():
+        return str(Path(env_path).resolve())
+
+    candidates = []
+
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        local_candidates = [
+            Path(local_app_data) / "Programs" / "Codex" / "Codex.exe",
+            Path(local_app_data) / "OpenAI" / "Codex" / "Codex.exe",
+        ]
+        candidates.extend(local_candidates)
+
+    program_files = os.environ.get("ProgramFiles")
+    if program_files:
+        windows_apps = Path(program_files) / "WindowsApps"
+        try:
+            candidates.extend(windows_apps.glob("OpenAI.Codex_*\\app\\Codex.exe"))
+        except OSError:
+            pass
+
+    existing = [path for path in candidates if path.exists()]
+    existing.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    if existing:
+        return str(existing[0].resolve())
+
+    return None
 
 
 def dashboard_app_dir():
@@ -103,16 +139,6 @@ def log_action(message):
 
 def action_log_path():
     return dashboard_app_dir() / ACTION_LOG_FILE
-
-
-def launch_shell_target(target):
-    subprocess.Popen(
-        ["explorer.exe", target],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-    )
 
 
 def focus_codex_window():
@@ -573,30 +599,48 @@ class ZDHDashboard:
         self.pause_topmost()
         self.show_alert(f"Opening Codex: {state.name}", lift=False)
 
-        codex_exe = find_codex_exe()
         log_file = None
-        try:
-            log_action("wake Codex Desktop with codex: protocol")
-            launch_shell_target("codex:")
-        except OSError as exc:
-            log_action(f"codex protocol wake failed: {exc}")
 
         try:
             log_file = action_log_path().open("ab")
-            log_file.write(
-                f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] launch codex cli: {codex_exe} app {project_path}\n".encode(
-                    "utf-8"
+
+            desktop_exe = find_codex_desktop_exe()
+            if desktop_exe:
+                log_file.write(
+                    f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] launch codex desktop: {desktop_exe} --open-project {project_path}\n".encode(
+                        "utf-8"
+                    )
                 )
-            )
-            process = subprocess.Popen(
-                [codex_exe, "app", str(project_path)],
-                cwd=str(project_path),
-                stdin=subprocess.DEVNULL,
-                stdout=log_file,
-                stderr=log_file,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            )
-            log_action(f"codex cli pid: {process.pid}")
+                process = subprocess.Popen(
+                    [desktop_exe, "--open-project", str(project_path)],
+                    cwd=str(Path(desktop_exe).parent),
+                    stdin=subprocess.DEVNULL,
+                    stdout=log_file,
+                    stderr=log_file,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+                log_action(f"codex desktop pid: {process.pid}")
+            else:
+                codex_exe = find_codex_exe()
+                if not codex_exe:
+                    log_action("launch failed: Codex Desktop and CLI not found")
+                    self.show_alert("Could not find the Codex launcher")
+                    return
+
+                log_file.write(
+                    f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] fallback codex cli: {codex_exe} app {project_path}\n".encode(
+                        "utf-8"
+                    )
+                )
+                process = subprocess.Popen(
+                    [codex_exe, "app", str(project_path)],
+                    cwd=str(Path(codex_exe).parent),
+                    stdin=subprocess.DEVNULL,
+                    stdout=log_file,
+                    stderr=log_file,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+                log_action(f"codex cli fallback pid: {process.pid}")
         except OSError as exc:
             log_action(f"launch failed: {exc}")
             self.show_alert(f"Could not open Codex: {exc}")
