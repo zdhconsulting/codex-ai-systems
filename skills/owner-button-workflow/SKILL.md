@@ -89,6 +89,26 @@ Default to the lightest gear that can do the job safely. Begin substantial tasks
 
 `Gear: low|medium|high|xhigh - brief reason.`
 
+## Actual Gear Routing
+
+For new Codex CLI/automation work, use the real profile router:
+
+`C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
+
+To inspect the selected route without launching work:
+
+`C:\Users\zev\.codex\scripts\codex-gear.cmd "TASK"`
+
+Model/profile plan:
+
+- `low` / `fast`: `gpt-5.3-codex-spark`, low reasoning, for ultra-fast simple coding and mechanical tasks.
+- `medium` / `balanced`: `gpt-5.4`, medium reasoning, for normal implementation work.
+- `high` / `deep`: `gpt-5.5`, high reasoning, for debugging, CI, regressions, multi-file work, deploy issues, and verification-heavy tasks.
+- `xhigh` / `max`: `gpt-5.5`, xhigh reasoning, for architecture, auth, security, billing, database, permissions, and production-risk work.
+- `review`: `codex-auto-review`, medium reasoning, for explicit code review, PR review, diff review, or commit review.
+
+In an already-open Desktop chat, a gear label is a working-mode signal unless the session itself was launched with the matching profile. Actual model switching happens through `codex-auto.cmd` or a Codex profile.
+
 If a task mixes easy and risky parts, choose the gear for the riskiest part, then move back down once that part is done.
 
 Use `low` for quick, obvious work:

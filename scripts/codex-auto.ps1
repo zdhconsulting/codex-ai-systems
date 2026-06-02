@@ -11,87 +11,25 @@ if (-not $prompt) {
     exit 2
 }
 
-$normalized = $prompt.ToLowerInvariant()
+$modulePath = Join-Path $PSScriptRoot "CodexGear.psm1"
+Import-Module $modulePath -Force
 
-function Select-CodexProfile {
-    param([string] $Text)
+$profile = Select-CodexGear -Text $prompt
+$gear = Get-CodexGear -Profile $profile
 
-    if ($Text -match "\[(low|fast)\]" -or $Text -match "\b--(low|fast)\b") {
-        return "fast"
-    }
-    if ($Text -match "\[(medium|balanced)\]" -or $Text -match "\b--(medium|balanced)\b") {
-        return "balanced"
-    }
-    if ($Text -match "\[(high|deep)\]" -or $Text -match "\b--(high|deep)\b") {
-        return "deep"
-    }
-    if ($Text -match "\[(xhigh|max)\]" -or $Text -match "\b--(xhigh|max)\b") {
-        return "max"
-    }
-
-    $score = 0
-
-    $lowPatterns = @(
-        "\btypo\b", "\bcopy\b", "\btext change\b", "\blink\b", "\bbutton\b",
-        "\bcolor\b", "\bspacing\b", "\brename\b", "\bstatus\b", "\bquick\b",
-        "\bcommit\b", "\bpush\b", "\bshow me\b"
-    )
-    foreach ($pattern in $lowPatterns) {
-        if ($Text -match $pattern) { $score -= 1 }
-    }
-
-    $mediumPatterns = @(
-        "\badd\b", "\bbuild\b", "\bcreate\b", "\bfix\b", "\bform\b",
-        "\bpage\b", "\bcomponent\b", "\bstyle\b", "\bmobile\b", "\bresponsive\b"
-    )
-    foreach ($pattern in $mediumPatterns) {
-        if ($Text -match $pattern) { $score += 1 }
-    }
-
-    $highPatterns = @(
-        "\bdebug\b", "\bfailing\b", "\btest\b", "\bci\b", "\breview\b",
-        "\bregression\b", "\bperformance\b", "\brefactor\b", "\bmigration\b",
-        "\bmulti[- ]file\b", "\bacross the site\b", "\bproduction\b", "\bdeploy\b"
-    )
-    foreach ($pattern in $highPatterns) {
-        if ($Text -match $pattern) { $score += 2 }
-    }
-
-    $maxHits = 0
-    $maxPatterns = @(
-        "\barchitecture\b", "\bsecurity\b", "\bauth\b", "\bbilling\b",
-        "\bpayments?\b", "\bdatabase\b", "\bdata loss\b", "\bpermissions?\b",
-        "\bstrategy\b", "\bcomplex\b", "\brace condition\b", "\bthreading\b"
-    )
-    foreach ($pattern in $maxPatterns) {
-        if ($Text -match $pattern) {
-            $score += 3
-            $maxHits += 1
-        }
-    }
-
-    if ($maxHits -gt 0) { return "max" }
-    if ($score -le 0) { return "fast" }
-    if ($score -le 4) { return "balanced" }
-    return "deep"
-}
-
-$profile = Select-CodexProfile -Text $normalized
-$effortByProfile = @{
-    fast = "low"
-    balanced = "medium"
-    deep = "high"
-    max = "xhigh"
-}
-
-Write-Host "Codex auto gear: $profile ($($effortByProfile[$profile]))"
+Write-Host "Codex auto gear: $($gear.Profile) ($($gear.Gear))"
+Write-Host "Model: $($gear.Model)"
+Write-Host "Reasoning effort: $($gear.Effort)"
+$tier = if ($gear.ServiceTier) { $gear.ServiceTier } else { "(default/none)" }
+Write-Host "Service tier: $tier"
 Write-Host "Workspace: $Cwd"
+Write-Host "Command: codex $($gear.Command)"
 
 $logDir = Join-Path $env:USERPROFILE ".codex\logs"
 $logPath = Join-Path $logDir "reasoning-gear.log"
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-"[$timestamp] $profile/$($effortByProfile[$profile]) | $Cwd | $prompt" | Add-Content -Path $logPath
+"[$timestamp] $($gear.Profile)/$($gear.Gear) | model=$($gear.Model) | effort=$($gear.Effort) | tier=$tier | $Cwd | $prompt" | Add-Content -Path $logPath
 
 if ($DryRun) {
     Write-Host "Dry run only. Prompt: $prompt"
@@ -99,5 +37,10 @@ if ($DryRun) {
     exit 0
 }
 
-$codex = Join-Path $env:LOCALAPPDATA "OpenAI\Codex\bin\7dea4a003bc76627\codex.exe"
-& $codex exec -C $Cwd -p $profile $prompt
+$codex = Get-CodexExecutable
+if ($gear.Command -eq "review") {
+    $configArgs = New-CodexConfigArgs -Gear $gear
+    & $codex review @configArgs $prompt
+} else {
+    & $codex exec -C $Cwd -p $profile $prompt
+}

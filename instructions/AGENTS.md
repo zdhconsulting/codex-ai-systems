@@ -54,6 +54,26 @@ For visibility, begin substantial tasks with one short line:
 
 Skip the gear line only for tiny conversational replies where it would add clutter. In Desktop sessions this is a visible working-mode label; the actual model reasoning setting may still be controlled by the current session/profile.
 
+## Actual Gear Routing
+
+When launching new Codex CLI/automation work, use the real profile router:
+
+`C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
+
+Check the selected route without launching work:
+
+`C:\Users\zev\.codex\scripts\codex-gear.cmd "TASK"`
+
+The actual model/profile plan is:
+
+- `low` / `fast`: `gpt-5.3-codex-spark`, low reasoning, for ultra-fast simple coding and mechanical tasks.
+- `medium` / `balanced`: `gpt-5.4`, medium reasoning, for normal implementation work.
+- `high` / `deep`: `gpt-5.5`, high reasoning, for debugging, CI, regressions, multi-file work, deploy issues, and verification-heavy tasks.
+- `xhigh` / `max`: `gpt-5.5`, xhigh reasoning, for architecture, auth, security, billing, database, permissions, and production-risk work.
+- `review`: `codex-auto-review`, medium reasoning, for explicit code review, PR review, diff review, or commit review.
+
+In an already-open Desktop chat, Codex cannot guarantee changing the current session's model just by printing a gear label. The label still controls working behavior. Actual model switching happens when the task is launched through `codex-auto.cmd` or a Codex profile.
+
 ## Reasoning Gear Examples
 
 If a task includes multiple risk levels, choose the highest gear needed for the riskiest part. Move down again once the risky part is finished.

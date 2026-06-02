@@ -1,0 +1,3 @@
+model = "codex-auto-review"
+model_reasoning_effort = "medium"
+service_tier = ""
