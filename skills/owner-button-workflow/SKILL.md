@@ -115,6 +115,10 @@ To refresh project freshness colors in the Codex left bar:
 
 `C:\Users\zev\.codex\scripts\codex-project-freshness.cmd`
 
+If Desktop does not show the project marker colors after a restart, start the after-exit helper and then close Codex Desktop:
+
+`C:\Users\zev\.codex\scripts\codex-project-freshness-after-exit.cmd`
+
 To force a route:
 
 - `C:\Users\zev\.codex\scripts\codex-low.cmd "TASK"`

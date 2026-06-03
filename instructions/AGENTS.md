@@ -80,6 +80,10 @@ Refresh project freshness colors in the Codex left bar:
 
 `C:\Users\zev\.codex\scripts\codex-project-freshness.cmd`
 
+If Desktop did not show the left-bar project marker colors after a restart, start the after-exit helper, then close Codex Desktop. The helper waits until Desktop is fully closed, rewrites the freshness state with UTF-8 without BOM, and relaunches Codex:
+
+`C:\Users\zev\.codex\scripts\codex-project-freshness-after-exit.cmd`
+
 Force a specific route:
 
 - `C:\Users\zev\.codex\scripts\codex-low.cmd "TASK"`
