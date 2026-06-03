@@ -22,6 +22,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `scripts/codex-doctor.cmd`: runs the local systems health check.
 - `scripts/codex-gear.cmd`: shows which model/profile a task will use.
 - `scripts/codex-gear-test.cmd`: verifies profile files, forced commands, route selection, and optional real smoke tests.
+- `scripts/codex-project-freshness.cmd`: colors saved Codex project labels by last modified age.
 - `scripts/codex-systems-status.cmd`: shows current repo, owner buttons, gear routes, and systems backup state.
 - `scripts/codex-low.cmd`, `codex-medium.cmd`, `codex-high.cmd`, `codex-xhigh.cmd`, `codex-xhigh-bounce.cmd`, `codex-xhigh-raw.cmd`, `codex-council.cmd`, `codex-review.cmd`: force a specific model/profile route.
 - `scripts/codex-handoff.cmd`: creates a portable handoff note for another Codex or computer.
@@ -80,6 +81,12 @@ Show current repo, owner buttons, gear routes, and systems backup state:
 .\scripts\codex-systems-status.cmd
 ```
 
+Refresh project freshness colors:
+
+```powershell
+.\scripts\codex-project-freshness.cmd
+```
+
 Force a specific model/profile route:
 
 ```powershell
@@ -112,6 +119,20 @@ Self-bounce is available for xhigh work. It runs a read-only ephemeral preflight
 Council mode is enforced by default for xhigh implementation launched through `codex-auto.cmd`. It stages the task as CEO Agent requirements, CTO Agent architecture, Programmer Agent implementation, and Tester/QA Agent review/fix loops. The preflight must include `CEO Agent`, `CTO Agent`, `Tester/QA Agent`, and `Programmer Brief`, or implementation does not start. Use `codex-xhigh-raw.cmd` or `[nocouncil]` only when raw xhigh is explicitly needed.
 
 `gpt-5.4-mini` is available but not used by default; keep it as a low/medium fallback if Spark is too shallow or unavailable.
+
+## Project Freshness Colors
+
+`install.ps1` configures `~/.codex/config.toml` so `notify` runs `scripts/codex-notify-router.cmd` at turn end. The router forwards the normal computer-use notification, then runs `codex-project-freshness.cmd`.
+
+The freshness script reads saved/trusted project roots, checks the most recent file timestamp while skipping common generated folders, and updates `electron-workspace-root-labels` in `.codex-global-state.json` with visible freshness markers:
+
+- `FRESH`: touched within 24 hours.
+- `WARM`: touched within 3 days.
+- `AGING`: touched within 7 days.
+- `STALE`: touched within 14 days.
+- `DORMANT`: untouched longer than 14 days.
+
+CLI output uses ANSI colors. The Codex left bar uses colored label markers because the desktop UI does not expose a per-project CSS theme key in `config.toml`.
 
 Create a handoff note for another Codex:
 

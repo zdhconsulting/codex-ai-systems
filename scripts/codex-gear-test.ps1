@@ -84,6 +84,10 @@ $requiredScripts = @(
     "codex-gear.ps1",
     "codex-gear-test.cmd",
     "codex-gear-test.ps1",
+    "codex-notify-router.cmd",
+    "codex-notify-router.ps1",
+    "codex-project-freshness.cmd",
+    "codex-project-freshness.ps1",
     "codex-systems-status.cmd",
     "codex-systems-status.ps1",
     "codex-low.cmd",
@@ -150,6 +154,9 @@ Assert-True ($autoCouncilDryRun -match "Council mode: auto-on") "Auto xhigh dry-
 $noCouncilDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -NoCouncil -Cwd $CodexHome "[xhigh] change auth permissions" 2>&1 6>&1 | Out-String)
 Assert-True ($noCouncilDryRun -match "Self-bounce: off") "NoCouncil dry-run disables auto council preflight"
 Assert-True ($noCouncilDryRun -match "Council mode: off by explicit override") "NoCouncil dry-run reports explicit override"
+
+$freshnessDryRun = (& (Join-Path $scriptDir "codex-project-freshness.ps1") -CodexHome $CodexHome -NoUpdateLabels -ProjectPath $CodexHome -Json 2>&1 6>&1 | Out-String)
+Assert-True ($freshnessDryRun -match '"Status"') "Project freshness report returns status"
 
 try {
     $codex = Get-CodexExecutable

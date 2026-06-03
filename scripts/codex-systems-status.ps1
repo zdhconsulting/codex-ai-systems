@@ -121,6 +121,7 @@ if (Test-Path -LiteralPath $SystemsRepo) {
 
 Write-Section "Useful Commands"
 Write-Host "$scriptRoot\codex-systems-status.cmd"
+Write-Host "$scriptRoot\codex-project-freshness.cmd"
 Write-Host "$scriptRoot\codex-bounce.cmd `"plan database migration safely`""
 Write-Host "$scriptRoot\codex-council.cmd `"build billing-safe workflow`""
 Write-Host "$scriptRoot\codex-xhigh-raw.cmd `"raw xhigh without council`""

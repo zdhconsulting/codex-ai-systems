@@ -19,6 +19,21 @@ Copy-Item -Path (Join-Path $repoRoot "scripts\*") `
 Copy-Item -Path (Join-Path $repoRoot "profiles\*.config.toml") `
     -Destination $CodexHome -Force
 
+$configPath = Join-Path $CodexHome "config.toml"
+$notifyPath = Join-Path $CodexHome "scripts\codex-notify-router.cmd"
+$notifyLine = 'notify = [ "' + ($notifyPath -replace '\\', '\\') + '", "turn-ended" ]'
+if (Test-Path -LiteralPath $configPath) {
+    $configText = Get-Content -LiteralPath $configPath -Raw
+    if ($configText -match '(?m)^notify\s*=') {
+        $configText = [regex]::Replace($configText, '(?m)^notify\s*=.*$', $notifyLine, 1)
+    } else {
+        $configText = $notifyLine + "`r`n" + $configText
+    }
+    Set-Content -LiteralPath $configPath -Value $configText -Encoding UTF8
+} else {
+    Set-Content -LiteralPath $configPath -Value ($notifyLine + "`r`n") -Encoding UTF8
+}
+
 Copy-Item -LiteralPath (Join-Path $repoRoot "skills\owner-button-workflow\SKILL.md") `
     -Destination (Join-Path $CodexHome "skills\owner-button-workflow\SKILL.md") -Force
 
@@ -37,3 +52,4 @@ Write-Host "$CodexHome\scripts\git-guard.cmd"
 Write-Host "$CodexHome\scripts\codex-doctor.cmd"
 Write-Host "$CodexHome\scripts\codex-gear-test.cmd"
 Write-Host "$CodexHome\scripts\codex-systems-status.cmd"
+Write-Host "$CodexHome\scripts\codex-project-freshness.cmd"

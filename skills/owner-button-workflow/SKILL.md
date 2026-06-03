@@ -111,6 +111,10 @@ To run the full local Codex systems health check:
 
 `C:\Users\zev\.codex\scripts\codex-doctor.cmd`
 
+To refresh project freshness colors in the Codex left bar:
+
+`C:\Users\zev\.codex\scripts\codex-project-freshness.cmd`
+
 To force a route:
 
 - `C:\Users\zev\.codex\scripts\codex-low.cmd "TASK"`

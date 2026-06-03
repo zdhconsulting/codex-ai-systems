@@ -76,6 +76,10 @@ Run the full local Codex systems health check:
 
 `C:\Users\zev\.codex\scripts\codex-doctor.cmd`
 
+Refresh project freshness colors in the Codex left bar:
+
+`C:\Users\zev\.codex\scripts\codex-project-freshness.cmd`
+
 Force a specific route:
 
 - `C:\Users\zev\.codex\scripts\codex-low.cmd "TASK"`
