@@ -3,6 +3,9 @@ param(
     [string] $StatePath = "",
     [string[]] $ProjectPath = @(),
     [switch] $NoUpdateLabels,
+    [switch] $NoUpdateAppearances,
+    [switch] $IncludeTrustedProjects,
+    [switch] $PatchLabels,
     [switch] $Json,
     [switch] $Quiet,
     [int] $MaxFilesPerProject = 30000
@@ -42,6 +45,177 @@ function ConvertTo-JsonObjectText {
     return ($ordered | ConvertTo-Json -Depth 5 -Compress)
 }
 
+function Write-Utf8NoBomFile {
+    param(
+        [string] $Path,
+        [string] $Text
+    )
+
+    $encoding = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Text, $encoding)
+}
+
+function Find-JsonPropertyRange {
+    param(
+        [string] $Text,
+        [string] $PropertyName
+    )
+
+    $propertyPattern = '"' + [regex]::Escape($PropertyName) + '"\s*:'
+    $match = [regex]::Match($Text, $propertyPattern)
+    if (-not $match.Success) { return $null }
+
+    $valueStart = $match.Index + $match.Length
+    while ($valueStart -lt $Text.Length -and [char]::IsWhiteSpace($Text[$valueStart])) {
+        $valueStart++
+    }
+    if ($valueStart -ge $Text.Length -or $Text[$valueStart] -ne "{") {
+        throw "Property '$PropertyName' is not a JSON object."
+    }
+
+    $depth = 0
+    $inString = $false
+    $escaped = $false
+    for ($i = $valueStart; $i -lt $Text.Length; $i++) {
+        $ch = $Text[$i]
+        if ($inString) {
+            if ($escaped) {
+                $escaped = $false
+            } elseif ($ch -eq "\") {
+                $escaped = $true
+            } elseif ($ch -eq '"') {
+                $inString = $false
+            }
+            continue
+        }
+
+        if ($ch -eq '"') {
+            $inString = $true
+        } elseif ($ch -eq "{") {
+            $depth++
+        } elseif ($ch -eq "}") {
+            $depth--
+            if ($depth -eq 0) {
+                return [pscustomobject]@{
+                    PropertyStart = $match.Index
+                    PropertyLength = ($i + 1) - $match.Index
+                    ValueStart = $valueStart
+                    ValueLength = ($i + 1) - $valueStart
+                    ValueText = $Text.Substring($valueStart, ($i + 1) - $valueStart)
+                }
+            }
+        }
+    }
+
+    throw "Could not find the end of property '$PropertyName'."
+}
+
+function Get-JsonObjectMapFromState {
+    param(
+        [string] $Path,
+        [string] $PropertyName
+    )
+
+    $map = @{}
+    if (-not (Test-Path -LiteralPath $Path)) { return $map }
+
+    $raw = Get-Content -LiteralPath $Path -Raw
+    $range = Find-JsonPropertyRange -Text $raw -PropertyName $PropertyName
+    if (-not $range) { return $map }
+
+    try {
+        $object = $range.ValueText | ConvertFrom-Json
+        foreach ($property in $object.PSObject.Properties) {
+            $map[$property.Name] = $property.Value
+        }
+    } catch {
+        return @{}
+    }
+
+    return $map
+}
+
+function Get-RootJsonObjectMapFromState {
+    param(
+        [string] $Path,
+        [string] $PropertyName
+    )
+
+    $map = @{}
+    if (-not (Test-Path -LiteralPath $Path)) { return $map }
+
+    try {
+        $stateObject = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+        $property = $stateObject.PSObject.Properties[$PropertyName]
+        if (-not $property) { return $map }
+        foreach ($child in $property.Value.PSObject.Properties) {
+            $map[$child.Name] = $child.Value
+        }
+    } catch {
+        return @{}
+    }
+
+    return $map
+}
+
+function Set-RootJsonObjectPropertyInState {
+    param(
+        [string] $Path,
+        [string] $PropertyName,
+        [hashtable] $Map
+    )
+
+    $backup = "$Path.bak-project-freshness-$(Get-Date -Format 'yyyyMMddHHmmss')"
+    Copy-Item -LiteralPath $Path -Destination $backup -Force
+
+    $stateObject = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    $ordered = [ordered]@{}
+    foreach ($key in ($Map.Keys | Sort-Object)) {
+        $ordered[$key] = $Map[$key]
+    }
+
+    $existing = $stateObject.PSObject.Properties[$PropertyName]
+    if ($existing) {
+        $stateObject.PSObject.Properties.Remove($PropertyName)
+    }
+    $stateObject | Add-Member -NotePropertyName $PropertyName -NotePropertyValue ([pscustomobject]$ordered) -Force
+
+    $atom = $stateObject.PSObject.Properties["electron-persisted-atom-state"].Value
+    if ($atom -and $atom.PSObject.Properties[$PropertyName]) {
+        $atom.PSObject.Properties.Remove($PropertyName)
+    }
+
+    Write-Utf8NoBomFile -Path $Path -Text ($stateObject | ConvertTo-Json -Depth 100 -Compress)
+    return $backup
+}
+
+function Set-JsonObjectPropertyInState {
+    param(
+        [string] $Path,
+        [string] $PropertyName,
+        [hashtable] $Map
+    )
+
+    $raw = Get-Content -LiteralPath $Path -Raw
+    $propertyJson = '"' + $PropertyName + '":' + (ConvertTo-JsonObjectText -Map $Map)
+    $backup = "$Path.bak-project-freshness-$(Get-Date -Format 'yyyyMMddHHmmss')"
+    Copy-Item -LiteralPath $Path -Destination $backup -Force
+
+    $range = Find-JsonPropertyRange -Text $raw -PropertyName $PropertyName
+    if ($range) {
+        $updated = $raw.Substring(0, $range.PropertyStart) + $propertyJson + $raw.Substring($range.PropertyStart + $range.PropertyLength)
+    } else {
+        $atomPattern = '"electron-persisted-atom-state"\s*:\s*\{'
+        if (-not [regex]::IsMatch($raw, $atomPattern)) {
+            throw "Cannot find electron-persisted-atom-state in $Path"
+        }
+        $updated = [regex]::Replace($raw, $atomPattern, '$0' + $propertyJson + ',', 1)
+    }
+
+    Write-Utf8NoBomFile -Path $Path -Text $updated
+    return $backup
+}
+
 function Set-WorkspaceLabelsInState {
     param(
         [string] $Path,
@@ -64,7 +238,7 @@ function Set-WorkspaceLabelsInState {
         $updated = [regex]::Replace($raw, $atomPattern, '$0"electron-workspace-root-labels":' + $labelsJson + ',', 1)
     }
 
-    Set-Content -LiteralPath $Path -Value $updated -Encoding UTF8
+    Write-Utf8NoBomFile -Path $Path -Text $updated
     return $backup
 }
 
@@ -85,6 +259,33 @@ function Get-WorkspaceLabelsFromRawState {
         }
     } catch {
         return @{}
+    }
+
+    return $map
+}
+
+function Get-CanonicalProjectPathMap {
+    param($State)
+
+    $map = @{}
+    function Add-CanonicalPath {
+        param([string] $Candidate)
+        $normalized = Normalize-ProjectPath $Candidate
+        if (-not $normalized) { return }
+        $map[$normalized.ToLowerInvariant()] = $normalized
+    }
+
+    if ($State) {
+        foreach ($path in @($State.'electron-saved-workspace-roots')) { Add-CanonicalPath $path }
+        foreach ($path in @($State.'active-workspace-roots')) { Add-CanonicalPath $path }
+        foreach ($path in @($State.'project-order')) { Add-CanonicalPath $path }
+
+        $atom = $State.'electron-persisted-atom-state'
+        if ($atom) {
+            foreach ($path in @($atom.'electron-saved-workspace-roots')) { Add-CanonicalPath $path }
+            foreach ($path in @($atom.'active-workspace-roots')) { Add-CanonicalPath $path }
+            foreach ($path in @($atom.'project-order')) { Add-CanonicalPath $path }
+        }
     }
 
     return $map
@@ -111,6 +312,10 @@ function Get-ProjectRoots {
     foreach ($path in $ProjectPath) { Add-Root $path }
 
     if ($State) {
+        foreach ($path in @($State.'electron-saved-workspace-roots')) { Add-Root $path }
+        foreach ($path in @($State.'active-workspace-roots')) { Add-Root $path }
+        foreach ($path in @($State.'project-order')) { Add-Root $path }
+
         $atom = $State.'electron-persisted-atom-state'
         if ($atom) {
             foreach ($path in @($atom.'electron-saved-workspace-roots')) { Add-Root $path }
@@ -119,7 +324,7 @@ function Get-ProjectRoots {
         }
     }
 
-    if (Test-Path -LiteralPath $configPath) {
+    if ($IncludeTrustedProjects -and (Test-Path -LiteralPath $configPath)) {
         $configText = Get-Content -LiteralPath $configPath -Raw
         $matches = [regex]::Matches($configText, "\[projects\.'([^']+)'\]")
         foreach ($match in $matches) { Add-Root $match.Groups[1].Value }
@@ -187,6 +392,18 @@ function Get-FreshnessBand {
     return [pscustomobject]@{ Name = "dormant"; Label = "DORMANT"; Ansi = "90"; Icon = [char]::ConvertFromUtf32(0x26AB) }
 }
 
+function Get-CodexAppearanceColor {
+    param([string] $Status)
+
+    switch ($Status) {
+        "fresh" { return "green" }
+        "warm" { return "yellow" }
+        "aging" { return "orange" }
+        "stale" { return "red" }
+        default { return "black" }
+    }
+}
+
 function Strip-FreshnessPrefix {
     param([string] $Label)
     if (-not $Label) { return "" }
@@ -206,14 +423,16 @@ function Strip-FreshnessPrefix {
 }
 
 $state = Get-StateObject
+$canonicalProjectPaths = Get-CanonicalProjectPathMap -State $state
 $roots = Get-ProjectRoots -State $state
 $now = Get-Date
 $results = foreach ($root in $roots) {
     $write = Get-LatestProjectWrite -Root $root
     $age = $now - $write.LastModified
     $band = Get-FreshnessBand -Age $age
+    $canonicalRoot = if ($canonicalProjectPaths.ContainsKey($root.ToLowerInvariant())) { $canonicalProjectPaths[$root.ToLowerInvariant()] } else { $root }
     [pscustomobject]@{
-        Path = $root
+        Path = $canonicalRoot
         Name = Split-Path -Leaf $root
         LastModified = $write.LastModified.ToString("s")
         AgeDays = [math]::Round($age.TotalDays, 2)
@@ -221,12 +440,43 @@ $results = foreach ($root in $roots) {
         Label = $band.Label
         Icon = $band.Icon
         Ansi = $band.Ansi
+        CodexAppearanceColor = Get-CodexAppearanceColor -Status $band.Name
         FilesScanned = $write.FilesScanned
         HitLimit = $write.HitLimit
     }
 }
 
-if (-not $NoUpdateLabels -and (Test-Path -LiteralPath $StatePath) -and $results.Count -gt 0) {
+if (-not $NoUpdateAppearances -and -not $NoUpdateLabels -and (Test-Path -LiteralPath $StatePath) -and $results.Count -gt 0) {
+        $appearanceMap = Get-RootJsonObjectMapFromState -Path $StatePath -PropertyName "project-appearances"
+
+        foreach ($project in $results) {
+            $path = $project.Path
+            $existing = if ($appearanceMap.ContainsKey($path)) { $appearanceMap[$path] } else { $null }
+            $marker = $null
+            if ($existing -and $existing.marker) {
+                $marker = $existing.marker
+            } else {
+                $marker = [ordered]@{ kind = "icon"; icon = "folder" }
+            }
+            $appearanceMap[$path] = [ordered]@{
+                color = $project.CodexAppearanceColor
+                marker = $marker
+            }
+        }
+
+        $appearanceBackup = Set-RootJsonObjectPropertyInState -Path $StatePath -PropertyName "project-appearances" -Map $appearanceMap
+
+        $cacheOut = [pscustomobject]@{
+            lastRun = (Get-Date).ToString("s")
+            appearanceStateBackup = $appearanceBackup
+            appearanceUpdated = $true
+            labelPatchEnabled = $false
+            projects = $results
+        }
+        Write-Utf8NoBomFile -Path $cachePath -Text ($cacheOut | ConvertTo-Json -Depth 20)
+}
+
+if ($PatchLabels -and -not $NoUpdateLabels -and (Test-Path -LiteralPath $StatePath) -and $results.Count -gt 0) {
         $labelMap = Get-WorkspaceLabelsFromRawState -Path $StatePath
 
         if (Test-Path -LiteralPath $cachePath) {
@@ -259,7 +509,7 @@ if (-not $NoUpdateLabels -and (Test-Path -LiteralPath $StatePath) -and $results.
             originalLabels = $cache.originalLabels
             projects = $results
         }
-        $cacheOut | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $cachePath -Encoding UTF8
+        Write-Utf8NoBomFile -Path $cachePath -Text ($cacheOut | ConvertTo-Json -Depth 20)
 }
 
 if ($Json) {
