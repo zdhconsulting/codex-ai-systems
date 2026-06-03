@@ -77,6 +77,7 @@ $requiredScripts = @(
     "codex-auto.cmd",
     "codex-auto.ps1",
     "codex-bounce.cmd",
+    "codex-council.cmd",
     "codex-doctor.cmd",
     "codex-doctor.ps1",
     "codex-gear.cmd",
@@ -136,6 +137,10 @@ Assert-True ($bounceDryRun -match "Self-bounce: bounce-then-execute") "Bounce dr
 
 $bounceOnlyDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -BounceOnly -Cwd $CodexHome "change auth permissions" 2>&1 6>&1 | Out-String)
 Assert-True ($bounceOnlyDryRun -match "Self-bounce: bounce-only") "BounceOnly dry-run enables max preflight"
+
+$councilDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -Council -Cwd $CodexHome "[xhigh] build billing-safe workflow" 2>&1 6>&1 | Out-String)
+Assert-True ($councilDryRun -match "Self-bounce: council-bounce-then-execute") "Council dry-run enables xhigh council preflight"
+Assert-True ($councilDryRun -match "Council mode: on") "Council dry-run reports council mode"
 
 try {
     $codex = Get-CodexExecutable

@@ -84,6 +84,7 @@ Force a specific route:
 - `C:\Users\zev\.codex\scripts\codex-xhigh.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-xhigh-bounce.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-bounce.cmd "TASK"`
+- `C:\Users\zev\.codex\scripts\codex-council.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-review.cmd "TASK"`
 
 The actual model/profile plan is:
@@ -99,6 +100,14 @@ Highest-gear self-bounce:
 - Use `codex-xhigh-bounce.cmd "TASK"` when xhigh work should first compare approaches, critique risks, define validation, then execute.
 - Use `codex-bounce.cmd "TASK"` when only the xhigh preflight ideas are needed and no implementation should start.
 - Self-bounce runs the preflight in read-only ephemeral mode before execution. Use it for architecture, auth, security, billing, database, production-risk, ambiguous failures, and other work where trying the first idea is too risky.
+
+CEO/CTO/Programmer/QA council:
+
+- Use `codex-council.cmd "TASK"` for complex xhigh implementation where the agent should stage itself as CEO Agent, CTO Agent, Programmer Agent, and Tester/QA Agent.
+- CEO Agent scopes requirements and success criteria.
+- CTO Agent chooses the technical approach and risk controls.
+- Programmer Agent implements the smallest correct change set.
+- Tester/QA Agent reviews, tests, and pushes bugs back to Programmer Agent until clean or truly blocked.
 
 Available but not the default:
 

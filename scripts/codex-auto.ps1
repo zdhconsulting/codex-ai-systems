@@ -2,6 +2,7 @@ param(
     [switch] $DryRun,
     [switch] $Bounce,
     [switch] $BounceOnly,
+    [switch] $Council,
     [string] $Cwd = (Get-Location).Path,
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
     [string[]] $PromptParts
@@ -9,14 +10,21 @@ param(
 
 $prompt = ($PromptParts -join " ").Trim()
 $tagBounce = $false
+$tagCouncil = $false
 if ($prompt -match "\[(bounce|debate|preflight)\]" -or $prompt -match "\s--(bounce|debate|preflight)\b") {
     $tagBounce = $true
     $prompt = (($prompt -replace "\[(bounce|debate|preflight)\]", "") -replace "\s--(bounce|debate|preflight)\b", "").Trim()
 }
+if ($prompt -match "\[(council|agents)\]" -or $prompt -match "\s--(council|agents)\b") {
+    $tagCouncil = $true
+    $prompt = (($prompt -replace "\[(council|agents)\]", "") -replace "\s--(council|agents)\b", "").Trim()
+}
 if ($tagBounce) { $Bounce = $true }
+if ($tagCouncil) { $Council = $true }
 if ($BounceOnly) { $Bounce = $true }
+if ($Council) { $Bounce = $true }
 if (-not $prompt) {
-    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Cwd PATH] <task prompt>"
+    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Council] [-Cwd PATH] <task prompt>"
     exit 2
 }
 
@@ -34,15 +42,17 @@ Write-Host "Service tier: $tier"
 Write-Host "Workspace: $Cwd"
 Write-Host "Command: codex $($gear.Command)"
 $bounceEnabled = $Bounce -and $gear.Profile -eq "max" -and $gear.Command -eq "exec"
-$bounceMode = if ($BounceOnly) { "bounce-only" } elseif ($bounceEnabled) { "bounce-then-execute" } elseif ($Bounce) { "requested but skipped; only max/xhigh exec routes bounce" } else { "off" }
+$councilEnabled = $Council -and $gear.Profile -eq "max" -and $gear.Command -eq "exec"
+$bounceMode = if ($BounceOnly) { "bounce-only" } elseif ($councilEnabled) { "council-bounce-then-execute" } elseif ($bounceEnabled) { "bounce-then-execute" } elseif ($Bounce) { "requested but skipped; only max/xhigh exec routes bounce" } else { "off" }
 Write-Host "Self-bounce: $bounceMode"
+Write-Host "Council mode: $(if ($councilEnabled) { "on" } elseif ($Council) { "requested but skipped; only max/xhigh exec routes use council" } else { "off" })"
 
 $codexHome = Split-Path -Parent $PSScriptRoot
 $logDir = Join-Path $codexHome "logs"
 $logPath = Join-Path $logDir "reasoning-gear.log"
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-"[$timestamp] $($gear.Profile)/$($gear.Gear) | model=$($gear.Model) | effort=$($gear.Effort) | tier=$tier | bounce=$bounceMode | $Cwd | $prompt" | Add-Content -Path $logPath
+"[$timestamp] $($gear.Profile)/$($gear.Gear) | model=$($gear.Model) | effort=$($gear.Effort) | tier=$tier | bounce=$bounceMode | council=$Council | $Cwd | $prompt" | Add-Content -Path $logPath
 
 if ($DryRun) {
     Write-Host "Dry run only. Prompt: $prompt"
@@ -55,12 +65,32 @@ function Invoke-SelfBounce {
         [string] $CodexPath,
         [string] $Workspace,
         [string] $TaskPrompt,
-        [string] $OutputDir
+        [string] $OutputDir,
+        [switch] $CouncilMode
     )
 
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
     $outFile = Join-Path $OutputDir "xhigh-bounce-$stamp-$PID.md"
-    $bouncePrompt = @"
+    $runLog = Join-Path $OutputDir "xhigh-bounce-$stamp-$PID.run.log"
+    if ($CouncilMode) {
+        $bouncePrompt = @"
+You are the xhigh CEO/CTO preflight council for a Codex implementation task.
+
+Task:
+$TaskPrompt
+
+Rules:
+- Do not edit files, run commands, commit, push, deploy, or take external actions.
+- Think before trying. Produce a better implementation direction before execution starts.
+- CEO Agent scopes the requirements, success criteria, user value, and owner-only blockers.
+- CTO Agent chooses the technical approach using the existing repo and stack unless there is a strong reason not to.
+- Tester/QA Agent predicts likely bugs, missing tests, edge cases, and verification steps before implementation starts.
+- End with a concise Programmer Brief: exact first steps, files or areas to inspect, risks, and validation commands.
+- If an Owner button or Commander approval would truly be needed, say exactly why.
+- Use plain ASCII text only. Avoid smart quotes and special punctuation.
+"@
+    } else {
+        $bouncePrompt = @"
 You are the xhigh preflight council for a Codex implementation task.
 
 Task:
@@ -75,13 +105,15 @@ Rules:
 - Verifier defines the smallest useful validation plan.
 - End with a concise final recommendation and first implementation steps.
 - If an Owner button or Commander approval would truly be needed, say exactly why.
+- Use plain ASCII text only. Avoid smart quotes and special punctuation.
 "@
+    }
 
     Write-Host "Running xhigh self-bounce preflight..."
-    $bouncePrompt | & $CodexPath exec -C $Workspace --sandbox read-only --ephemeral -p max -o $outFile "-" 2>&1 | Out-Host
+    $bouncePrompt | & $CodexPath exec -C $Workspace --sandbox read-only --ephemeral -p max -o $outFile "-" *> $runLog
     $preflightExitCode = $LASTEXITCODE
     if ($preflightExitCode -ne 0) {
-        throw "Self-bounce preflight failed with exit code $preflightExitCode"
+        throw "Self-bounce preflight failed with exit code $preflightExitCode. Run log: $runLog"
     }
     if (-not (Test-Path -LiteralPath $outFile)) {
         throw "Self-bounce output was not created: $outFile"
@@ -93,8 +125,10 @@ Rules:
     }
 
     Write-Host "Self-bounce output: $outFile"
+    Write-Host "Self-bounce run log: $runLog"
     return [pscustomobject]@{
         Path = $outFile
+        RunLog = $runLog
         Text = $bounceText
     }
 }
@@ -114,15 +148,36 @@ if ($gear.Command -eq "review") {
     }
 
     if ($bounceEnabled) {
-        $bounceResult = Invoke-SelfBounce -CodexPath $codex -Workspace $Cwd -TaskPrompt $prompt -OutputDir $logDir
+        $bounceResult = Invoke-SelfBounce -CodexPath $codex -Workspace $Cwd -TaskPrompt $prompt -OutputDir $logDir -CouncilMode:$councilEnabled
         if ($BounceOnly) {
             Write-Host ""
             Write-Host "Bounce-only mode complete. No implementation was started."
             Write-Host "Read: $($bounceResult.Path)"
+            Write-Host ""
+            Write-Host "Self-bounce result:"
+            Write-Host $bounceResult.Text
             exit 0
         }
 
-        $promptWithBounce = @"
+        if ($councilEnabled) {
+            $promptWithBounce = @"
+Original task:
+$prompt
+
+XHIGH CEO/CTO PREFLIGHT:
+$($bounceResult.Text)
+
+Now execute the task through this staged council workflow:
+1. CEO Agent: restate scoped requirements and success criteria.
+2. CTO Agent: confirm architecture, stack choices, and risk controls against the current repo.
+3. Programmer Agent: implement the smallest correct change set.
+4. Tester/QA Agent: review the code, run relevant verification, identify bugs or gaps.
+5. If Tester/QA finds bugs, return to Programmer Agent for fixes, then repeat QA until clean or truly blocked.
+
+Use the preflight as planning input, but validate it against the repository before changing files.
+"@
+        } else {
+            $promptWithBounce = @"
 Original task:
 $prompt
 
@@ -131,6 +186,7 @@ $($bounceResult.Text)
 
 Now execute the task. Use the preflight as planning input, but validate it against the repository before changing files.
 "@
+        }
         $promptWithBounce | & $codex exec -C $Cwd -p $profile "-"
     } else {
         & $codex exec -C $Cwd -p $profile $prompt
