@@ -60,6 +60,30 @@ When launching new Codex CLI/automation work, use the real profile router:
 
 `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
 
+## ChatGPT Usage Routing
+
+To save Codex usage, route work away from Codex when it does not need local repo access, terminal commands, filesystem edits, tests, git, deployment/debugging, browser verification, app connectors, or owner-button queue state.
+
+Use the ChatGPT route for:
+
+- Brainstorming, naming, ideation, and option generation.
+- Emails, messages, posts, copy, tone rewrites, and internal/customer-facing writing.
+- Strategy, planning, learning, explanations, critiques, and second opinions.
+- Summaries, outlines, meeting notes, rough research synthesis, and simple classification.
+- Any task where a ready prompt in ChatGPT is enough and no Codex tool execution is needed.
+
+Keep the work in Codex for:
+
+- Code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, and browser/app verification.
+- Anything needing current workspace context, durable changes under `C:\Users\zev\.codex`, or system backup to GitHub.
+- Auth, security, billing, database, permissions, production risk, and ambiguous failures. Use xhigh/council; ChatGPT can give a second opinion, but Codex should execute only after guardrails.
+
+When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
+
+`C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
+
+This copies a ChatGPT-ready prompt to the clipboard and opens ChatGPT. Do not claim the current Desktop chat has switched models. The current Codex session is only dispatching; ChatGPT does the routed work.
+
 Check the selected route without launching work:
 
 `C:\Users\zev\.codex\scripts\codex-gear.cmd "TASK"`

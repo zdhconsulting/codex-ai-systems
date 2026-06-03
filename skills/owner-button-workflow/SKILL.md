@@ -62,6 +62,22 @@ Confirm the repo root, branch, origin remote, latest commit, and dirty files mat
 - If blocked, make the blocker concrete and give the shortest useful action list.
 - After completing a task, summarize results, tests, commits, pushes, and any remaining owner buttons.
 
+## ChatGPT Usage Routing
+
+To preserve Codex usage, route work away from Codex when it does not need local repo access, terminal commands, filesystem edits, tests, git, deployment/debugging, browser verification, app connectors, or owner-button queue state.
+
+Use the ChatGPT route for brainstorming, naming, ideation, emails, copy, strategy, learning, explanations, critiques, summaries, outlines, meeting notes, rough research synthesis, simple classification, and second opinions.
+
+Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, and high-risk auth/billing/security/database/permissions/production work.
+
+When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
+
+`C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
+
+Do not claim the current Codex Desktop chat has switched models. The current session is only dispatching; ChatGPT does the routed work.
+
+If API-based ChatGPT routing is requested, use `Commander approval needed` before adding it because it may require API key setup, billing, model choice, and data-sharing decisions.
+
 ## Next Protocol
 
 When the user says `Next`, treat it as an instruction to continue the current mission with the best next action. Do not ask what `Next` means, and do not turn it into a menu of options unless a real approval decision is required.

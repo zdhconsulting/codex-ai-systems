@@ -1,0 +1,7 @@
+interface:
+  display_name: "ChatGPT Routing"
+  short_description: "Route non-code work out of Codex to preserve Codex usage."
+  default_prompt: "Use $chatgpt-routing to decide whether this should stay in Codex or be handed to ChatGPT."
+
+policy:
+  allow_implicit_invocation: true

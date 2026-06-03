@@ -80,7 +80,8 @@ Open the new-user Skill Catalog:
 
 ## Skill Packs
 
-- `Core`: owner buttons, Next protocol, gear routing, git guard, handoffs, project freshness, and health checks.
+- `Core`: owner buttons, Next protocol, ChatGPT usage routing, gear routing, git guard, handoffs, project freshness, and health checks.
+- `ChatGPT`: routes writing, brainstorming, strategy, summaries, learning, and second opinions to ChatGPT when Codex tools are not needed.
 - `Founder`: founder/operator writing, meetings, handoffs, owner-button extraction, lead/domain/support/file workflows.
 - `Builder`: implementation, CI/debugging, deploy prep, migrations, logs, PR review, and changelog workflows.
 - `Designer`: visual deliverables, frontend polish, brand consistency, screenshot QA, image cleanup, and face-preservation rules.
@@ -95,6 +96,12 @@ Run the local systems health check:
 ```powershell
 .\scripts\codex-doctor.cmd
 .\scripts\codex-doctor.cmd -Smoke
+```
+
+Route non-code work to ChatGPT to preserve Codex usage:
+
+```powershell
+.\scripts\chatgpt-route.cmd "draft a client email from these notes"
 ```
 
 Auto-route a Codex task:
@@ -172,6 +179,16 @@ Self-bounce is available for xhigh work. It runs a read-only ephemeral preflight
 Council mode is enforced by default for xhigh implementation launched through `codex-auto.cmd`. It stages the task as CEO Agent requirements, CTO Agent architecture, Programmer Agent implementation, and Tester/QA Agent review/fix loops. The preflight must include `CEO Agent`, `CTO Agent`, `Tester/QA Agent`, and `Programmer Brief`, or implementation does not start. Use `codex-xhigh-raw.cmd` or `[nocouncil]` only when raw xhigh is explicitly needed.
 
 `gpt-5.4-mini` is available but not used by default; keep it as a low/medium fallback if Spark is too shallow or unavailable.
+
+## ChatGPT Usage Routing
+
+Use ChatGPT when the task does not need local repo access, terminal commands, filesystem edits, tests, git, deployment/debugging, browser verification, app connectors, or owner-button queue state.
+
+Route to ChatGPT for brainstorming, naming, ideation, emails, copy, strategy, learning, explanations, critiques, summaries, outlines, meeting notes, rough research synthesis, simple classification, and second opinions.
+
+Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, and high-risk auth/billing/security/database/permissions/production work.
+
+The ChatGPT route copies a ready prompt to the clipboard and opens ChatGPT. It does not switch the current Codex Desktop chat to a different model.
 
 ## Project Freshness Colors
 

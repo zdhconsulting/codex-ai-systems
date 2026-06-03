@@ -3,9 +3,17 @@ const packs = [
     id: "Core",
     name: "Core Operating System",
     risk: "medium",
-    summary: "Owner buttons, Next protocol, gear routing, git guard, handoffs, and systems health checks.",
+    summary: "Owner buttons, Next protocol, ChatGPT usage routing, gear routing, git guard, handoffs, and systems health checks.",
     tags: ["Everyone", "Fresh installs", "Guardrails"],
-    examples: ["Next", "Create a goal", "Check the selected gear"]
+    examples: ["Route to ChatGPT", "Next", "Check the selected gear"]
+  },
+  {
+    id: "ChatGPT",
+    name: "ChatGPT Saver Pack",
+    risk: "low",
+    summary: "Routes writing, brainstorming, strategy, summaries, learning, and second opinions to ChatGPT when Codex tools are not needed.",
+    tags: ["Usage saver", "Writing", "Strategy"],
+    examples: ["Draft client email", "Brainstorm names", "Second opinion"]
   },
   {
     id: "Founder",
@@ -67,6 +75,11 @@ const workflows = [
     title: "Reasoning Gears",
     label: "Low to xhigh",
     copy: "Tasks route through fast, balanced, deep, max, or review profiles. Risky work can self-bounce before implementation starts."
+  },
+  {
+    title: "ChatGPT Usage Routing",
+    label: "Usage saver",
+    copy: "Non-repo writing, brainstorming, summaries, learning, and strategy work can leave Codex through a ChatGPT-ready handoff prompt."
   },
   {
     title: "Git Guard",

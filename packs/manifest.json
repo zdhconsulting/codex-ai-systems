@@ -5,10 +5,11 @@
     {
       "id": "Core",
       "name": "Core Operating System",
-      "description": "The durable Zev workflow: owner buttons, Next protocol, gear routing, git guard, handoffs, and systems health checks.",
+      "description": "The durable Zev workflow: owner buttons, Next protocol, ChatGPT usage routing, gear routing, git guard, handoffs, and systems health checks.",
       "idealFor": ["Everyone", "Fresh installs", "New Codex sessions"],
-      "skills": ["owner-button-workflow", "agent-deep-links", "webapp-testing"],
+      "skills": ["owner-button-workflow", "chatgpt-routing", "agent-deep-links", "webapp-testing"],
       "commands": [
+        "scripts/chatgpt-route.cmd",
         "scripts/codex-systems-status.cmd",
         "scripts/codex-doctor.cmd",
         "scripts/codex-gear-test.cmd",
@@ -16,11 +17,34 @@
         "scripts/owner-button.cmd"
       ],
       "examplePrompts": [
+        "Route this email draft to ChatGPT",
         "Next",
         "Create a goal: make this repo safe to deploy",
         "Check the selected gear for debugging failing CI"
       ],
       "riskLevel": "medium"
+    },
+    {
+      "id": "ChatGPT",
+      "name": "ChatGPT Saver Pack",
+      "description": "Preserves Codex usage by routing writing, brainstorming, strategy, summaries, learning, and second opinions to ChatGPT when no local repo execution is needed.",
+      "idealFor": ["Usage savings", "Writing", "Brainstorming", "Strategy"],
+      "skills": [
+        "chatgpt-routing",
+        "email-draft-polish",
+        "content-research-writer",
+        "meeting-notes-and-actions",
+        "domain-name-brainstormer"
+      ],
+      "commands": [
+        "scripts/chatgpt-route.cmd"
+      ],
+      "examplePrompts": [
+        "Draft this client email in ChatGPT",
+        "Brainstorm 20 names without using Codex",
+        "Get a ChatGPT second opinion on this strategy"
+      ],
+      "riskLevel": "low"
     },
     {
       "id": "Founder",
