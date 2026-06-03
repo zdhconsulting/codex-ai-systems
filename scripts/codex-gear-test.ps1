@@ -91,6 +91,7 @@ $requiredScripts = @(
     "codex-high.cmd",
     "codex-xhigh.cmd",
     "codex-xhigh-bounce.cmd",
+    "codex-xhigh-raw.cmd",
     "codex-review.cmd",
     "CodexGear.psm1"
 )
@@ -141,6 +142,14 @@ Assert-True ($bounceOnlyDryRun -match "Self-bounce: bounce-only") "BounceOnly dr
 $councilDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -Council -Cwd $CodexHome "[xhigh] build billing-safe workflow" 2>&1 6>&1 | Out-String)
 Assert-True ($councilDryRun -match "Self-bounce: council-bounce-then-execute") "Council dry-run enables xhigh council preflight"
 Assert-True ($councilDryRun -match "Council mode: on") "Council dry-run reports council mode"
+
+$autoCouncilDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -Cwd $CodexHome "change auth billing database permissions" 2>&1 6>&1 | Out-String)
+Assert-True ($autoCouncilDryRun -match "Self-bounce: council-bounce-then-execute") "Auto xhigh dry-run enforces council preflight"
+Assert-True ($autoCouncilDryRun -match "Council mode: auto-on") "Auto xhigh dry-run reports auto council"
+
+$noCouncilDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -NoCouncil -Cwd $CodexHome "[xhigh] change auth permissions" 2>&1 6>&1 | Out-String)
+Assert-True ($noCouncilDryRun -match "Self-bounce: off") "NoCouncil dry-run disables auto council preflight"
+Assert-True ($noCouncilDryRun -match "Council mode: off by explicit override") "NoCouncil dry-run reports explicit override"
 
 try {
     $codex = Get-CodexExecutable

@@ -83,6 +83,7 @@ Force a specific route:
 - `C:\Users\zev\.codex\scripts\codex-high.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-xhigh.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-xhigh-bounce.cmd "TASK"`
+- `C:\Users\zev\.codex\scripts\codex-xhigh-raw.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-bounce.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-council.cmd "TASK"`
 - `C:\Users\zev\.codex\scripts\codex-review.cmd "TASK"`
@@ -103,11 +104,13 @@ Highest-gear self-bounce:
 
 CEO/CTO/Programmer/QA council:
 
+- Xhigh implementation launched through `codex-auto.cmd` defaults to council mode. Use `codex-xhigh-raw.cmd "TASK"` or `[nocouncil]` only when Zev explicitly wants raw xhigh without council preflight.
 - Use `codex-council.cmd "TASK"` for complex xhigh implementation where the agent should stage itself as CEO Agent, CTO Agent, Programmer Agent, and Tester/QA Agent.
 - CEO Agent scopes requirements and success criteria.
 - CTO Agent chooses the technical approach and risk controls.
 - Programmer Agent implements the smallest correct change set.
 - Tester/QA Agent reviews, tests, and pushes bugs back to Programmer Agent until clean or truly blocked.
+- Enforcement: council preflight must include `CEO Agent`, `CTO Agent`, `Tester/QA Agent`, and `Programmer Brief`, or implementation does not start.
 
 Available but not the default:
 

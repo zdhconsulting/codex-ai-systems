@@ -3,6 +3,7 @@ param(
     [switch] $Bounce,
     [switch] $BounceOnly,
     [switch] $Council,
+    [switch] $NoCouncil,
     [string] $Cwd = (Get-Location).Path,
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
     [string[]] $PromptParts
@@ -11,6 +12,7 @@ param(
 $prompt = ($PromptParts -join " ").Trim()
 $tagBounce = $false
 $tagCouncil = $false
+$tagNoCouncil = $false
 if ($prompt -match "\[(bounce|debate|preflight)\]" -or $prompt -match "\s--(bounce|debate|preflight)\b") {
     $tagBounce = $true
     $prompt = (($prompt -replace "\[(bounce|debate|preflight)\]", "") -replace "\s--(bounce|debate|preflight)\b", "").Trim()
@@ -19,12 +21,16 @@ if ($prompt -match "\[(council|agents)\]" -or $prompt -match "\s--(council|agent
     $tagCouncil = $true
     $prompt = (($prompt -replace "\[(council|agents)\]", "") -replace "\s--(council|agents)\b", "").Trim()
 }
+if ($prompt -match "\[(nocouncil|no-council|raw|direct)\]" -or $prompt -match "\s--(nocouncil|no-council|raw|direct)\b") {
+    $tagNoCouncil = $true
+    $prompt = (($prompt -replace "\[(nocouncil|no-council|raw|direct)\]", "") -replace "\s--(nocouncil|no-council|raw|direct)\b", "").Trim()
+}
 if ($tagBounce) { $Bounce = $true }
 if ($tagCouncil) { $Council = $true }
+if ($tagNoCouncil) { $NoCouncil = $true }
 if ($BounceOnly) { $Bounce = $true }
-if ($Council) { $Bounce = $true }
 if (-not $prompt) {
-    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Council] [-Cwd PATH] <task prompt>"
+    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Council] [-NoCouncil] [-Cwd PATH] <task prompt>"
     exit 2
 }
 
@@ -41,18 +47,21 @@ $tier = if ($gear.ServiceTier) { $gear.ServiceTier } else { "(default/none)" }
 Write-Host "Service tier: $tier"
 Write-Host "Workspace: $Cwd"
 Write-Host "Command: codex $($gear.Command)"
+$autoCouncil = (-not $NoCouncil) -and (-not $Council) -and (-not $BounceOnly) -and (-not $Bounce) -and $gear.Profile -eq "max" -and $gear.Command -eq "exec"
+if ($autoCouncil) { $Council = $true }
+if ($Council) { $Bounce = $true }
 $bounceEnabled = $Bounce -and $gear.Profile -eq "max" -and $gear.Command -eq "exec"
 $councilEnabled = $Council -and $gear.Profile -eq "max" -and $gear.Command -eq "exec"
 $bounceMode = if ($BounceOnly) { "bounce-only" } elseif ($councilEnabled) { "council-bounce-then-execute" } elseif ($bounceEnabled) { "bounce-then-execute" } elseif ($Bounce) { "requested but skipped; only max/xhigh exec routes bounce" } else { "off" }
 Write-Host "Self-bounce: $bounceMode"
-Write-Host "Council mode: $(if ($councilEnabled) { "on" } elseif ($Council) { "requested but skipped; only max/xhigh exec routes use council" } else { "off" })"
+Write-Host "Council mode: $(if ($councilEnabled -and $autoCouncil) { "auto-on" } elseif ($councilEnabled) { "on" } elseif ($Council) { "requested but skipped; only max/xhigh exec routes use council" } elseif ($NoCouncil) { "off by explicit override" } else { "off" })"
 
 $codexHome = Split-Path -Parent $PSScriptRoot
 $logDir = Join-Path $codexHome "logs"
 $logPath = Join-Path $logDir "reasoning-gear.log"
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-"[$timestamp] $($gear.Profile)/$($gear.Gear) | model=$($gear.Model) | effort=$($gear.Effort) | tier=$tier | bounce=$bounceMode | council=$Council | $Cwd | $prompt" | Add-Content -Path $logPath
+"[$timestamp] $($gear.Profile)/$($gear.Gear) | model=$($gear.Model) | effort=$($gear.Effort) | tier=$tier | bounce=$bounceMode | council=$Council | autoCouncil=$autoCouncil | noCouncil=$NoCouncil | $Cwd | $prompt" | Add-Content -Path $logPath
 
 if ($DryRun) {
     Write-Host "Dry run only. Prompt: $prompt"
@@ -122,6 +131,17 @@ Rules:
     $bounceText = (Get-Content -LiteralPath $outFile -Raw).Trim()
     if ([string]::IsNullOrWhiteSpace($bounceText)) {
         throw "Self-bounce output was empty: $outFile"
+    }
+
+    $requiredMarkers = if ($CouncilMode) {
+        @("CEO Agent", "CTO Agent", "Tester/QA Agent", "Programmer Brief")
+    } else {
+        @("Builder", "Skeptic", "Verifier")
+    }
+    foreach ($marker in $requiredMarkers) {
+        if ($bounceText -notmatch [regex]::Escape($marker)) {
+            throw "Self-bounce output missing required marker '$marker'. Output: $outFile. Run log: $runLog"
+        }
     }
 
     Write-Host "Self-bounce output: $outFile"
