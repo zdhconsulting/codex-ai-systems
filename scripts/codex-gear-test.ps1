@@ -96,6 +96,8 @@ $requiredScripts = @(
     "codex-project-freshness.ps1",
     "codex-systems-status.cmd",
     "codex-systems-status.ps1",
+    "zdh-worker-boss-interval.cmd",
+    "zdh-worker-boss-interval.ps1",
     "codex-low.cmd",
     "codex-medium.cmd",
     "codex-high.cmd",

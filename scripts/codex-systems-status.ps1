@@ -125,6 +125,7 @@ Write-Host "$scriptRoot\chatgpt-route.cmd `"draft a client email from these note
 Write-Host "$scriptRoot\chatgpt-route.cmd `"brainstorm poster concepts for this launch`""
 Write-Host "$scriptRoot\chatgpt-return.cmd -Print"
 Write-Host "$scriptRoot\codex-project-rules.cmd"
+Write-Host "$scriptRoot\zdh-worker-boss-interval.cmd 20"
 Write-Host "$scriptRoot\codex-project-freshness.cmd"
 Write-Host "$scriptRoot\codex-bounce.cmd `"plan database migration safely`""
 Write-Host "$scriptRoot\codex-council.cmd `"build billing-safe workflow`""

@@ -140,6 +140,14 @@ Verify the installed gear setup:
 .\scripts\codex-gear-test.cmd -Smoke
 ```
 
+Set Worker Boss cadence for the approved push-capable project worker:
+
+```powershell
+.\scripts\zdh-worker-boss-interval.cmd 5
+.\scripts\zdh-worker-boss-interval.cmd 20
+.\scripts\zdh-worker-boss-interval.cmd 60
+```
+
 Show current repo, owner buttons, gear routes, and systems backup state:
 
 ```powershell
