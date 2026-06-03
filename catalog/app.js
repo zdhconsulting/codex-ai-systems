@@ -3,17 +3,17 @@ const packs = [
     id: "Core",
     name: "Core Operating System",
     risk: "medium",
-    summary: "Owner buttons, Next protocol, ChatGPT usage routing, gear routing, git guard, handoffs, and systems health checks.",
+    summary: "Owner buttons, Next protocol, automated ChatGPT orchestration, gear routing, git guard, future-project rules, handoffs, and systems health checks.",
     tags: ["Everyone", "Fresh installs", "Guardrails"],
-    examples: ["Route to ChatGPT", "Next", "Check the selected gear"]
+    examples: ["Route to ChatGPT", "Seed project rules", "Next"]
   },
   {
     id: "ChatGPT",
     name: "ChatGPT Saver Pack",
     risk: "low",
-    summary: "Routes writing, brainstorming, strategy, graphic design direction, summaries, learning, and second opinions to ChatGPT, then imports the result back into Codex.",
-    tags: ["Usage saver", "Writing", "Design"],
-    examples: ["Draft client email", "Poster concepts", "Import result"]
+    summary: "Routes writing, brainstorming, graphic design direction, image generation, summaries, learning, and second opinions to ChatGPT through automated Chrome orchestration when possible.",
+    tags: ["Usage saver", "ChatGPT", "Design"],
+    examples: ["Draft client email", "Generate image", "Download result"]
   },
   {
     id: "Founder",
@@ -79,7 +79,12 @@ const workflows = [
   {
     title: "ChatGPT Usage Routing",
     label: "Usage saver",
-    copy: "Non-repo writing, brainstorming, graphic design direction, summaries, learning, and strategy work can leave Codex through a ChatGPT-ready prompt, then return through a clipboard import packet."
+    copy: "Non-repo writing, brainstorming, graphic design direction, summaries, learning, strategy, and image generation can leave Codex through ChatGPT while Codex automates the browser, downloads assets, and verifies results."
+  },
+  {
+    title: "Future Project Rules",
+    label: "Portable",
+    copy: "Run codex-project-rules.cmd in any repo to add a marked AGENTS.md block that preserves Zev's workflow while keeping project-specific rules intact."
   },
   {
     title: "Git Guard",

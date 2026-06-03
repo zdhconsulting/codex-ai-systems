@@ -77,20 +77,32 @@ Keep the work in Codex for:
 
 - Code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, and browser/app verification.
 - Anything needing current workspace context, durable changes under `C:\Users\zev\.codex`, or system backup to GitHub.
-- Actual asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, or real-person face work requiring exact pixel preservation.
+- Actual local asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, or real-person face work requiring exact pixel preservation, unless Zev explicitly asks ChatGPT to be the image surface; then use ChatGPT auto-orchestration.
 - Auth, security, billing, database, permissions, production risk, and ambiguous failures. Use xhigh/council; ChatGPT can give a second opinion, but Codex should execute only after guardrails.
 
 When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
-This copies a ChatGPT-ready prompt to the clipboard, opens ChatGPT, and asks ChatGPT to end with a `CODEX_RETURN_PACKET`. Do not claim the current Desktop chat has switched models. The current Codex session is only dispatching; ChatGPT does the routed work.
+Default to full automation when Chrome/ChatGPT web is available: use the Chrome browser plugin to open or claim ChatGPT, submit the routed prompt, wait for completion, copy/import text results, or download generated image assets. Do not ask Zev to paste/copy unless the browser automation bridge is unavailable or ChatGPT itself requires login, CAPTCHA, payment, account verification, safety confirmation, or another true owner-only action.
 
-To bring ChatGPT results back into Codex, Zev copies the ChatGPT answer, says `import ChatGPT result`, then Codex reads the clipboard with:
+For ChatGPT image generation, Codex is the orchestrator: prepare an IP-safe prompt, submit it through ChatGPT web, wait for the image, download the generated asset, save it to the project assets folder when one is obvious or `C:\Users\zev\OneDrive\Documents\ZDH Generated Assets`, visually inspect it, and return the local file link plus image preview. Avoid exact copyrighted characters, logos, brand trade dress, and real-person face reinterpretation unless the user supplies allowed source material and exact preservation is possible.
+
+Manual fallback: this copies a ChatGPT-ready prompt to the clipboard, opens ChatGPT, and asks ChatGPT to end with a `CODEX_RETURN_PACKET`. Do not claim the current Desktop chat has switched models. The current Codex session is only dispatching; ChatGPT does the routed work.
+
+To bring manual ChatGPT results back into Codex, Zev copies the ChatGPT answer, says `import ChatGPT result`, then Codex reads the clipboard with:
 
 `C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`
 
 After import, continue from the returned summary, decisions, artifact, and Codex next action.
+
+## Future Project Rule Seeding
+
+The global `C:\Users\zev\.codex\AGENTS.md` is the default memory for new Codex sessions. To make any project carry the same rules explicitly, run this from the project root:
+
+`C:\Users\zev\.codex\scripts\codex-project-rules.cmd`
+
+This creates or updates a marked Zev workflow block in that project's `AGENTS.md` while preserving existing project-specific rules.
 
 Check the selected route without launching work:
 

@@ -68,19 +68,29 @@ To preserve Codex usage, route work away from Codex when it does not need local 
 
 Use the ChatGPT route for brainstorming, naming, ideation, emails, copy, strategy, learning, explanations, critiques, summaries, outlines, meeting notes, rough research synthesis, simple classification, second opinions, and graphic design direction such as moodboards, layout concepts, ad/poster/social concepts, image prompt drafting, color palettes, and typography ideas when no local asset editing is needed.
 
-Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, actual asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, real-person face work requiring exact pixel preservation, and high-risk auth/billing/security/database/permissions/production work.
+Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, actual local asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, real-person face work requiring exact pixel preservation, and high-risk auth/billing/security/database/permissions/production work. If Zev explicitly asks ChatGPT to be the image surface, Codex should orchestrate ChatGPT end to end.
 
 When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
-Do not claim the current Codex Desktop chat has switched models. The current session is only dispatching; ChatGPT does the routed work.
+Default to full automation when Chrome/ChatGPT web is available: use the Chrome browser plugin to open or claim ChatGPT, submit the routed prompt, wait for completion, copy/import text results, or download generated image assets. Do not ask Zev to paste/copy unless the browser automation bridge is unavailable or ChatGPT itself requires login, CAPTCHA, payment, account verification, safety confirmation, or another true owner-only action.
+
+For ChatGPT image generation, Codex is the orchestrator: prepare an IP-safe prompt, submit it through ChatGPT web, wait for the image, download the generated asset, save it to the project assets folder when one is obvious or `C:\Users\zev\OneDrive\Documents\ZDH Generated Assets`, visually inspect it, and return the local file link plus image preview. Avoid exact copyrighted characters, logos, brand trade dress, and real-person face reinterpretation unless the user supplies allowed source material and exact preservation is possible.
+
+Manual fallback: do not claim the current Codex Desktop chat has switched models. The current session is only dispatching; ChatGPT does the routed work.
 
 ChatGPT results come back through a `CODEX_RETURN_PACKET`. When Zev copies the ChatGPT result and says `import ChatGPT result`, read it with:
 
 `C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`
 
 Then continue from the returned summary, decisions, artifact, and Codex next action.
+
+For future projects, seed the project `AGENTS.md` with:
+
+`C:\Users\zev\.codex\scripts\codex-project-rules.cmd`
+
+This preserves existing project-specific rules and updates only the marked Zev workflow block.
 
 If API-based ChatGPT routing is requested, use `Commander approval needed` before adding it because it may require API key setup, billing, model choice, and data-sharing decisions.
 

@@ -20,6 +20,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `packs/manifest.json`: installable pack definitions.
 - `skills/`: reusable Codex skills, including `owner-button-workflow`.
 - `scripts/chatgpt-route.cmd` and `scripts/chatgpt-return.cmd`: route non-repo work to ChatGPT and import the result back into Codex.
+- `scripts/codex-project-rules.cmd`: seeds any project `AGENTS.md` with Zev's workflow rules while preserving project-specific notes.
 - `scripts/codex-auto.cmd`: auto-selects reasoning gear for CLI tasks.
 - `scripts/codex-bounce.cmd`: runs xhigh self-bounce preflight only.
 - `scripts/codex-council.cmd`: runs the CEO/CTO/Programmer/QA xhigh workflow.
@@ -107,6 +108,12 @@ Route non-code work to ChatGPT to preserve Codex usage:
 .\scripts\chatgpt-return.cmd -Print
 ```
 
+Seed the current project with Zev's workflow rules:
+
+```powershell
+.\scripts\codex-project-rules.cmd
+```
+
 Auto-route a Codex task:
 
 ```powershell
@@ -189,9 +196,13 @@ Use ChatGPT when the task does not need local repo access, terminal commands, fi
 
 Route to ChatGPT for brainstorming, naming, ideation, emails, copy, strategy, learning, explanations, critiques, summaries, outlines, meeting notes, rough research synthesis, simple classification, second opinions, and graphic design direction like moodboards, layout concepts, ad/poster/social concepts, image prompt drafting, color palettes, and typography ideas when no local asset editing is needed.
 
-Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, actual asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, real-person face work requiring exact pixel preservation, and high-risk auth/billing/security/database/permissions/production work.
+Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, actual local asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, real-person face work requiring exact pixel preservation, and high-risk auth/billing/security/database/permissions/production work. If Zev explicitly asks ChatGPT to be the image surface, Codex orchestrates ChatGPT end to end.
 
-The ChatGPT route copies a ready prompt to the clipboard and opens ChatGPT. It asks ChatGPT to end with a `CODEX_RETURN_PACKET`. It does not switch the current Codex Desktop chat to a different model.
+Default behavior is automation-first: when Chrome/ChatGPT web is available, Codex opens or claims ChatGPT, submits the prompt, waits for completion, imports text results, or downloads generated image assets. Manual paste/copy is fallback only when browser automation is unavailable or ChatGPT requires login, CAPTCHA, payment, account verification, safety confirmation, or another owner-only action.
+
+For ChatGPT image generation, Codex orchestrates the browser route, prepares an IP-safe prompt, downloads the generated image, saves it to the project assets folder when obvious or `C:\Users\zev\OneDrive\Documents\ZDH Generated Assets`, visually inspects it, and returns a local file link plus image preview.
+
+The manual ChatGPT route copies a ready prompt to the clipboard and opens ChatGPT. It asks ChatGPT to end with a `CODEX_RETURN_PACKET`. It does not switch the current Codex Desktop chat to a different model.
 
 To bring results back, copy the ChatGPT answer and run:
 
@@ -200,6 +211,16 @@ To bring results back, copy the ChatGPT answer and run:
 ```
 
 Codex can then continue from the returned summary, decisions, artifact, and next action.
+
+## Future Project Rules
+
+The global `C:\Users\zev\.codex\AGENTS.md` is installed by `install.ps1` and applies as the default memory for new Codex sessions. To make a project carry the same workflow explicitly, run this from that project root:
+
+```powershell
+C:\Users\zev\.codex\scripts\codex-project-rules.cmd
+```
+
+The script creates or updates a marked Zev workflow block in `AGENTS.md` while preserving project-specific instructions.
 
 ## Project Freshness Colors
 

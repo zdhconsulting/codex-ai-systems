@@ -5,12 +5,13 @@
     {
       "id": "Core",
       "name": "Core Operating System",
-      "description": "The durable Zev workflow: owner buttons, Next protocol, ChatGPT usage routing, gear routing, git guard, handoffs, and systems health checks.",
+      "description": "The durable Zev workflow: owner buttons, Next protocol, automated ChatGPT orchestration, gear routing, git guard, future-project rule seeding, handoffs, and systems health checks.",
       "idealFor": ["Everyone", "Fresh installs", "New Codex sessions"],
       "skills": ["owner-button-workflow", "chatgpt-routing", "agent-deep-links", "webapp-testing"],
       "commands": [
         "scripts/chatgpt-route.cmd",
         "scripts/chatgpt-return.cmd",
+        "scripts/codex-project-rules.cmd",
         "scripts/codex-systems-status.cmd",
         "scripts/codex-doctor.cmd",
         "scripts/codex-gear-test.cmd",
@@ -19,6 +20,7 @@
       ],
       "examplePrompts": [
         "Route this email draft to ChatGPT",
+        "Seed this project with Zev's Codex rules",
         "Next",
         "Create a goal: make this repo safe to deploy",
         "Check the selected gear for debugging failing CI"
@@ -28,7 +30,7 @@
     {
       "id": "ChatGPT",
       "name": "ChatGPT Saver Pack",
-      "description": "Preserves Codex usage by routing writing, brainstorming, strategy, summaries, learning, graphic design direction, and second opinions to ChatGPT when no local repo execution is needed, then importing the result back into Codex.",
+      "description": "Preserves Codex usage by routing writing, brainstorming, strategy, summaries, learning, graphic design direction, image generation, and second opinions to ChatGPT through automated Chrome orchestration when possible, then importing or downloading the result back into Codex.",
       "idealFor": ["Usage savings", "Writing", "Brainstorming", "Strategy", "Graphic design"],
       "skills": [
         "chatgpt-routing",
@@ -43,6 +45,7 @@
       ],
       "examplePrompts": [
         "Draft this client email in ChatGPT",
+        "Use ChatGPT to generate this concept image and save it locally",
         "Brainstorm poster concepts without using Codex",
         "Brainstorm 20 names without using Codex",
         "Import the ChatGPT result back into Codex",

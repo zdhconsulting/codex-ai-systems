@@ -90,6 +90,8 @@ $requiredScripts = @(
     "codex-gear-test.ps1",
     "codex-notify-router.cmd",
     "codex-notify-router.ps1",
+    "codex-project-rules.cmd",
+    "codex-project-rules.ps1",
     "codex-project-freshness.cmd",
     "codex-project-freshness.ps1",
     "codex-systems-status.cmd",
