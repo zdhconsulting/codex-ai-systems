@@ -11,9 +11,9 @@ const packs = [
     id: "ChatGPT",
     name: "ChatGPT Saver Pack",
     risk: "low",
-    summary: "Routes writing, brainstorming, strategy, summaries, learning, and second opinions to ChatGPT when Codex tools are not needed.",
-    tags: ["Usage saver", "Writing", "Strategy"],
-    examples: ["Draft client email", "Brainstorm names", "Second opinion"]
+    summary: "Routes writing, brainstorming, strategy, graphic design direction, summaries, learning, and second opinions to ChatGPT, then imports the result back into Codex.",
+    tags: ["Usage saver", "Writing", "Design"],
+    examples: ["Draft client email", "Poster concepts", "Import result"]
   },
   {
     id: "Founder",
@@ -79,7 +79,7 @@ const workflows = [
   {
     title: "ChatGPT Usage Routing",
     label: "Usage saver",
-    copy: "Non-repo writing, brainstorming, summaries, learning, and strategy work can leave Codex through a ChatGPT-ready handoff prompt."
+    copy: "Non-repo writing, brainstorming, graphic design direction, summaries, learning, and strategy work can leave Codex through a ChatGPT-ready prompt, then return through a clipboard import packet."
   },
   {
     title: "Git Guard",

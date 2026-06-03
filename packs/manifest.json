@@ -10,6 +10,7 @@
       "skills": ["owner-button-workflow", "chatgpt-routing", "agent-deep-links", "webapp-testing"],
       "commands": [
         "scripts/chatgpt-route.cmd",
+        "scripts/chatgpt-return.cmd",
         "scripts/codex-systems-status.cmd",
         "scripts/codex-doctor.cmd",
         "scripts/codex-gear-test.cmd",
@@ -27,8 +28,8 @@
     {
       "id": "ChatGPT",
       "name": "ChatGPT Saver Pack",
-      "description": "Preserves Codex usage by routing writing, brainstorming, strategy, summaries, learning, and second opinions to ChatGPT when no local repo execution is needed.",
-      "idealFor": ["Usage savings", "Writing", "Brainstorming", "Strategy"],
+      "description": "Preserves Codex usage by routing writing, brainstorming, strategy, summaries, learning, graphic design direction, and second opinions to ChatGPT when no local repo execution is needed, then importing the result back into Codex.",
+      "idealFor": ["Usage savings", "Writing", "Brainstorming", "Strategy", "Graphic design"],
       "skills": [
         "chatgpt-routing",
         "email-draft-polish",
@@ -37,11 +38,14 @@
         "domain-name-brainstormer"
       ],
       "commands": [
-        "scripts/chatgpt-route.cmd"
+        "scripts/chatgpt-route.cmd",
+        "scripts/chatgpt-return.cmd"
       ],
       "examplePrompts": [
         "Draft this client email in ChatGPT",
+        "Brainstorm poster concepts without using Codex",
         "Brainstorm 20 names without using Codex",
+        "Import the ChatGPT result back into Codex",
         "Get a ChatGPT second opinion on this strategy"
       ],
       "riskLevel": "low"

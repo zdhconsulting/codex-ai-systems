@@ -76,6 +76,8 @@ $expected = @(
 $requiredScripts = @(
     "chatgpt-route.cmd",
     "chatgpt-route.ps1",
+    "chatgpt-return.cmd",
+    "chatgpt-return.ps1",
     "codex-auto.cmd",
     "codex-auto.ps1",
     "codex-bounce.cmd",

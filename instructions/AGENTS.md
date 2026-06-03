@@ -70,19 +70,27 @@ Use the ChatGPT route for:
 - Emails, messages, posts, copy, tone rewrites, and internal/customer-facing writing.
 - Strategy, planning, learning, explanations, critiques, and second opinions.
 - Summaries, outlines, meeting notes, rough research synthesis, and simple classification.
+- Graphic design direction, moodboards, layout concepts, ad/poster/social concepts, design critique, image prompt drafting, color palettes, and typography ideas when no local asset editing is needed.
 - Any task where a ready prompt in ChatGPT is enough and no Codex tool execution is needed.
 
 Keep the work in Codex for:
 
 - Code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, and browser/app verification.
 - Anything needing current workspace context, durable changes under `C:\Users\zev\.codex`, or system backup to GitHub.
+- Actual asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, or real-person face work requiring exact pixel preservation.
 - Auth, security, billing, database, permissions, production risk, and ambiguous failures. Use xhigh/council; ChatGPT can give a second opinion, but Codex should execute only after guardrails.
 
 When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
-This copies a ChatGPT-ready prompt to the clipboard and opens ChatGPT. Do not claim the current Desktop chat has switched models. The current Codex session is only dispatching; ChatGPT does the routed work.
+This copies a ChatGPT-ready prompt to the clipboard, opens ChatGPT, and asks ChatGPT to end with a `CODEX_RETURN_PACKET`. Do not claim the current Desktop chat has switched models. The current Codex session is only dispatching; ChatGPT does the routed work.
+
+To bring ChatGPT results back into Codex, Zev copies the ChatGPT answer, says `import ChatGPT result`, then Codex reads the clipboard with:
+
+`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`
+
+After import, continue from the returned summary, decisions, artifact, and Codex next action.
 
 Check the selected route without launching work:
 

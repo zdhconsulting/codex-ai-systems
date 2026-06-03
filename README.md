@@ -19,6 +19,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `catalog/`: static Skill Catalog site for new users.
 - `packs/manifest.json`: installable pack definitions.
 - `skills/`: reusable Codex skills, including `owner-button-workflow`.
+- `scripts/chatgpt-route.cmd` and `scripts/chatgpt-return.cmd`: route non-repo work to ChatGPT and import the result back into Codex.
 - `scripts/codex-auto.cmd`: auto-selects reasoning gear for CLI tasks.
 - `scripts/codex-bounce.cmd`: runs xhigh self-bounce preflight only.
 - `scripts/codex-council.cmd`: runs the CEO/CTO/Programmer/QA xhigh workflow.
@@ -102,6 +103,8 @@ Route non-code work to ChatGPT to preserve Codex usage:
 
 ```powershell
 .\scripts\chatgpt-route.cmd "draft a client email from these notes"
+.\scripts\chatgpt-route.cmd "brainstorm poster concepts for this launch"
+.\scripts\chatgpt-return.cmd -Print
 ```
 
 Auto-route a Codex task:
@@ -184,11 +187,19 @@ Council mode is enforced by default for xhigh implementation launched through `c
 
 Use ChatGPT when the task does not need local repo access, terminal commands, filesystem edits, tests, git, deployment/debugging, browser verification, app connectors, or owner-button queue state.
 
-Route to ChatGPT for brainstorming, naming, ideation, emails, copy, strategy, learning, explanations, critiques, summaries, outlines, meeting notes, rough research synthesis, simple classification, and second opinions.
+Route to ChatGPT for brainstorming, naming, ideation, emails, copy, strategy, learning, explanations, critiques, summaries, outlines, meeting notes, rough research synthesis, simple classification, second opinions, and graphic design direction like moodboards, layout concepts, ad/poster/social concepts, image prompt drafting, color palettes, and typography ideas when no local asset editing is needed.
 
-Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, and high-risk auth/billing/security/database/permissions/production work.
+Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, actual asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, real-person face work requiring exact pixel preservation, and high-risk auth/billing/security/database/permissions/production work.
 
-The ChatGPT route copies a ready prompt to the clipboard and opens ChatGPT. It does not switch the current Codex Desktop chat to a different model.
+The ChatGPT route copies a ready prompt to the clipboard and opens ChatGPT. It asks ChatGPT to end with a `CODEX_RETURN_PACKET`. It does not switch the current Codex Desktop chat to a different model.
+
+To bring results back, copy the ChatGPT answer and run:
+
+```powershell
+.\scripts\chatgpt-return.cmd -Print
+```
+
+Codex can then continue from the returned summary, decisions, artifact, and next action.
 
 ## Project Freshness Colors
 

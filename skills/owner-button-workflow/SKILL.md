@@ -66,15 +66,21 @@ Confirm the repo root, branch, origin remote, latest commit, and dirty files mat
 
 To preserve Codex usage, route work away from Codex when it does not need local repo access, terminal commands, filesystem edits, tests, git, deployment/debugging, browser verification, app connectors, or owner-button queue state.
 
-Use the ChatGPT route for brainstorming, naming, ideation, emails, copy, strategy, learning, explanations, critiques, summaries, outlines, meeting notes, rough research synthesis, simple classification, and second opinions.
+Use the ChatGPT route for brainstorming, naming, ideation, emails, copy, strategy, learning, explanations, critiques, summaries, outlines, meeting notes, rough research synthesis, simple classification, second opinions, and graphic design direction such as moodboards, layout concepts, ad/poster/social concepts, image prompt drafting, color palettes, and typography ideas when no local asset editing is needed.
 
-Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, and high-risk auth/billing/security/database/permissions/production work.
+Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, actual asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, real-person face work requiring exact pixel preservation, and high-risk auth/billing/security/database/permissions/production work.
 
 When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
 Do not claim the current Codex Desktop chat has switched models. The current session is only dispatching; ChatGPT does the routed work.
+
+ChatGPT results come back through a `CODEX_RETURN_PACKET`. When Zev copies the ChatGPT result and says `import ChatGPT result`, read it with:
+
+`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`
+
+Then continue from the returned summary, decisions, artifact, and Codex next action.
 
 If API-based ChatGPT routing is requested, use `Commander approval needed` before adding it because it may require API key setup, billing, model choice, and data-sharing decisions.
 
