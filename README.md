@@ -11,10 +11,13 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - Prevents accidental commits/pushes to the wrong repo.
 - Gives Codex low/medium/high/xhigh model and reasoning profiles.
 - Makes setup portable to another machine.
+- Gives new users a browsable catalog and installable skill packs.
 
 ## Contents
 
 - `instructions/AGENTS.md`: global Codex breadcrumb.
+- `catalog/`: static Skill Catalog site for new users.
+- `packs/manifest.json`: installable pack definitions.
 - `skills/`: reusable Codex skills, including `owner-button-workflow`.
 - `scripts/codex-auto.cmd`: auto-selects reasoning gear for CLI tasks.
 - `scripts/codex-bounce.cmd`: runs xhigh self-bounce preflight only.
@@ -22,7 +25,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `scripts/codex-doctor.cmd`: runs the local systems health check.
 - `scripts/codex-gear.cmd`: shows which model/profile a task will use.
 - `scripts/codex-gear-test.cmd`: verifies profile files, forced commands, route selection, and optional real smoke tests.
-- `scripts/codex-project-freshness.cmd`: colors saved Codex project labels by last modified age.
+- `scripts/codex-project-freshness.cmd`: colors saved Codex project markers by last modified age.
 - `scripts/codex-systems-status.cmd`: shows current repo, owner buttons, gear routes, and systems backup state.
 - `scripts/codex-low.cmd`, `codex-medium.cmd`, `codex-high.cmd`, `codex-xhigh.cmd`, `codex-xhigh-bounce.cmd`, `codex-xhigh-raw.cmd`, `codex-council.cmd`, `codex-review.cmd`: force a specific model/profile route.
 - `scripts/codex-handoff.cmd`: creates a portable handoff note for another Codex or computer.
@@ -61,6 +64,29 @@ From an already-cloned repo:
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 ```
+
+Install selected packs instead of everything:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -ListPacks
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Pack Founder,Builder,Designer
+```
+
+Open the new-user Skill Catalog:
+
+```powershell
+& ".\catalog\Start Skill Catalog.bat"
+```
+
+## Skill Packs
+
+- `Core`: owner buttons, Next protocol, gear routing, git guard, handoffs, project freshness, and health checks.
+- `Founder`: founder/operator writing, meetings, handoffs, owner-button extraction, lead/domain/support/file workflows.
+- `Builder`: implementation, CI/debugging, deploy prep, migrations, logs, PR review, and changelog workflows.
+- `Designer`: visual deliverables, frontend polish, brand consistency, screenshot QA, image cleanup, and face-preservation rules.
+- `Knowledge`: Notion-ready research, meetings, specs, decisions, and implementation planning.
+- `Revenue`: ads, leads, invoices, support, spreadsheets, giveaways, resumes, and media downloads.
+- `XHigh`: self-bounce, CEO/CTO/Programmer/QA council mode, and risky-work guardrails.
 
 ## Common Commands
 

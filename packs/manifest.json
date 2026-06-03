@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "defaultInstall": "All",
+  "packs": [
+    {
+      "id": "Core",
+      "name": "Core Operating System",
+      "description": "The durable Zev workflow: owner buttons, Next protocol, gear routing, git guard, handoffs, and systems health checks.",
+      "idealFor": ["Everyone", "Fresh installs", "New Codex sessions"],
+      "skills": ["owner-button-workflow", "agent-deep-links", "webapp-testing"],
+      "commands": [
+        "scripts/codex-systems-status.cmd",
+        "scripts/codex-doctor.cmd",
+        "scripts/codex-gear-test.cmd",
+        "scripts/git-guard.cmd",
+        "scripts/owner-button.cmd"
+      ],
+      "examplePrompts": [
+        "Next",
+        "Create a goal: make this repo safe to deploy",
+        "Check the selected gear for debugging failing CI"
+      ],
+      "riskLevel": "medium"
+    },
+    {
+      "id": "Founder",
+      "name": "Founder Operator Pack",
+      "description": "Turns scattered founder work into owner-only queues, handoffs, follow-ups, briefings, and crisp written outputs.",
+      "idealFor": ["Founders", "Solo builders", "Agency owners"],
+      "skills": [
+        "owner-button-workflow",
+        "meeting-notes-and-actions",
+        "email-draft-polish",
+        "internal-comms",
+        "domain-name-brainstormer",
+        "lead-research-assistant",
+        "support-ticket-triage",
+        "file-organizer"
+      ],
+      "commands": [
+        "scripts/codex-handoff.cmd",
+        "scripts/owner-button.cmd",
+        "scripts/codex-systems-status.cmd"
+      ],
+      "examplePrompts": [
+        "Turn this messy project update into a client-ready status note",
+        "Extract owner buttons and next actions from this transcript",
+        "Create a handoff note for another Codex"
+      ],
+      "riskLevel": "low"
+    },
+    {
+      "id": "Builder",
+      "name": "Builder Automation Pack",
+      "description": "For implementation work: feature building, CI/debugging, deploy prep, migrations, logs, reviews, and repo-safe shipping.",
+      "idealFor": ["Developers", "Technical founders", "Internal tools teams"],
+      "skills": [
+        "codebase-migrate",
+        "pr-review-ci-fix",
+        "deploy-pipeline",
+        "datadog-logs",
+        "sentry-triage",
+        "issue-triage",
+        "langsmith-fetch",
+        "mcp-builder",
+        "webapp-testing",
+        "changelog-generator"
+      ],
+      "commands": [
+        "scripts/codex-auto.cmd",
+        "scripts/codex-high.cmd",
+        "scripts/codex-review.cmd",
+        "scripts/git-guard.cmd"
+      ],
+      "examplePrompts": [
+        "Debug the failing build and commit the fix",
+        "Review the current diff for regressions",
+        "Ship this feature with tests and a clean changelog"
+      ],
+      "riskLevel": "high"
+    },
+    {
+      "id": "Designer",
+      "name": "Design Delivery Pack",
+      "description": "For polished visual deliverables, frontend QA, brand consistency, image cleanup, and face-preserving design edits.",
+      "idealFor": ["Designers", "Marketing sites", "Frontend polish"],
+      "skills": [
+        "canvas-design",
+        "brand-guidelines",
+        "theme-factory",
+        "image-enhancer",
+        "slack-gif-creator",
+        "webapp-testing"
+      ],
+      "commands": [
+        "scripts/codex-project-freshness.cmd",
+        "scripts/codex-project-freshness-after-exit.cmd"
+      ],
+      "examplePrompts": [
+        "Polish this dashboard for desktop and mobile",
+        "Create a static poster with visual QA",
+        "Preserve this face exactly while changing the surrounding design"
+      ],
+      "riskLevel": "medium"
+    },
+    {
+      "id": "Knowledge",
+      "name": "Knowledge Capture Pack",
+      "description": "Converts research, meetings, specs, and decisions into structured documents, Notion-ready pages, and implementation plans.",
+      "idealFor": ["Teams", "Research-heavy projects", "Product managers"],
+      "skills": [
+        "notion-knowledge-capture",
+        "notion-meeting-intelligence",
+        "notion-research-documentation",
+        "notion-spec-to-implementation",
+        "content-research-writer",
+        "meeting-insights-analyzer",
+        "meeting-notes-and-actions"
+      ],
+      "commands": [
+        "scripts/codex-handoff.cmd"
+      ],
+      "examplePrompts": [
+        "Turn this conversation into a decision record",
+        "Convert this PRD into implementation tasks",
+        "Prepare a meeting brief from the available context"
+      ],
+      "riskLevel": "medium"
+    },
+    {
+      "id": "Revenue",
+      "name": "Revenue and Ops Pack",
+      "description": "Sales, ads, leads, support, invoices, spreadsheets, and customer-facing operations.",
+      "idealFor": ["Agencies", "Sales teams", "Back-office work"],
+      "skills": [
+        "competitive-ads-extractor",
+        "lead-research-assistant",
+        "invoice-organizer",
+        "spreadsheet-formula-helper",
+        "support-ticket-triage",
+        "raffle-winner-picker",
+        "tailored-resume-generator",
+        "video-downloader"
+      ],
+      "commands": [
+        "scripts/codex-systems-status.cmd"
+      ],
+      "examplePrompts": [
+        "Find high-quality leads for this service",
+        "Organize these receipts into tax-ready folders",
+        "Write the spreadsheet formula and test edge cases"
+      ],
+      "riskLevel": "medium"
+    },
+    {
+      "id": "XHigh",
+      "name": "XHigh Council Pack",
+      "description": "The highest-risk workflow: self-bounce, CEO/CTO/Programmer/QA council mode, and explicit guardrails before risky implementation.",
+      "idealFor": ["Architecture", "Auth", "Billing", "Security", "Database changes"],
+      "skills": ["owner-button-workflow", "mcp-builder", "deploy-pipeline", "sentry-triage", "datadog-logs"],
+      "commands": [
+        "scripts/codex-xhigh.cmd",
+        "scripts/codex-xhigh-bounce.cmd",
+        "scripts/codex-xhigh-raw.cmd",
+        "scripts/codex-bounce.cmd",
+        "scripts/codex-council.cmd",
+        "scripts/git-guard.cmd"
+      ],
+      "examplePrompts": [
+        "Use council mode to plan and implement this auth change",
+        "Bounce ideas before touching this database migration",
+        "Run xhigh review before production-risk deployment"
+      ],
+      "riskLevel": "xhigh"
+    }
+  ]
+}

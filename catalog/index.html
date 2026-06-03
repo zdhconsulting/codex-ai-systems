@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Codex AI Systems Skill Catalog</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="top-shell">
+      <div class="top-visual" aria-hidden="true"></div>
+      <nav class="top-nav" aria-label="Catalog navigation">
+        <a href="#packs">Packs</a>
+        <a href="#install">Install</a>
+        <a href="#workflows">Workflows</a>
+        <a href="#safety">Safety</a>
+      </nav>
+      <section class="intro-band" aria-labelledby="page-title">
+        <div class="intro-copy">
+          <p class="eyebrow">Codex AI Systems</p>
+          <h1 id="page-title">A portable operating system for how Codex should work.</h1>
+          <p class="intro-text">
+            Install Zev's reusable rules, gears, guards, owner-button workflow, and skill packs on any Windows Codex setup.
+          </p>
+        </div>
+        <div class="command-panel" id="install" aria-label="Install command">
+          <div class="panel-header">
+            <span>Selected install</span>
+            <button class="icon-button" type="button" data-copy-target="install-command" title="Copy install command" aria-label="Copy install command">
+              Copy
+            </button>
+          </div>
+          <pre><code id="install-command">powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1</code></pre>
+          <p class="panel-note">Default install includes every pack. Use the pack filters below to generate a smaller command.</p>
+        </div>
+      </section>
+    </header>
+
+    <main>
+      <section class="control-band" aria-label="Catalog controls">
+        <div class="search-control">
+          <label for="search">Search packs and workflows</label>
+          <input id="search" type="search" placeholder="Try auth, design, founder, CI, handoff..." autocomplete="off" />
+        </div>
+        <div class="filter-control" aria-label="Risk filter">
+          <button type="button" class="filter-button active" data-risk="all">All</button>
+          <button type="button" class="filter-button" data-risk="low">Low</button>
+          <button type="button" class="filter-button" data-risk="medium">Medium</button>
+          <button type="button" class="filter-button" data-risk="high">High</button>
+          <button type="button" class="filter-button" data-risk="xhigh">XHigh</button>
+        </div>
+      </section>
+
+      <section class="content-grid" id="packs" aria-labelledby="packs-title">
+        <div class="section-heading">
+          <p class="eyebrow">Installable Packs</p>
+          <h2 id="packs-title">Pick the operating mode first.</h2>
+        </div>
+        <div class="pack-grid" id="pack-grid"></div>
+      </section>
+
+      <section class="workflow-band" id="workflows" aria-labelledby="workflows-title">
+        <div class="section-heading">
+          <p class="eyebrow">Core Workflows</p>
+          <h2 id="workflows-title">What new users actually get.</h2>
+        </div>
+        <div class="workflow-grid" id="workflow-grid"></div>
+      </section>
+
+      <section class="safety-band" id="safety" aria-labelledby="safety-title">
+        <div class="section-heading">
+          <p class="eyebrow">Safety Contract</p>
+          <h2 id="safety-title">The system saves rules, not secrets.</h2>
+        </div>
+        <div class="safety-grid">
+          <article>
+            <h3>Saved to GitHub</h3>
+            <p>Global instructions, reusable skills, installable packs, gear profiles, scripts, dashboard tools, owner-button workflow, and handoff helpers.</p>
+          </article>
+          <article>
+            <h3>Not saved</h3>
+            <p>Auth tokens, browser sessions, chat databases, logs, `.env` files, secrets, and live private account access.</p>
+          </article>
+          <article>
+            <h3>Guarded actions</h3>
+            <p>Git guard runs before commit, push, deploy, branch, PR, or destructive operations so Codex verifies the repo first.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>GitHub: zdhconsulting/codex-ai-systems</span>
+      <button class="text-button" type="button" data-copy-target="clone-command">Copy clone command</button>
+      <span class="hidden-copy" id="clone-command">git clone https://github.com/zdhconsulting/codex-ai-systems.git C:\Repos\codex-ai-systems</span>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
