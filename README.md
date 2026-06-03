@@ -15,7 +15,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 ## Contents
 
 - `instructions/AGENTS.md`: global Codex breadcrumb.
-- `skills/owner-button-workflow/`: reusable Codex skill.
+- `skills/`: reusable Codex skills, including `owner-button-workflow`.
 - `scripts/codex-auto.cmd`: auto-selects reasoning gear for CLI tasks.
 - `scripts/codex-bounce.cmd`: runs xhigh self-bounce preflight only.
 - `scripts/codex-council.cmd`: runs the CEO/CTO/Programmer/QA xhigh workflow.
@@ -33,9 +33,30 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `dashboard/`: ZDH Dashboard source for project, git, and owner-button monitoring.
 - `codexui/`: standalone Codex custom UI prototype and launcher source.
 
-## Install
+## Save
 
-From this repo:
+Sync the live Codex setup into this repo, commit, and push:
+
+```powershell
+C:\Users\zev\.codex\scripts\save-codex-systems.cmd
+```
+
+This saves the portable AI operating system: global instructions, reasoning profiles, scripts, non-system skills, owner-button workflow, dashboard tooling, and import instructions.
+
+It intentionally does not save private/session data such as `auth.json`, SQLite chat/log/memory databases, browser/session files, secrets, `.env` files, or live owner-button queue contents.
+
+## Import
+
+On another Windows computer or a fresh Codex setup:
+
+```powershell
+git clone https://github.com/zdhconsulting/codex-ai-systems.git C:\Repos\codex-ai-systems
+cd C:\Repos\codex-ai-systems
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
+C:\Users\zev\.codex\scripts\codex-doctor.cmd
+```
+
+From an already-cloned repo:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
@@ -87,6 +108,12 @@ Refresh project freshness colors:
 .\scripts\codex-project-freshness.cmd
 ```
 
+If Desktop did not show the left-bar project marker colors after restart, run this and then close Codex Desktop:
+
+```powershell
+.\scripts\codex-project-freshness-after-exit.cmd
+```
+
 Force a specific model/profile route:
 
 ```powershell
@@ -124,7 +151,7 @@ Council mode is enforced by default for xhigh implementation launched through `c
 
 `install.ps1` configures `~/.codex/config.toml` so `notify` runs `scripts/codex-notify-router.cmd` at turn end. The router forwards the normal computer-use notification, then runs `codex-project-freshness.cmd`.
 
-The freshness script reads saved/trusted project roots, checks the most recent file timestamp while skipping common generated folders, and updates `electron-workspace-root-labels` in `.codex-global-state.json` with visible freshness markers:
+The freshness script reads saved project roots, checks the most recent file timestamp while skipping common generated folders, and updates Codex Desktop `project-appearances` in `.codex-global-state.json` with visible project marker colors:
 
 - `FRESH`: touched within 24 hours.
 - `WARM`: touched within 3 days.
@@ -132,7 +159,7 @@ The freshness script reads saved/trusted project roots, checks the most recent f
 - `STALE`: touched within 14 days.
 - `DORMANT`: untouched longer than 14 days.
 
-CLI output uses ANSI colors. The Codex left bar uses colored label markers because the desktop UI does not expose a per-project CSS theme key in `config.toml`.
+CLI output uses ANSI colors. The Codex left bar uses colored project marker/folder icons, not full-row background paint.
 
 Create a handoff note for another Codex:
 
@@ -163,12 +190,6 @@ Run the custom Codex UI prototype:
 ```powershell
 cd .\codexui
 python .\server.py
-```
-
-Sync the live Codex setup into this repo, commit, and push:
-
-```powershell
-.\scripts\save-codex-systems.cmd
 ```
 
 ## GitHub Remote Setup

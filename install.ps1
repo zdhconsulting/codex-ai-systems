@@ -8,7 +8,7 @@ New-Item -ItemType Directory -Force `
     $CodexHome, `
     (Join-Path $CodexHome "scripts"), `
     (Join-Path $CodexHome "queues"), `
-    (Join-Path $CodexHome "skills\owner-button-workflow\agents") | Out-Null
+    (Join-Path $CodexHome "skills") | Out-Null
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "instructions\AGENTS.md") `
     -Destination (Join-Path $CodexHome "AGENTS.md") -Force
@@ -34,11 +34,12 @@ if (Test-Path -LiteralPath $configPath) {
     Set-Content -LiteralPath $configPath -Value ($notifyLine + "`r`n") -Encoding UTF8
 }
 
-Copy-Item -LiteralPath (Join-Path $repoRoot "skills\owner-button-workflow\SKILL.md") `
-    -Destination (Join-Path $CodexHome "skills\owner-button-workflow\SKILL.md") -Force
-
-Copy-Item -LiteralPath (Join-Path $repoRoot "skills\owner-button-workflow\agents\openai.yaml") `
-    -Destination (Join-Path $CodexHome "skills\owner-button-workflow\agents\openai.yaml") -Force
+Get-ChildItem -LiteralPath (Join-Path $repoRoot "skills") -Directory |
+    ForEach-Object {
+        $dest = Join-Path $CodexHome ("skills\" + $_.Name)
+        New-Item -ItemType Directory -Force $dest | Out-Null
+        Copy-Item -Path (Join-Path $_.FullName "*") -Destination $dest -Recurse -Force
+    }
 
 $queuePath = Join-Path $CodexHome "queues\owner-buttons.json"
 if (-not (Test-Path $queuePath)) {
@@ -46,6 +47,7 @@ if (-not (Test-Path $queuePath)) {
 }
 
 Write-Host "Installed Codex AI Systems to: $CodexHome"
+Write-Host "Installed reusable skills from: $(Join-Path $repoRoot "skills")"
 Write-Host "Owner button queue: $queuePath"
 Write-Host "Run this to verify:"
 Write-Host "$CodexHome\scripts\git-guard.cmd"
