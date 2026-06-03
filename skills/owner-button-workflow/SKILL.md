@@ -187,6 +187,16 @@ CEO/CTO/Programmer/QA council:
 - Tester/QA Agent reviews, tests, and pushes bugs back to Programmer Agent until clean or truly blocked.
 - Enforcement: council preflight must include `CEO Agent`, `CTO Agent`, `Tester/QA Agent`, and `Programmer Brief`, or implementation does not start.
 
+Council vs swarm routing:
+
+- Use council mode when one task is high-stakes or strategically risky and needs better internal sequencing before execution: architecture, auth, billing, database, security, permissions, production deploys, ambiguous failures, major refactors, or risky cross-cutting design/system work.
+- Use council mode when the problem is mostly one coordinated implementation path, even if it needs CEO/CTO/QA thinking.
+- Use swarm mode only when Zev explicitly asks for `swarm`, `agents`, `sub-agents`, `delegate`, `parallel agents`, or equivalent parallel agent work in the current Desktop chat.
+- Recommend swarm mode, but do not spawn agents yet, when a task naturally splits into independent lanes that can run in parallel: UX audit + bug audit + performance audit, frontend slice + backend slice with disjoint files, multiple independent codebase investigations, or implementation + independent QA.
+- Do not use swarm when the next step is a single blocking diagnosis, when file ownership would overlap heavily, or when coordination overhead is larger than the work.
+- When swarm is enabled, Codex remains coordinator: define lanes, assign disjoint write scopes, run local critical-path work, integrate results, verify, and close agents when done.
+- If both apply, use council for high-risk strategy/preflight and swarm only for clearly separable implementation, research, or verification lanes after the strategy is clear.
+
 Available but not the default:
 
 - `gpt-5.4-mini`: future low/medium fallback if `gpt-5.3-codex-spark` is too shallow or unavailable.
