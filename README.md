@@ -112,6 +112,7 @@ Seed the current project with Zev's workflow rules:
 
 ```powershell
 .\scripts\codex-project-rules.cmd
+.\scripts\codex-project-rules.cmd -DryRun
 ```
 
 Auto-route a Codex task:
@@ -221,6 +222,8 @@ C:\Users\zev\.codex\scripts\codex-project-rules.cmd
 ```
 
 The script creates or updates a marked Zev workflow block in `AGENTS.md` while preserving project-specific instructions.
+
+Use `-DryRun` to preview the exact `AGENTS.md` result without changing files.
 
 ## Project Freshness Colors
 

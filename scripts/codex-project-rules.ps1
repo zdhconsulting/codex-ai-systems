@@ -1,5 +1,6 @@
 param(
     [string] $ProjectPath = (Get-Location).Path,
+    [switch] $DryRun,
     [switch] $Print
 )
 
@@ -79,12 +80,15 @@ if (Test-Path -LiteralPath $agentsPath) {
     $updated = $block
 }
 
-Set-Content -LiteralPath $agentsPath -Value $updated -Encoding UTF8
-
-Write-Host "Project rules installed."
+if ($DryRun) {
+    Write-Host "Project rules dry run. No files changed."
+} else {
+    Set-Content -LiteralPath $agentsPath -Value $updated -Encoding UTF8
+    Write-Host "Project rules installed."
+}
 Write-Host "Project: $projectRoot"
 Write-Host "AGENTS: $agentsPath"
-if ($Print) {
+if ($Print -or $DryRun) {
     Write-Host ""
     Write-Host $updated
 }
