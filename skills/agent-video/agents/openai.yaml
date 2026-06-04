@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Video"
+  short_description: "Conduct English Comedy TLV-style VEED Instagram Reel edits."
+  default_prompt: "Use Agent Video to conduct this VEED Instagram Reel edit in the English Comedy TLV house style."
