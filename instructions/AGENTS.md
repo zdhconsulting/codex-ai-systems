@@ -60,6 +60,10 @@ When launching new Codex CLI/automation work, use the real profile router:
 
 `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
 
+## Browser Preference
+
+Use Chrome or Chromium instead of Edge for all browser work by default: local previews, browser automation, screenshots, responsive checks, ChatGPT handoffs, and web app verification. Do not launch Edge unless Zev explicitly asks for Edge, Chrome is unavailable, or the task specifically requires Edge compatibility testing.
+
 ## ChatGPT Usage Routing
 
 To save Codex usage, route work away from Codex when it does not need local repo access, terminal commands, filesystem edits, tests, git, deployment/debugging, browser verification, app connectors, or owner-button queue state.
