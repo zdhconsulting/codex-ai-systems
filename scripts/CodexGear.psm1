@@ -202,9 +202,11 @@ function Get-ChatGatewaySavingsEstimate {
         $tokens = 6000 + ([math]::Min($wordCount, 600) * 18)
     }
 
-    if ($CodexFallbackProfile -eq "deep") { $tokens += 6000 }
-    if ($CodexFallbackProfile -eq "max") { $tokens += 12000 }
-    if ($CacheHit) { $tokens += 3000 }
+    if ($Route -eq "chatgpt" -or $Route -eq "hybrid") {
+        if ($CodexFallbackProfile -eq "deep") { $tokens += 6000 }
+        if ($CodexFallbackProfile -eq "max") { $tokens += 12000 }
+        if ($CacheHit) { $tokens += 3000 }
+    }
 
     return [pscustomobject]@{
         Basis = "heuristic"

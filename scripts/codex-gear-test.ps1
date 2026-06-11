@@ -269,6 +269,8 @@ $cacheHit = Get-ChatGatewayCacheEntry -CodexHome $cacheTestHome -Task $cacheTask
 Assert-True ($cacheHit.Hit -eq $true) "ChatGPT bridge cache finds exact task hit"
 $freshnessBypass = Get-ChatGatewayCacheEntry -CodexHome $cacheTestHome -Task "write a cold email today" -Project $cacheProject
 Assert-Equal $freshnessBypass.Status "freshness-bypass" "ChatGPT bridge cache bypasses freshness-sensitive task"
+$codexSavings = Get-ChatGatewaySavingsEstimate -Text "fix failing tests" -Route "codex" -CodexFallbackProfile "deep"
+Assert-Equal $codexSavings.EstimatedAvoidedCodexTokens 0 "Codex-only route has no avoided-Codex token estimate"
 
 $feedbackOut = (& (Join-Path $scriptDir "codex-gateway-feedback.ps1") -CodexHome $cacheTestHome -Project $cacheProject -Task $cacheTask -Rating 5 -Outcome good -Notes "test feedback" 2>&1 6>&1 | Out-String)
 Assert-True ($feedbackOut -match "Gateway feedback logged") "Gateway feedback command logs feedback"
