@@ -32,3 +32,4 @@
 - "Make up four client logos for a bridge test" goes to ChatGPT because fictional creative generation is detachable.
 - "Download the generated ChatGPT logo image into this project folder" stays in Codex because it needs local filesystem work.
 - "Create client logos for real ZDH clients" can go to ChatGPT for concepts only after Zev supplies the client facts; do not invent real clients unless Zev explicitly says it is a fictional test.
+- Use `chatgpt-auto-route.cmd` when the task should be logged as a ChatGPT bridge session with prompt, response, downloaded assets, and savings events.

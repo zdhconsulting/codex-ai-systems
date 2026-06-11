@@ -16,9 +16,19 @@ Use this skill to spend Codex only where Codex is uniquely useful: local files, 
    `C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`
 3. If routing away, use:
    `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
+   For the one-command session/log helper, use:
+   `C:\Users\zev\.codex\scripts\chatgpt-auto-route.cmd -Project "PROJECT" -OutDir "OUTPUT_DIR" "TASK"`
 4. When ChatGPT returns, import with:
    `C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`
 5. Codex resumes only the local/verification/execution part from the packet.
+
+## Auto Bridge Helper
+
+Use `chatgpt-auto-route.cmd` for repeatable bridge runs. It routes the task, creates a session log, writes the ChatGPT prompt to a file, copies it to the clipboard, opens ChatGPT unless `-NoOpen` is set, and prints the Codex Desktop Chrome runner snippet.
+
+In Codex Desktop, run the printed snippet with the Node REPL tool to submit the prompt through Chrome, wait for completion, bundle generated page images, save them under the requested output folder, write/import the return packet, and append a savings event to `.codex/logs/chatgpt-bridge/events.jsonl`.
+
+Important limitation: the PowerShell command cannot directly call the Codex Chrome extension outside a Codex Desktop tool runtime. The Chrome automation layer lives in `chatgpt-chrome-bridge.mjs` and must run from Codex Desktop where the `agent.browsers` API exists.
 
 ## Handoff Rules
 

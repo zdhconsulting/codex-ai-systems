@@ -76,6 +76,9 @@ $expected = @(
 $requiredScripts = @(
     "ai-credits-optimizer.cmd",
     "ai-credits-optimizer.ps1",
+    "chatgpt-auto-route.cmd",
+    "chatgpt-auto-route.ps1",
+    "chatgpt-chrome-bridge.mjs",
     "chatgpt-route.cmd",
     "chatgpt-route.ps1",
     "chatgpt-return.cmd",
@@ -185,6 +188,21 @@ Assert-True ($optimizerCodexDryRun -match "Codex auto gear:") "Codex dry-run sti
 $routePrint = (& (Join-Path $scriptDir "chatgpt-route.ps1") -NoOpen -Print -PacketOnly "draft a short client update" 2>&1 6>&1 | Out-String)
 Assert-True ($routePrint -match "Return only the CODEX_RETURN_PACKET block") "ChatGPT route packet-only prompt is explicit"
 Assert-True ($routePrint -match "Go back to Codex\?:") "ChatGPT route includes go-back field"
+
+$routeOutFile = Join-Path $env:TEMP "chatgpt-route-prompt-$PID.txt"
+if (Test-Path -LiteralPath $routeOutFile) {
+    Remove-Item -LiteralPath $routeOutFile -Force
+}
+$routePromptOnly = (& (Join-Path $scriptDir "chatgpt-route.ps1") -NoOpen -PromptOnly -OutFile $routeOutFile "generate a fictional logo image" 2>&1 6>&1 | Out-String)
+Assert-True (Test-Path -LiteralPath $routeOutFile) "ChatGPT route writes prompt file"
+Assert-True ($routePromptOnly -match "do not stop at briefs") "ChatGPT image route prompt asks for actual image generation"
+
+$autoBridgeDryRun = (& (Join-Path $scriptDir "chatgpt-auto-route.ps1") -DryRun -NoOpen -Project "gear-test" "make up four client logos for a bridge test and generate a logo image sheet" 2>&1 6>&1 | Out-String)
+Assert-True ($autoBridgeDryRun -match "Status: dry-run") "ChatGPT auto bridge dry-run reports status"
+Assert-True ($autoBridgeDryRun -match "Route: chatgpt") "ChatGPT auto bridge dry-run routes creative task to ChatGPT"
+
+$autoBridgeCodex = (& (Join-Path $scriptDir "chatgpt-auto-route.ps1") -NoOpen -Project "gear-test" "fix failing tests in the checkout flow" 2>&1 6>&1 | Out-String)
+Assert-True ($autoBridgeCodex -match "Status: not-routed") "ChatGPT auto bridge refuses Codex-local work"
 
 $packetFile = Join-Path $env:TEMP "chatgpt-return-packet-$PID.txt"
 @"

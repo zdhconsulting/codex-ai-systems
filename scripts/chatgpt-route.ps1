@@ -1,9 +1,12 @@
 param(
-    [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]] $Task,
     [switch] $NoOpen,
     [switch] $Print,
-    [switch] $PacketOnly
+    [switch] $PacketOnly,
+    [switch] $PromptOnly,
+    [switch] $Quiet,
+    [string] $OutFile = "",
+    [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
+    [string[]] $Task
 )
 
 $ErrorActionPreference = "Stop"
@@ -76,16 +79,36 @@ if ($Print) {
     Write-Host $prompt
 }
 
+if ($OutFile) {
+    $outDir = Split-Path -Parent $OutFile
+    if ($outDir) {
+        New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+    }
+    Set-Content -LiteralPath $OutFile -Value $prompt -Encoding UTF8
+}
+
+if ($PromptOnly) {
+    if (-not $Print) {
+        Write-Host $prompt
+    }
+    exit 0
+}
+
 if (-not $NoOpen) {
     Start-Process "https://chatgpt.com/"
 }
 
-Write-Host "ChatGPT route prepared."
-if ($copied) {
-    Write-Host "Prompt copied to clipboard."
-} else {
-    Write-Host "Prompt was not copied. Re-run with -Print to view it."
-}
-if (-not $NoOpen) {
-    Write-Host "Opened ChatGPT. Paste the prompt if it is not inserted automatically."
+if (-not $Quiet) {
+    Write-Host "ChatGPT route prepared."
+    if ($copied) {
+        Write-Host "Prompt copied to clipboard."
+    } else {
+        Write-Host "Prompt was not copied. Re-run with -Print to view it."
+    }
+    if ($OutFile) {
+        Write-Host "Prompt saved: $OutFile"
+    }
+    if (-not $NoOpen) {
+        Write-Host "Opened ChatGPT. Paste the prompt if it is not inserted automatically."
+    }
 }
