@@ -196,7 +196,7 @@ function Select-AiWorkRoute {
 
     $codexSignals = [ordered]@{
         "local files or repo context" = "(\b(repo|repository|codebase|workspace|local files?|filesystem|folder|directory|path|cwd)\b|[a-z]:\\|\.codex|agents\.md)"
-        "code/build/test/git work" = "\b(code|codebase|implement|implementation|component|page|route|api|endpoint|database|migration|schema|script|fix|bug|debug|test|tests|build|lint|typecheck|git|commit|branch|push|pull request|pr|ci|github actions|deploy|deployment|logs?|stack trace|crash|terminal|shell|powershell|cmd|npm|pnpm|yarn|python|node)\b"
+        "code/build/test/git work" = "(\b(code|codebase|implement|implementation|component|page|route|api|endpoint|database|migration|schema|script|fix|bug|debug|tests|build|lint|typecheck|git|commit|branch|push|pull request|pr|ci|github actions|deploy|deployment|logs?|stack trace|crash|terminal|shell|powershell|cmd|npm|pnpm|yarn|python|node)\b|\b(failing|broken|unit|integration|e2e|smoke|regression)\s+tests?\b|\b(run|rerun|execute|write|add)\s+tests?\b)"
         "browser or app verification" = "\b(browser|chrome|screenshot|playwright|localhost|127\.0\.0\.1|app verification|responsive|mobile|desktop qa)\b"
         "connected apps or private account state" = "\b(gmail|email inbox|inbox|slack|notion|linear|jira|github|vercel|supabase|stripe|datadog|sentry|google analytics|search console|cloudflare|zapier|make\.com|connector|mcp|app session)\b"
         "local asset generation or export" = "(\b(save|export|download|render)\b.*\b(logos?|images?|assets?|png|jpe?g|svg|webp|pdf)\b|\b(logos?|images?|assets?|png|jpe?g|svg|webp|pdf)\b.*\b(save|export|download|render)\b)"

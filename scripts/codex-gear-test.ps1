@@ -155,6 +155,7 @@ $workRouteTests = @(
     [pscustomobject]@{ Prompt = "translate this short paragraph into Hebrew"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "I need 4 logos for different clients ZDH Sales worked with"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "brainstorm four logo concepts for ZDH Sales clients"; Route = "chatgpt" },
+    [pscustomobject]@{ Prompt = "Create 4 fictional logo concepts/images for a ZDH Sales bridge test. Make up client names. Return a CODEX_RETURN_PACKET."; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "fix failing tests in the checkout flow"; Route = "codex" },
     [pscustomobject]@{ Prompt = "summarize src/app.ts"; Route = "codex" },
     [pscustomobject]@{ Prompt = "summarize my Gmail inbox for urgent replies"; Route = "codex" },
