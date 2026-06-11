@@ -21,9 +21,13 @@ Say:
 
 `ChatGPT route recommended - brief reason`
 
-Then prepare the handoff:
+Then prepare the handoff, or let the optimizer do it:
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
+
+`C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd "TASK"`
+
+`codex-auto.cmd` also runs the optimizer before launching a new Codex session. Use `[codex]`, `--codex`, or `-ForceCodex` to bypass the optimizer when the task should stay in Codex.
 
 ## Keep In Codex
 

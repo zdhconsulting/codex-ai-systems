@@ -4,15 +4,30 @@ param(
     [switch] $BounceOnly,
     [switch] $Council,
     [switch] $NoCouncil,
+    [switch] $ForceCodex,
+    [switch] $ForceChatGPT,
+    [switch] $NoOptimizeCredits,
+    [switch] $NoOpen,
+    [switch] $Print,
     [string] $Cwd = (Get-Location).Path,
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
     [string[]] $PromptParts
 )
 
 $prompt = ($PromptParts -join " ").Trim()
+$tagForceCodex = $false
+$tagForceChatGPT = $false
 $tagBounce = $false
 $tagCouncil = $false
 $tagNoCouncil = $false
+if ($prompt -match "\[(codex|force-codex)\]" -or $prompt -match "\s--(codex|force-codex)\b") {
+    $tagForceCodex = $true
+    $prompt = (($prompt -replace "\[(codex|force-codex)\]", "") -replace "\s--(codex|force-codex)\b", "").Trim()
+}
+if ($prompt -match "\[(chatgpt|gpt|force-chatgpt)\]" -or $prompt -match "\s--(chatgpt|gpt|force-chatgpt)\b") {
+    $tagForceChatGPT = $true
+    $prompt = (($prompt -replace "\[(chatgpt|gpt|force-chatgpt)\]", "") -replace "\s--(chatgpt|gpt|force-chatgpt)\b", "").Trim()
+}
 if ($prompt -match "\[(bounce|debate|preflight)\]" -or $prompt -match "\s--(bounce|debate|preflight)\b") {
     $tagBounce = $true
     $prompt = (($prompt -replace "\[(bounce|debate|preflight)\]", "") -replace "\s--(bounce|debate|preflight)\b", "").Trim()
@@ -28,14 +43,55 @@ if ($prompt -match "\[(nocouncil|no-council|raw|direct)\]" -or $prompt -match "\
 if ($tagBounce) { $Bounce = $true }
 if ($tagCouncil) { $Council = $true }
 if ($tagNoCouncil) { $NoCouncil = $true }
+if ($tagForceCodex) { $ForceCodex = $true }
+if ($tagForceChatGPT) { $ForceChatGPT = $true }
 if ($BounceOnly) { $Bounce = $true }
 if (-not $prompt) {
-    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Council] [-NoCouncil] [-Cwd PATH] <task prompt>"
+    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Council] [-NoCouncil] [-ForceCodex] [-ForceChatGPT] [-NoOptimizeCredits] [-NoOpen] [-Print] [-Cwd PATH] <task prompt>"
     exit 2
 }
 
 $modulePath = Join-Path $PSScriptRoot "CodexGear.psm1"
 Import-Module $modulePath -Force
+
+if (-not $NoOptimizeCredits) {
+    $optimizerRoute = Select-AiWorkRoute -Text $prompt -ForceCodex:$ForceCodex -ForceChatGPT:$ForceChatGPT
+    $signalText = if ($optimizerRoute.Signals -and $optimizerRoute.Signals.Count -gt 0) {
+        $optimizerRoute.Signals -join ", "
+    } else {
+        "none"
+    }
+
+    $codexHome = Split-Path -Parent $PSScriptRoot
+    $logDir = Join-Path $codexHome "logs"
+    $optimizerLogPath = Join-Path $logDir "ai-credits-optimizer.log"
+    New-Item -ItemType Directory -Force $logDir | Out-Null
+    $optimizerStamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "[$optimizerStamp] route=$($optimizerRoute.Route) | confidence=$($optimizerRoute.Confidence) | signals=$signalText | $Cwd | $prompt" | Add-Content -Path $optimizerLogPath
+
+    if ($optimizerRoute.Route -eq "chatgpt") {
+        Write-Host "AI credits optimizer: ChatGPT route selected"
+        Write-Host "Reason: $($optimizerRoute.Reason)"
+        Write-Host "Signals: $signalText"
+        Write-Host "Return path: chatgpt-return.cmd -Print"
+        Write-Host "Logged to: $optimizerLogPath"
+        if ($DryRun) {
+            Write-Host "Dry run only. Prompt: $prompt"
+            exit 0
+        }
+
+        $routeScript = Join-Path $PSScriptRoot "chatgpt-route.ps1"
+        $routeArgs = @()
+        if ($NoOpen) { $routeArgs += "-NoOpen" }
+        if ($Print) { $routeArgs += "-Print" }
+        $routeArgs += $prompt
+        & $routeScript @routeArgs
+        exit $LASTEXITCODE
+    }
+
+    Write-Host "AI credits optimizer: Codex route selected"
+    Write-Host "Reason: $($optimizerRoute.Reason)"
+}
 
 $profile = Select-CodexGear -Text $prompt
 $gear = Get-CodexGear -Profile $profile

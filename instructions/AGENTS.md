@@ -60,6 +60,20 @@ When launching new Codex CLI/automation work, use the real profile router:
 
 `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
 
+## AI Credits Usage Optimizer
+
+`codex-auto.cmd` now runs an AI credits optimizer before launching a new Codex session. It routes obvious non-repo writing, brainstorming, strategy, summary, explanation, and design-direction tasks to ChatGPT through `chatgpt-route.cmd`; it keeps code, local files, tests, git, deploys, browser/app verification, connectors, `.codex` systems work, owner-button state, auth, billing, security, database, permissions, and production-risk work in Codex.
+
+Preview or intentionally dispatch a task with:
+
+`C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`
+
+Force Codex when needed with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`. Use `-NoOptimizeCredits` on `codex-auto.cmd` only when testing the raw gear router.
+
+When the optimizer sends work to ChatGPT, bring the result back by copying the ChatGPT response and running:
+
+`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`
+
 ## Browser Preference
 
 Use Chrome or Chromium instead of Edge for all browser work by default: local previews, browser automation, screenshots, responsive checks, ChatGPT handoffs, and web app verification. Do not launch Edge unless Zev explicitly asks for Edge, Chrome is unavailable, or the task specifically requires Edge compatibility testing.

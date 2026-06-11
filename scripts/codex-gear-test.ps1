@@ -74,6 +74,8 @@ $expected = @(
 )
 
 $requiredScripts = @(
+    "ai-credits-optimizer.cmd",
+    "ai-credits-optimizer.ps1",
     "chatgpt-route.cmd",
     "chatgpt-route.ps1",
     "chatgpt-return.cmd",
@@ -144,6 +146,30 @@ $routeTests = @(
 foreach ($case in $routeTests) {
     Assert-Equal (Select-CodexGear -Text $case.Prompt) $case.Profile "Route '$($case.Prompt)'"
 }
+
+$workRouteTests = @(
+    [pscustomobject]@{ Prompt = "draft a concise apology email to a client"; Route = "chatgpt" },
+    [pscustomobject]@{ Prompt = "brainstorm ten domain names for a comedy newsletter"; Route = "chatgpt" },
+    [pscustomobject]@{ Prompt = "summarize meeting notes into decisions and action items"; Route = "chatgpt" },
+    [pscustomobject]@{ Prompt = "fix failing tests in the checkout flow"; Route = "codex" },
+    [pscustomobject]@{ Prompt = "summarize src/app.ts"; Route = "codex" },
+    [pscustomobject]@{ Prompt = "[low] draft a short email"; Route = "codex" },
+    [pscustomobject]@{ Prompt = "[chatgpt] fix failing tests in the checkout flow"; Route = "chatgpt" },
+    [pscustomobject]@{ Prompt = "[codex] draft a short email"; Route = "codex" }
+)
+
+foreach ($case in $workRouteTests) {
+    $workRoute = Select-AiWorkRoute -Text $case.Prompt
+    Assert-Equal $workRoute.Route $case.Route "Work route '$($case.Prompt)'"
+}
+
+$optimizerDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -NoOpen -Cwd $CodexHome "draft a concise apology email to a client" 2>&1 6>&1 | Out-String)
+Assert-True ($optimizerDryRun -match "AI credits optimizer: ChatGPT route selected") "Codex auto dry-run diverts writing task to ChatGPT"
+Assert-True ($optimizerDryRun -notmatch "Codex auto gear:") "ChatGPT dry-run does not launch Codex gear"
+
+$optimizerCodexDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -Cwd $CodexHome "fix failing tests in the checkout flow" 2>&1 6>&1 | Out-String)
+Assert-True ($optimizerCodexDryRun -match "AI credits optimizer: Codex route selected") "Codex auto dry-run keeps test/debug task in Codex"
+Assert-True ($optimizerCodexDryRun -match "Codex auto gear:") "Codex dry-run still selects Codex gear"
 
 $bounceDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -Bounce -Cwd $CodexHome "[xhigh] change auth permissions" 2>&1 6>&1 | Out-String)
 Assert-True ($bounceDryRun -match "Self-bounce: bounce-then-execute") "Bounce dry-run enables max preflight"

@@ -44,6 +44,14 @@ When Zev says `Next`, continue the current mission with the best next action. Do
 
 Start substantial tasks with `Gear: low|medium|high|xhigh - brief reason`. Use low for simple mechanical work, medium for normal implementation, high for debugging/verification-heavy work, and xhigh for architecture, auth, billing, security, database, permissions, or production-risk work.
 
+## AI Credits Usage Optimizer
+
+Use `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"` for new CLI/automation work. It runs an AI credits optimizer before launching Codex and diverts obvious non-repo writing, brainstorming, strategy, summaries, explanations, and design-direction tasks to ChatGPT.
+
+Preview or dispatch with `C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`. Force Codex with `-ForceCodex`, `[codex]`, or `--codex`; force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`.
+
+After ChatGPT returns an answer, import it with `C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`.
+
 ## ChatGPT Auto-Orchestration
 
 Route non-repo writing, brainstorming, strategy, summaries, learning, second opinions, and graphic design direction to ChatGPT to preserve Codex usage.

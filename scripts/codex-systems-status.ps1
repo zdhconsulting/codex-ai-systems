@@ -92,10 +92,12 @@ if (Test-Path -LiteralPath $gearModule) {
         Format-Table -AutoSize
 
     if ($Task) {
+        $workRoute = Select-AiWorkRoute -Text $Task
         $profile = Select-CodexGear -Text $Task
         $gear = Get-CodexGear -Profile $profile
         Write-Host "Task route: $Task"
-        Write-Host "Selected: $($gear.Profile) / $($gear.Gear) / $($gear.Model) / $($gear.Effort)"
+        Write-Host "AI work route: $($workRoute.Route) ($($workRoute.Reason))"
+        Write-Host "Codex fallback: $($gear.Profile) / $($gear.Gear) / $($gear.Model) / $($gear.Effort)"
     }
 } else {
     Write-Host "CodexGear.psm1 not found."
@@ -121,6 +123,7 @@ if (Test-Path -LiteralPath $SystemsRepo) {
 
 Write-Section "Useful Commands"
 Write-Host "$scriptRoot\codex-systems-status.cmd"
+Write-Host "$scriptRoot\ai-credits-optimizer.cmd -DryRun `"draft a client email from these notes`""
 Write-Host "$scriptRoot\chatgpt-route.cmd `"draft a client email from these notes`""
 Write-Host "$scriptRoot\chatgpt-route.cmd `"brainstorm poster concepts for this launch`""
 Write-Host "$scriptRoot\chatgpt-return.cmd -Print"
