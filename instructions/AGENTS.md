@@ -101,7 +101,7 @@ When the optimizer sends work to ChatGPT, bring the result back by copying the C
 
 ## Browser Preference
 
-Use Chrome or Chromium instead of Edge for all browser work by default: local previews, browser automation, screenshots, responsive checks, ChatGPT handoffs, and web app verification. Do not launch Edge unless Zev explicitly asks for Edge, Chrome is unavailable, or the task specifically requires Edge compatibility testing.
+For all chats and projects, use Chrome or Chromium instead of Microsoft Edge for browser work by default: local previews, browser automation, screenshots, responsive checks, ChatGPT handoffs, and web app verification. Do not launch Edge unless Zev explicitly asks for Edge, Chrome is unavailable, or the task specifically requires Edge compatibility testing.
 
 ## ChatGPT Usage Routing
 
