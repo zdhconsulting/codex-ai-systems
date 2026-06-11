@@ -137,6 +137,13 @@ For new Codex CLI/automation work, use the real profile router:
 
 `codex-gateway.cmd` is the preferred front door for new work because it classifies tasks as `chatgpt`, `codex`, or `hybrid`. It auto-bounces high-confidence detachable work to ChatGPT, keeps local/risky work in Codex, and asks first for mixed work. `codex-auto.cmd` remains the lower-level Codex launcher and includes a simpler AI credits optimizer. Use `$codex-chatgpt-bridge` for routing edge cases, handoff preparation, and `CODEX_RETURN_PACKET` imports.
 
+Gateway savings controls:
+
+- Exact completed ChatGPT packets/assets are cached by project plus normalized task.
+- Current/fresh prompts such as latest/current/today/news/price/weather/schedule bypass cache automatically.
+- Use `-Refresh` for a new ChatGPT run, `-NoCache` for raw routing tests, and `-SplitHybrid` only when the detachable ChatGPT subtask is clear.
+- Use `codex-gateway-feedback.cmd` to record route quality after useful or bad runs.
+
 Preview or intentionally dispatch with:
 
 `C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`

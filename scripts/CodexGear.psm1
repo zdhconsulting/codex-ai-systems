@@ -49,6 +49,265 @@ function Get-CodexGearMatrix {
     return $matrix
 }
 
+function ConvertTo-ChatGatewayTaskText {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Text
+    )
+
+    return (($Text -replace "\s+", " ").Trim().ToLowerInvariant())
+}
+
+function Get-ChatGatewayTaskKey {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Text,
+        [string] $Project = "Gateway"
+    )
+
+    $normalizedTask = ConvertTo-ChatGatewayTaskText -Text $Text
+    $normalizedProject = ConvertTo-ChatGatewayTaskText -Text $Project
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes("$normalizedProject`n$normalizedTask")
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha.ComputeHash($bytes)
+        return (($hashBytes | ForEach-Object { $_.ToString("x2") }) -join "")
+    } finally {
+        $sha.Dispose()
+    }
+}
+
+function Test-ChatGatewayFreshnessSensitive {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Text
+    )
+
+    $normalized = ConvertTo-ChatGatewayTaskText -Text $Text
+    return ($normalized -match "\b(today|tonight|tomorrow|yesterday|latest|current|recent|newest|news|live|now|as of|this week|this month|this quarter|price|pricing|stock|market|weather|schedule|score|standings|exchange rate|rate limit)\b")
+}
+
+function Get-ChatGatewayCacheEntry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $CodexHome,
+        [Parameter(Mandatory = $true)]
+        [string] $Task,
+        [string] $Project = "Gateway",
+        [int] $TtlDays = 14,
+        [switch] $IgnoreFreshness
+    )
+
+    $key = Get-ChatGatewayTaskKey -Text $Task -Project $Project
+    $cachePath = Join-Path $CodexHome "cache\chatgpt-bridge\$key.json"
+
+    if (-not $IgnoreFreshness -and (Test-ChatGatewayFreshnessSensitive -Text $Task)) {
+        return [pscustomobject]@{
+            Hit = $false
+            Status = "freshness-bypass"
+            Reason = "Task appears time-sensitive; cache reuse is disabled."
+            Key = $key
+            Path = $cachePath
+            Entry = $null
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $cachePath)) {
+        return [pscustomobject]@{
+            Hit = $false
+            Status = "miss"
+            Reason = "No exact completed ChatGPT result is cached for this project/task."
+            Key = $key
+            Path = $cachePath
+            Entry = $null
+        }
+    }
+
+    try {
+        $entry = Get-Content -LiteralPath $cachePath -Raw | ConvertFrom-Json
+    } catch {
+        return [pscustomobject]@{
+            Hit = $false
+            Status = "invalid"
+            Reason = "Cache entry could not be parsed: $($_.Exception.Message)"
+            Key = $key
+            Path = $cachePath
+            Entry = $null
+        }
+    }
+
+    $completedAt = $null
+    if ($entry.CompletedAt) {
+        try { $completedAt = [datetime]::Parse($entry.CompletedAt) } catch { $completedAt = $null }
+    }
+    if ($completedAt -and $TtlDays -gt 0 -and $completedAt -lt (Get-Date).AddDays(-1 * $TtlDays)) {
+        return [pscustomobject]@{
+            Hit = $false
+            Status = "stale"
+            Reason = "Cached result is older than $TtlDays day(s)."
+            Key = $key
+            Path = $cachePath
+            Entry = $entry
+        }
+    }
+
+    $handoffPath = if ($entry.HandoffPath) { $entry.HandoffPath } else { "" }
+    $responsePath = if ($entry.ResponsePath) { $entry.ResponsePath } else { "" }
+    $hasUsableText = ($handoffPath -and (Test-Path -LiteralPath $handoffPath)) -or
+        ($responsePath -and (Test-Path -LiteralPath $responsePath))
+    if (-not $hasUsableText) {
+        return [pscustomobject]@{
+            Hit = $false
+            Status = "missing-artifact"
+            Reason = "Cache metadata exists, but the handoff/response file is missing."
+            Key = $key
+            Path = $cachePath
+            Entry = $entry
+        }
+    }
+
+    return [pscustomobject]@{
+        Hit = $true
+        Status = "hit"
+        Reason = "Exact completed ChatGPT result found."
+        Key = $key
+        Path = $cachePath
+        Entry = $entry
+    }
+}
+
+function Get-ChatGatewaySavingsEstimate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Text,
+        [string] $Route = "codex",
+        [object[]] $ChatGPTSignals = @(),
+        [string] $CodexFallbackProfile = "fast",
+        [switch] $CacheHit
+    )
+
+    $wordCount = [regex]::Matches($Text, "\S+").Count
+    $signalText = (($ChatGPTSignals | ForEach-Object { "$_" }) -join " ").ToLowerInvariant()
+    $turns = 0
+    $tokens = 0
+
+    if ($Route -eq "chatgpt") {
+        $turns = 1
+        $tokens = 9000 + ([math]::Min($wordCount, 800) * 25)
+        if ($signalText -match "research|strategy|ideas") { $tokens += 5000 }
+        if ($signalText -match "design|creative|logo|image") { $tokens += 9000; $turns = 2 }
+        if ($signalText -match "summary|explanation") { $tokens += 3000 }
+    } elseif ($Route -eq "hybrid") {
+        $turns = 1
+        $tokens = 6000 + ([math]::Min($wordCount, 600) * 18)
+    }
+
+    if ($CodexFallbackProfile -eq "deep") { $tokens += 6000 }
+    if ($CodexFallbackProfile -eq "max") { $tokens += 12000 }
+    if ($CacheHit) { $tokens += 3000 }
+
+    return [pscustomobject]@{
+        Basis = "heuristic"
+        AvoidedCodexTurns = $turns
+        EstimatedAvoidedCodexTokens = [int]$tokens
+        Note = "Not billing data; this is a routing pressure estimate for comparing gateway savings."
+    }
+}
+
+function New-ChatGatewayHybridSplit {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Text
+    )
+
+    $codexTarget = "the local project"
+    $fileMatch = [regex]::Match($Text, "\b[\w.-]+\.(ts|tsx|js|jsx|py|ps1|cmd|md|json|yml|yaml|toml|css|html|sql|sh|bat|cs|go|rs|java|php|rb)\b")
+    if ($fileMatch.Success) {
+        $codexTarget = $fileMatch.Value
+    } elseif ($Text -match "(?i)\b(this project|project folder|site|app|repo|repository|workspace)\b") {
+        $codexTarget = $Matches[1]
+    }
+
+    $chatTask = @"
+Original hybrid request:
+$Text
+
+Do only the detachable ChatGPT-safe part: writing, brainstorming, strategy, summary, or design direction/generation. Do not inspect or claim access to local files, repo state, accounts, secrets, logs, tests, builds, git, deployment, or browser verification.
+
+Return the useful deliverable and a CODEX_RETURN_PACKET. In "Codex next action", tell Codex exactly how to apply or verify the result locally in $codexTarget.
+"@.Trim()
+
+    $codexTask = "After importing the ChatGPT return packet, apply or verify the result locally in $codexTarget. Inspect files before editing and run the relevant local checks."
+
+    return [pscustomobject]@{
+        ChatGPTTask = $chatTask
+        CodexTask = $codexTask
+        LocalTarget = $codexTarget
+        WillDispatchChatGPT = $true
+        RequiresCodexAfterReturn = $true
+    }
+}
+
+function Get-CodexLatestTokenSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $CodexHome,
+        [int] $MaxFiles = 8,
+        [int] $Tail = 250
+    )
+
+    $sessionsDir = Join-Path $CodexHome "sessions"
+    if (-not (Test-Path -LiteralPath $sessionsDir)) {
+        return $null
+    }
+
+    $files = Get-ChildItem -LiteralPath $sessionsDir -Recurse -Filter "*.jsonl" -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First $MaxFiles
+
+    foreach ($file in $files) {
+        try {
+            $lines = Get-Content -LiteralPath $file.FullName -Tail $Tail -ErrorAction Stop
+        } catch {
+            continue
+        }
+
+        for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+            $line = $lines[$i]
+            if ($line -notmatch '"token_count"') { continue }
+            try {
+                $record = $line | ConvertFrom-Json
+                if ($record.payload.type -ne "token_count") { continue }
+                $usage = $record.payload.info.total_token_usage
+                $lastUsage = $record.payload.info.last_token_usage
+                $limits = if ($record.rate_limits) { $record.rate_limits } elseif ($record.payload.rate_limits) { $record.payload.rate_limits } else { $null }
+                return [pscustomobject]@{
+                    SessionPath = $file.FullName
+                    Timestamp = $record.timestamp
+                    TotalTokens = $usage.total_tokens
+                    InputTokens = $usage.input_tokens
+                    CachedInputTokens = $usage.cached_input_tokens
+                    OutputTokens = $usage.output_tokens
+                    ReasoningOutputTokens = $usage.reasoning_output_tokens
+                    LastTurnTokens = $lastUsage.total_tokens
+                    ModelContextWindow = $record.payload.info.model_context_window
+                    PlanType = if ($limits) { $limits.plan_type } else { $null }
+                    PrimaryUsedPercent = if ($limits -and $limits.primary) { $limits.primary.used_percent } else { $null }
+                    PrimaryWindowMinutes = if ($limits -and $limits.primary) { $limits.primary.window_minutes } else { $null }
+                    PrimaryResetsAt = if ($limits -and $limits.primary) { $limits.primary.resets_at } else { $null }
+                    SecondaryUsedPercent = if ($limits -and $limits.secondary) { $limits.secondary.used_percent } else { $null }
+                    SecondaryWindowMinutes = if ($limits -and $limits.secondary) { $limits.secondary.window_minutes } else { $null }
+                    SecondaryResetsAt = if ($limits -and $limits.secondary) { $limits.secondary.resets_at } else { $null }
+                }
+            } catch {
+                continue
+            }
+        }
+    }
+
+    return $null
+}
+
 function Get-CodexGear {
     param(
         [Parameter(Mandatory = $true)]
@@ -443,4 +702,4 @@ function New-CodexConfigArgs {
     return $args
 }
 
-Export-ModuleMember -Function Get-CodexGearMatrix, Get-CodexGear, Select-CodexGear, Select-AiWorkRoute, Select-ChatGatewayRoute, Get-CodexExecutable, New-CodexConfigArgs
+Export-ModuleMember -Function Get-CodexGearMatrix, Get-CodexGear, Select-CodexGear, Select-AiWorkRoute, Select-ChatGatewayRoute, ConvertTo-ChatGatewayTaskText, Get-ChatGatewayTaskKey, Test-ChatGatewayFreshnessSensitive, Get-ChatGatewayCacheEntry, Get-ChatGatewaySavingsEstimate, New-ChatGatewayHybridSplit, Get-CodexLatestTokenSnapshot, Get-CodexExecutable, New-CodexConfigArgs

@@ -30,6 +30,14 @@ Use this skill to spend Codex only where Codex is uniquely useful: local files, 
 
 Use `codex-gateway.cmd` as the front door. It classifies tasks as `chatgpt`, `codex`, or `hybrid`; auto-dispatches pure ChatGPT tasks to `chatgpt-auto-route.cmd`; dispatches pure local work to `codex-auto.cmd`; and marks mixed work as ask-first so Codex can split the detachable part without losing the local execution half.
 
+The gateway also acts like a small AI control plane:
+
+- Exact completed ChatGPT results are cached by project plus normalized task. A cache hit returns the prior `CODEX_RETURN_PACKET` and asset paths without spending a fresh Codex or ChatGPT run.
+- Cache is bypassed automatically for freshness-sensitive prompts such as latest/current/today/news/price/weather/schedule. Use `-Refresh` to force a new ChatGPT run and `-NoCache` when testing the raw bridge.
+- Dry runs show route, confidence, cache status, heuristic avoided-Codex token estimate, and current Codex rate-limit pressure when session telemetry is available.
+- Hybrid tasks stay ask-first by default. Use `-SplitHybrid` only when the detachable ChatGPT part is clear and Codex should prepare that subtask before applying/verifying locally after return.
+- Record quality signals with `codex-gateway-feedback.cmd -SessionPath "SESSION_JSON" -Rating 1-5 -Outcome good|mixed|bad -Notes "..."`.
+
 Use `chatgpt-auto-route.cmd` for repeatable bridge runs. It routes the task, creates a session log, writes the ChatGPT prompt to a file, copies it to the clipboard, opens ChatGPT unless `-NoOpen` is set, and prints the Codex Desktop Chrome runner snippet.
 
 In Codex Desktop, run the printed snippet with the Node REPL tool to submit the prompt through Chrome, wait for completion, bundle generated page images, save them under the requested output folder, write/import the return packet, and append a savings event to `.codex/logs/chatgpt-bridge/events.jsonl`.

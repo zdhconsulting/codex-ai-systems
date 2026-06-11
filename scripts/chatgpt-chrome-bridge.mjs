@@ -9,6 +9,18 @@ function safeName(value) {
   return cleaned || "General";
 }
 
+function normalizeTaskText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+async function taskKeyFor(project, task) {
+  const crypto = await import("node:crypto");
+  return crypto
+    .createHash("sha256")
+    .update(`${normalizeTaskText(project || "Gateway")}\n${normalizeTaskText(task)}`, "utf8")
+    .digest("hex");
+}
+
 function extFromContentType(contentType) {
   if (!contentType) return ".bin";
   if (contentType.includes("png")) return ".png";
@@ -71,6 +83,15 @@ async function writeSession(fs, sessionPath, patch) {
   await fs.writeFile(sessionPath, JSON.stringify(session, null, 2), "utf8");
 }
 
+async function readSession(fs, sessionPath) {
+  if (!sessionPath) return {};
+  try {
+    return JSON.parse(await fs.readFile(sessionPath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
 export async function runChatGptChromeBridge(options = {}) {
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
@@ -95,6 +116,9 @@ export async function runChatGptChromeBridge(options = {}) {
   await fs.mkdir(handoffDir, { recursive: true });
 
   const prompt = await readPrompt(fs, options);
+  const startingSession = await readSession(fs, options.sessionPath);
+  const task = options.task || startingSession.Task || "";
+  const taskKey = task ? await taskKeyFor(project, task) : "";
 
   let tab;
   const openTabs = await browser.user.openTabs();
@@ -165,6 +189,8 @@ export async function runChatGptChromeBridge(options = {}) {
       type: "waiting",
       at: new Date().toISOString(),
       project,
+      task,
+      taskKey,
       responsePath,
       outputDir,
       avoidedCodexCreativeWork: true,
@@ -244,6 +270,8 @@ END_CODEX_RETURN_PACKET`;
   const result = {
     status: "complete",
     project,
+    task,
+    taskKey,
     promptPath: options.promptPath || "",
     responsePath,
     handoffPath,
@@ -258,21 +286,61 @@ END_CODEX_RETURN_PACKET`;
   await writeSession(fs, options.sessionPath, {
     Status: "complete",
     CompletedAt: new Date().toISOString(),
+    TaskKey: taskKey,
     ResponsePath: responsePath,
     HandoffPath: handoffPath,
     Assets: copiedAssets,
     HasPacket: result.hasPacket,
   });
 
+  let cachePath = "";
+  if (task && taskKey) {
+    const cacheDir = `${codexHome}/cache/chatgpt-bridge`;
+    cachePath = `${cacheDir}/${taskKey}.json`;
+    const completedAt = new Date().toISOString();
+    const cacheEntry = {
+      version: 1,
+      taskKey,
+      project,
+      task,
+      route: startingSession?.Route?.Route || "chatgpt",
+      confidence: startingSession?.Route?.Confidence || "",
+      signals: startingSession?.Route?.Signals || [],
+      completedAt,
+      promptPath: options.promptPath || "",
+      responsePath,
+      handoffPath,
+      outputDir,
+      assets: copiedAssets,
+      assetCount: copiedAssets.length,
+      imageInventoryCount: imageCandidates.length,
+      generatedImageCount: generatedImages.length,
+      hasPacket: result.hasPacket,
+      sourceSessionPath: options.sessionPath || "",
+      savingsEstimate: startingSession?.SavingsEstimate || null,
+      feedback: [],
+    };
+    await fs.mkdir(cacheDir, { recursive: true });
+    await fs.writeFile(cachePath, JSON.stringify(cacheEntry, null, 2), "utf8");
+    await writeSession(fs, options.sessionPath, {
+      CachePath: cachePath,
+      CacheStatus: "stored",
+    });
+    result.cachePath = cachePath;
+  }
+
   await appendJsonLine(fs, eventsPath, {
     type: "complete",
     at: new Date().toISOString(),
     project,
+    task,
+    taskKey,
     responsePath,
     handoffPath,
     outputDir,
     assetCount: copiedAssets.length,
     hasPacket: result.hasPacket,
+    cachePath,
     avoidedCodexCreativeWork: true,
   });
 

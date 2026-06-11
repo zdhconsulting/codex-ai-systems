@@ -87,6 +87,8 @@ $requiredScripts = @(
     "codex-auto.ps1",
     "codex-gateway.cmd",
     "codex-gateway.ps1",
+    "codex-gateway-feedback.cmd",
+    "codex-gateway-feedback.ps1",
     "codex-bounce.cmd",
     "codex-council.cmd",
     "codex-doctor.cmd",
@@ -234,6 +236,42 @@ Assert-True ($gatewayCodexDryRun -match "Route: codex") "Codex gateway dry-run k
 $gatewayHybridDryRun = (& (Join-Path $scriptDir "codex-gateway.ps1") -DryRun -NoOpen -Project "gear-test" "write homepage copy and add it to src/app.ts" 2>&1 6>&1 | Out-String)
 Assert-True ($gatewayHybridDryRun -match "Route: hybrid") "Codex gateway dry-run detects hybrid tasks"
 Assert-True ($gatewayHybridDryRun -match "Ask first: True") "Codex gateway hybrid route asks first"
+Assert-True ($gatewayHybridDryRun -match "Savings estimate:") "Codex gateway dry-run reports savings estimate"
+
+$gatewayHybridSplitJson = (& (Join-Path $scriptDir "codex-gateway.ps1") -DryRun -SplitHybrid -Json -NoOpen -Project "gear-test" "write homepage copy and add it to src/app.ts" 2>&1 6>&1 | Out-String) | ConvertFrom-Json
+Assert-Equal $gatewayHybridSplitJson.Route "hybrid" "Codex gateway split dry-run keeps hybrid route"
+Assert-True ($gatewayHybridSplitJson.HybridSplit.WillDispatchChatGPT -eq $true) "Codex gateway split dry-run prepares ChatGPT subtask"
+Assert-True ($gatewayHybridSplitJson.HybridSplit.CodexTask -match "apply or verify") "Codex gateway split dry-run prepares Codex follow-up"
+
+$cacheTestHome = Join-Path $env:TEMP "codex-gateway-cache-test-$PID"
+New-Item -ItemType Directory -Path (Join-Path $cacheTestHome "cache\chatgpt-bridge") -Force | Out-Null
+$cacheTask = "write a cold email for cache test"
+$cacheProject = "gear-test-cache"
+$cacheKey = Get-ChatGatewayTaskKey -Text $cacheTask -Project $cacheProject
+$cacheHandoff = Join-Path $cacheTestHome "handoff.txt"
+"CODEX_RETURN_PACKET`nSummary: cached`nEND_CODEX_RETURN_PACKET" | Set-Content -LiteralPath $cacheHandoff -Encoding UTF8
+[pscustomobject]@{
+    version = 1
+    taskKey = $cacheKey
+    project = $cacheProject
+    task = $cacheTask
+    completedAt = (Get-Date).ToString("o")
+    responsePath = $cacheHandoff
+    handoffPath = $cacheHandoff
+    outputDir = $cacheTestHome
+    assets = @()
+    assetCount = 0
+    hasPacket = $true
+} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $cacheTestHome "cache\chatgpt-bridge\$cacheKey.json") -Encoding UTF8
+$cacheHit = Get-ChatGatewayCacheEntry -CodexHome $cacheTestHome -Task $cacheTask -Project $cacheProject
+Assert-True ($cacheHit.Hit -eq $true) "ChatGPT bridge cache finds exact task hit"
+$freshnessBypass = Get-ChatGatewayCacheEntry -CodexHome $cacheTestHome -Task "write a cold email today" -Project $cacheProject
+Assert-Equal $freshnessBypass.Status "freshness-bypass" "ChatGPT bridge cache bypasses freshness-sensitive task"
+
+$feedbackOut = (& (Join-Path $scriptDir "codex-gateway-feedback.ps1") -CodexHome $cacheTestHome -Project $cacheProject -Task $cacheTask -Rating 5 -Outcome good -Notes "test feedback" 2>&1 6>&1 | Out-String)
+Assert-True ($feedbackOut -match "Gateway feedback logged") "Gateway feedback command logs feedback"
+$cacheAfterFeedback = Get-Content -LiteralPath (Join-Path $cacheTestHome "cache\chatgpt-bridge\$cacheKey.json") -Raw | ConvertFrom-Json
+Assert-Equal $cacheAfterFeedback.LastFeedback.rating 5 "Gateway feedback updates cache metadata"
 
 $packetFile = Join-Path $env:TEMP "chatgpt-return-packet-$PID.txt"
 @"

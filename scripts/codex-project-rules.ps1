@@ -56,6 +56,10 @@ Use `$codex-chatgpt-bridge` for routing edge cases, bounded ChatGPT handoffs, an
 
 Route non-repo writing, brainstorming, strategy, summaries, learning, second opinions, and graphic design direction to ChatGPT to preserve Codex usage.
 
+Use `C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"` before substantial non-local work. The gateway reuses exact cached ChatGPT packets/assets when safe, bypasses cache for current/latest/today/news/price/weather/schedule style prompts, and shows estimated avoided Codex work plus current rate-limit pressure. Use `-Refresh` to force a fresh ChatGPT run, `-NoCache` to test raw routing, and `-SplitHybrid` only when the ChatGPT-safe part is obvious and Codex will apply or verify locally afterward.
+
+After notable routes, log quality with `C:\Users\zev\.codex\scripts\codex-gateway-feedback.cmd -SessionPath "SESSION_JSON" -Rating 1-5 -Outcome good|mixed|bad -Notes "..."`.
+
 When Chrome/ChatGPT web is available, automate the whole route: open or claim ChatGPT, submit the prompt, wait for completion, copy/import text results, or download generated image assets. Manual paste/copy is fallback only when browser automation is unavailable or ChatGPT requires login, CAPTCHA, payment, account verification, safety confirmation, or another owner-only action.
 
 For ChatGPT image generation, Codex is the orchestrator: prepare an IP-safe prompt, submit it through ChatGPT web, wait for the image, download the generated asset, save it to the project assets folder when one is obvious or `C:\Users\zev\OneDrive\Documents\ZDH Generated Assets`, visually inspect it, and return the local file link plus image preview.

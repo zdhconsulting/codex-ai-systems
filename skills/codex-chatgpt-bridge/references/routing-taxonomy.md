@@ -34,4 +34,9 @@
 - "Download the generated ChatGPT logo image into this project folder" stays in Codex because it needs local filesystem work.
 - "Create client logos for real ZDH clients" can go to ChatGPT for concepts only after Zev supplies the client facts; do not invent real clients unless Zev explicitly says it is a fictional test.
 - Use `codex-gateway.cmd` as the preferred front door when deciding route and dispatch.
+- Use `codex-gateway.cmd -Refresh "TASK"` when an exact cached result exists but a new ChatGPT run is wanted.
+- Use `codex-gateway.cmd -NoCache "TASK"` when testing routing/dispatch behavior without cache reuse.
+- Use `codex-gateway.cmd -SplitHybrid "TASK"` only when the ChatGPT-safe subtask is obvious and Codex should apply/verify locally after the packet returns.
+- Cache should never be trusted for current/fresh facts. The gateway bypasses obvious latest/current/today/news/price/weather/schedule prompts, but Codex should still use judgment.
 - Use `chatgpt-auto-route.cmd` when the task should be logged as a ChatGPT bridge session with prompt, response, downloaded assets, and savings events.
+- Use `codex-gateway-feedback.cmd` after real runs when the route quality is notably good, mixed, or bad. This makes future tuning evidence-based instead of vibes-based.

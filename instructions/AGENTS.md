@@ -74,6 +74,14 @@ The gateway classifies tasks as `chatgpt`, `codex`, or `hybrid`. It auto-bounces
 
 Force Codex with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`.
 
+The gateway also has conservative savings controls:
+
+- Exact completed ChatGPT packets/assets are cached by project plus normalized task. Cache hits reuse the prior packet without another Codex or ChatGPT run.
+- Fresh/current prompts such as latest/current/today/news/price/weather/schedule bypass cache automatically. Use `-Refresh` to force a new ChatGPT run and `-NoCache` to test raw routing.
+- Dry runs show cache status, a heuristic avoided-Codex token estimate, and current Codex rate-limit pressure when session telemetry is available.
+- Hybrid tasks remain ask-first by default. Use `-SplitHybrid` only when the ChatGPT-safe subtask is obvious and Codex will apply or verify locally after the return packet.
+- Log route quality with `C:\Users\zev\.codex\scripts\codex-gateway-feedback.cmd -SessionPath "SESSION_JSON" -Rating 1-5 -Outcome good|mixed|bad -Notes "..."`.
+
 ## AI Credits Usage Optimizer
 
 `codex-auto.cmd` now runs an AI credits optimizer before launching a new Codex session. It routes obvious non-repo writing, brainstorming, strategy, summary, explanation, and design-direction tasks to ChatGPT through `chatgpt-route.cmd`; it keeps code, local files, tests, git, deploys, browser/app verification, connectors, `.codex` systems work, owner-button state, auth, billing, security, database, permissions, and production-risk work in Codex.

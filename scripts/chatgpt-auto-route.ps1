@@ -66,6 +66,10 @@ function Write-BridgeResult {
     if ($Result.ResponsePath) { Write-Host "Response: $($Result.ResponsePath)" }
     if ($Result.HandoffPath) { Write-Host "Handoff: $($Result.HandoffPath)" }
     if ($Result.AssetOutDir) { Write-Host "Assets: $($Result.AssetOutDir)" }
+    if ($Result.TaskKey) { Write-Host "Task key: $($Result.TaskKey)" }
+    if ($Result.SavingsEstimate) {
+        Write-Host "Savings estimate: $($Result.SavingsEstimate.EstimatedAvoidedCodexTokens) Codex tokens / $($Result.SavingsEstimate.AvoidedCodexTurns) turn(s) avoided ($($Result.SavingsEstimate.Basis))"
+    }
     if ($Result.OpenedChatGPT) { Write-Host "Opened ChatGPT: yes" }
     if ($Result.RunnerSnippet) {
         Write-Host ""
@@ -139,6 +143,13 @@ $route = if ($ForceChatGPT) {
 }
 
 $fallbackProfile = Select-CodexGear -Text $taskText
+$taskKey = Get-ChatGatewayTaskKey -Text $taskText -Project $Project
+$savingsEstimate = Get-ChatGatewaySavingsEstimate `
+    -Text $taskText `
+    -Route $route.Route `
+    -ChatGPTSignals $route.Signals `
+    -CodexFallbackProfile $fallbackProfile
+$codexUsageBefore = Get-CodexLatestTokenSnapshot -CodexHome $codexHome
 $assetOutDir = if ($OutDir) {
     $OutDir
 } else {
@@ -150,9 +161,12 @@ if ($DryRun -or $route.Route -ne "chatgpt") {
         Status = if ($DryRun) { "dry-run" } else { "not-routed" }
         Route = $route
         Task = $taskText
+        TaskKey = $taskKey
         Project = $Project
         AssetOutDir = $assetOutDir
         CodexFallbackProfile = $fallbackProfile
+        SavingsEstimate = $savingsEstimate
+        CodexUsageBefore = $codexUsageBefore
         WouldOpenChatGPT = (-not $NoOpen -and $route.Route -eq "chatgpt")
         Note = if ($route.Route -ne "chatgpt") { "This task should stay in Codex unless forced with -ForceChatGPT." } else { "Dry run only. No prompt/session was created." }
     }
@@ -192,6 +206,7 @@ $session = [ordered]@{
     CreatedAt = (Get-Date).ToString("o")
     Project = $Project
     Task = $taskText
+    TaskKey = $taskKey
     Route = $route
     CodexFallbackProfile = $fallbackProfile
     PromptPath = $promptPath
@@ -202,8 +217,13 @@ $session = [ordered]@{
     OpenedChatGPT = (-not $NoOpen)
     RunnerSnippet = $runnerSnippet
     ResumeSnippet = $resumeSnippet
+    SavingsEstimate = $savingsEstimate
+    CodexUsageBefore = $codexUsageBefore
     SavingsLog = [ordered]@{
         AvoidedCodexCreativeWork = $true
+        EstimatedAvoidedCodexTokens = $savingsEstimate.EstimatedAvoidedCodexTokens
+        EstimatedAvoidedCodexTurns = $savingsEstimate.AvoidedCodexTurns
+        EstimateBasis = $savingsEstimate.Basis
         SavedCodexRole = "Codex only prepares, automates browser handoff, saves/imports assets, and verifies local results."
         RoutedWork = "ChatGPT handles detachable thinking or image generation."
     }
@@ -215,6 +235,7 @@ Write-BridgeEvent ([ordered]@{
     At = (Get-Date).ToString("o")
     Project = $Project
     Task = $taskText
+    TaskKey = $taskKey
     Route = $route.Route
     Confidence = $route.Confidence
     Signals = $route.Signals
@@ -222,6 +243,8 @@ Write-BridgeEvent ([ordered]@{
     PromptPath = $promptPath
     SessionPath = $sessionJsonPath
     AssetOutDir = $assetOutDir
+    SavingsEstimate = $savingsEstimate
+    CodexUsageBefore = $codexUsageBefore
 })
 
 $result = [pscustomobject]@{
@@ -232,6 +255,8 @@ $result = [pscustomobject]@{
     ResponsePath = $responsePath
     AssetOutDir = $assetOutDir
     SessionPath = $sessionJsonPath
+    TaskKey = $taskKey
+    SavingsEstimate = $savingsEstimate
     OpenedChatGPT = (-not $NoOpen)
     RunnerSnippet = $runnerSnippet
     ResumeSnippet = $resumeSnippet

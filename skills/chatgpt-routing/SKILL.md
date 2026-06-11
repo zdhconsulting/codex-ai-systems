@@ -25,11 +25,15 @@ Say:
 
 Then prepare the handoff, or let the optimizer do it:
 
+`C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"`
+
+`C:\Users\zev\.codex\scripts\codex-gateway.cmd "TASK"`
+
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
 `C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd "TASK"`
 
-`codex-auto.cmd` also runs the optimizer before launching a new Codex session. Use `[codex]`, `--codex`, or `-ForceCodex` to bypass the optimizer when the task should stay in Codex.
+`codex-gateway.cmd` is the preferred front door. It reuses exact cached ChatGPT packets/assets when safe, bypasses cache for freshness-sensitive prompts, and logs route/savings events. Use `-Refresh` for a new ChatGPT run, `-NoCache` for raw routing tests, and `-SplitHybrid` only when the detachable ChatGPT subtask is clear. `codex-auto.cmd` also runs the lower-level optimizer before launching a new Codex session. Use `[codex]`, `--codex`, or `-ForceCodex` to bypass the optimizer when the task should stay in Codex.
 
 ## Keep In Codex
 
@@ -61,6 +65,10 @@ After Zev copies the ChatGPT answer and says `import ChatGPT result`, import it 
 `C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`
 
 Then continue the Codex mission from the imported packet without asking Zev to repeat context.
+
+After useful or bad routes, record quality with:
+
+`C:\Users\zev\.codex\scripts\codex-gateway-feedback.cmd -SessionPath "SESSION_JSON" -Rating 1-5 -Outcome good|mixed|bad -Notes "..."`
 
 ## Boundary
 
