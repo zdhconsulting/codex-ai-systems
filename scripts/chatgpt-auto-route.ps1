@@ -72,6 +72,11 @@ function Write-BridgeResult {
         Write-Host "Codex Desktop Chrome runner:"
         Write-Host $Result.RunnerSnippet
     }
+    if ($Result.ResumeSnippet) {
+        Write-Host ""
+        Write-Host "If ChatGPT is still generating, harvest later with:"
+        Write-Host $Result.ResumeSnippet
+    }
 }
 
 if (-not (Test-Path -LiteralPath $modulePath)) {
@@ -178,7 +183,8 @@ if (-not $NoOpen) {
 }
 
 $runnerUri = "file:///" + (($runnerPath -replace '\\', '/') -replace ' ', '%20')
-$runnerSnippet = "const { runChatGptChromeBridge } = await import(`"$runnerUri`"); await runChatGptChromeBridge({ promptPath: $(ConvertTo-JsString $promptPath), responsePath: $(ConvertTo-JsString $responsePath), project: $(ConvertTo-JsString $Project), outputDir: $(ConvertTo-JsString $assetOutDir), sessionPath: $(ConvertTo-JsString $sessionJsonPath) });"
+$runnerSnippet = "const { runChatGptChromeBridge } = await import(`"$runnerUri`"); await runChatGptChromeBridge({ promptPath: $(ConvertTo-JsString $promptPath), responsePath: $(ConvertTo-JsString $responsePath), project: $(ConvertTo-JsString $Project), outputDir: $(ConvertTo-JsString $assetOutDir), sessionPath: $(ConvertTo-JsString $sessionJsonPath), maxWaitMs: 95000 });"
+$resumeSnippet = "const { resumeChatGptChromeBridge } = await import(`"$runnerUri`"); await resumeChatGptChromeBridge({ promptPath: $(ConvertTo-JsString $promptPath), responsePath: $(ConvertTo-JsString $responsePath), project: $(ConvertTo-JsString $Project), outputDir: $(ConvertTo-JsString $assetOutDir), sessionPath: $(ConvertTo-JsString $sessionJsonPath), maxWaitMs: 95000 });"
 
 $session = [ordered]@{
     SessionId = $sessionId
@@ -195,6 +201,7 @@ $session = [ordered]@{
     RouteOutput = $routeOutput
     OpenedChatGPT = (-not $NoOpen)
     RunnerSnippet = $runnerSnippet
+    ResumeSnippet = $resumeSnippet
     SavingsLog = [ordered]@{
         AvoidedCodexCreativeWork = $true
         SavedCodexRole = "Codex only prepares, automates browser handoff, saves/imports assets, and verifies local results."
@@ -227,5 +234,6 @@ $result = [pscustomobject]@{
     SessionPath = $sessionJsonPath
     OpenedChatGPT = (-not $NoOpen)
     RunnerSnippet = $runnerSnippet
+    ResumeSnippet = $resumeSnippet
 }
 Write-BridgeResult -Result $result -AsJson:$Json
