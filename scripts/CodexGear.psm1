@@ -481,7 +481,7 @@ function Select-AiWorkRoute {
         "writing or copy" = "\b(write|rewrite|draft|polish|edit|improve|email|message|post|copy|tone|headline|tagline|slogan)\b"
         "ideas or strategy" = "\b(brainstorm|ideate|ideas?|naming|name ideas|domain names?|strategy|plan|critique|second opinion|options?|pros and cons|positioning|offer|angle|campaign|go-to-market|gtm)\b"
         "summary or explanation" = "\b(summarize|summary|outline|explain|teach|learn|notes?|meeting notes|synthesis|classify)\b"
-        "research or comparison without local execution" = "\b(research|compare|competitor|market scan|best practices|examples?|sources?|literature|overview)\b"
+        "research or comparison without local execution" = "\b(research|compare|competitor|market scan|best practices|examples?|sources?|literature|overview|look up|lookup|latest|current|recent|newest|today|what is|who is)\b"
         "translation or transformation" = "\b(translate|transcribe cleanup|condense|expand|turn .* into|convert .* into)\b"
         "design direction" = "\b(moodboard|layout concept|design direction|ad concept|poster concept|social concept|image prompt|color palette|typography|logos?|logo concepts?|brand identity|visual identity|wordmark|brand mark)\b"
     }
@@ -571,7 +571,7 @@ function Select-ChatGatewayRoute {
         "writing or copy" = "\b(write|rewrite|draft|polish|edit|improve|email|message|post|copy|tone|headline|tagline|slogan|cold email|sales copy)\b"
         "ideas or strategy" = "\b(brainstorm|ideate|ideas?|naming|name ideas|domain names?|strategy|plan|critique|second opinion|options?|pros and cons|positioning|offer|angle|campaign|go-to-market|gtm)\b"
         "summary or explanation" = "\b(summarize|summary|outline|explain|teach|learn|notes?|meeting notes|synthesis|classify|pasted text)\b"
-        "research or comparison without local execution" = "\b(research|compare|competitor|market scan|best practices|examples?|sources?|literature|overview)\b"
+        "research or comparison without local execution" = "\b(research|compare|competitor|market scan|best practices|examples?|sources?|literature|overview|look up|lookup|latest|current|recent|newest|today|what is|who is)\b"
         "translation or transformation" = "\b(translate|transcribe cleanup|condense|expand|turn .* into|convert .* into)\b"
         "design or creative generation" = "\b(moodboard|layout concept|design direction|ad concept|poster concept|social concept|image prompt|color palette|typography|logos?|logo sheet|logo concepts?|brand identity|visual identity|wordmark|brand mark|visual mockup|ad creative)\b"
     }
