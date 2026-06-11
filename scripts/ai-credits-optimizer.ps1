@@ -5,6 +5,7 @@ param(
     [switch] $ForceChatGPT,
     [switch] $NoOpen,
     [switch] $Print,
+    [switch] $PacketOnly,
     [string] $Cwd = (Get-Location).Path,
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
     [string[]] $PromptParts
@@ -64,6 +65,7 @@ if ($route.Route -eq "chatgpt") {
     $routeArgs = @()
     if ($NoOpen) { $routeArgs += "-NoOpen" }
     if ($Print) { $routeArgs += "-Print" }
+    if ($PacketOnly) { $routeArgs += "-PacketOnly" }
     $routeArgs += $prompt
     & $routeScript @routeArgs
     exit $LASTEXITCODE

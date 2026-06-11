@@ -151,8 +151,12 @@ $workRouteTests = @(
     [pscustomobject]@{ Prompt = "draft a concise apology email to a client"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "brainstorm ten domain names for a comedy newsletter"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "summarize meeting notes into decisions and action items"; Route = "chatgpt" },
+    [pscustomobject]@{ Prompt = "research competitor positioning for boutique web design agencies"; Route = "chatgpt" },
+    [pscustomobject]@{ Prompt = "translate this short paragraph into Hebrew"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "fix failing tests in the checkout flow"; Route = "codex" },
     [pscustomobject]@{ Prompt = "summarize src/app.ts"; Route = "codex" },
+    [pscustomobject]@{ Prompt = "summarize my Gmail inbox for urgent replies"; Route = "codex" },
+    [pscustomobject]@{ Prompt = "draft an email using the notes in C:\Repos\client\notes.md"; Route = "codex" },
     [pscustomobject]@{ Prompt = "[low] draft a short email"; Route = "codex" },
     [pscustomobject]@{ Prompt = "[chatgpt] fix failing tests in the checkout flow"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "[codex] draft a short email"; Route = "codex" }
@@ -170,6 +174,29 @@ Assert-True ($optimizerDryRun -notmatch "Codex auto gear:") "ChatGPT dry-run doe
 $optimizerCodexDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -Cwd $CodexHome "fix failing tests in the checkout flow" 2>&1 6>&1 | Out-String)
 Assert-True ($optimizerCodexDryRun -match "AI credits optimizer: Codex route selected") "Codex auto dry-run keeps test/debug task in Codex"
 Assert-True ($optimizerCodexDryRun -match "Codex auto gear:") "Codex dry-run still selects Codex gear"
+
+$routePrint = (& (Join-Path $scriptDir "chatgpt-route.ps1") -NoOpen -Print -PacketOnly "draft a short client update" 2>&1 6>&1 | Out-String)
+Assert-True ($routePrint -match "Return only the CODEX_RETURN_PACKET block") "ChatGPT route packet-only prompt is explicit"
+Assert-True ($routePrint -match "Go back to Codex\?:") "ChatGPT route includes go-back field"
+
+$packetFile = Join-Path $env:TEMP "chatgpt-return-packet-$PID.txt"
+@"
+Useful answer.
+
+CODEX_RETURN_PACKET
+Summary: Drafted update.
+Decisions: Use concise tone.
+Deliverable: Hello client.
+Codex next action: none
+Files/assets needed: none
+Owner buttons needed: none
+Confidence: high
+Go back to Codex?: no
+END_CODEX_RETURN_PACKET
+"@ | Set-Content -LiteralPath $packetFile -Encoding UTF8
+$returnJson = (& (Join-Path $scriptDir "chatgpt-return.ps1") -InputFile $packetFile -Project "gear-test" -Json 2>&1 6>&1 | Out-String)
+Assert-True ($returnJson -match '"HasPacket":\s*true') "ChatGPT return JSON detects packet"
+Assert-True ($returnJson -match '"Codex next action":\s*"none"') "ChatGPT return JSON parses next action"
 
 $bounceDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -Bounce -Cwd $CodexHome "[xhigh] change auth permissions" 2>&1 6>&1 | Out-String)
 Assert-True ($bounceDryRun -match "Self-bounce: bounce-then-execute") "Bounce dry-run enables max preflight"

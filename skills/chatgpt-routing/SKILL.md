@@ -7,6 +7,8 @@ description: Use when deciding whether to route non-code work out of Codex to Ch
 
 Use this skill when a task can be completed without Codex-specific tools or local repo execution.
 
+For Zev's projects, also use `$codex-chatgpt-bridge` when the task involves preserving Codex credits, preparing a bounded handoff, or importing a structured return packet.
+
 ## Route To ChatGPT
 
 Route to ChatGPT when the task is mainly:
@@ -56,7 +58,7 @@ Use manual clipboard return only when browser automation is unavailable or ChatG
 
 After Zev copies the ChatGPT answer and says `import ChatGPT result`, import it with:
 
-`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`
+`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`
 
 Then continue the Codex mission from the imported packet without asking Zev to repeat context.
 

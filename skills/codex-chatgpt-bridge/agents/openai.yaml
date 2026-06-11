@@ -1,0 +1,3 @@
+display_name: Codex ChatGPT Bridge
+short_description: Route detachable work to ChatGPT.
+default_prompt: Use the Codex ChatGPT bridge to decide what can leave Codex, prepare a bounded ChatGPT handoff, and import the result back safely.

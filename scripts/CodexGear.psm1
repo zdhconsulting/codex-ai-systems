@@ -198,6 +198,7 @@ function Select-AiWorkRoute {
         "local files or repo context" = "(\b(repo|repository|codebase|workspace|local files?|filesystem|folder|directory|path|cwd)\b|[a-z]:\\|\.codex|agents\.md)"
         "code/build/test/git work" = "\b(code|codebase|implement|implementation|component|page|route|api|endpoint|database|migration|schema|script|fix|bug|debug|test|tests|build|lint|typecheck|git|commit|branch|push|pull request|pr|ci|github actions|deploy|deployment|logs?|stack trace|crash|terminal|shell|powershell|cmd|npm|pnpm|yarn|python|node)\b"
         "browser or app verification" = "\b(browser|chrome|screenshot|playwright|localhost|127\.0\.0\.1|app verification|responsive|mobile|desktop qa)\b"
+        "connected apps or private account state" = "\b(gmail|email inbox|inbox|slack|notion|linear|jira|github|vercel|supabase|stripe|datadog|sentry|google analytics|search console|cloudflare|zapier|make\.com|connector|mcp|app session)\b"
         "sensitive or production risk" = "\b(auth|oauth|security|secret|token|permissions?|billing|payments?|production|prod|owner button|env vars?|api key)\b"
         "specific file path or extension" = "\b[\w.-]+\.(ts|tsx|js|jsx|py|ps1|cmd|md|json|yml|yaml|toml|css|html|sql|sh|bat|cs|go|rs|java|php|rb)\b"
     }
@@ -218,8 +219,10 @@ function Select-AiWorkRoute {
 
     $chatGptSignals = [ordered]@{
         "writing or copy" = "\b(write|rewrite|draft|polish|edit|improve|email|message|post|copy|tone|headline|tagline|slogan)\b"
-        "ideas or strategy" = "\b(brainstorm|ideate|ideas?|naming|name ideas|domain names?|strategy|plan|critique|second opinion|options?|pros and cons)\b"
+        "ideas or strategy" = "\b(brainstorm|ideate|ideas?|naming|name ideas|domain names?|strategy|plan|critique|second opinion|options?|pros and cons|positioning|offer|angle|campaign|go-to-market|gtm)\b"
         "summary or explanation" = "\b(summarize|summary|outline|explain|teach|learn|notes?|meeting notes|synthesis|classify)\b"
+        "research or comparison without local execution" = "\b(research|compare|competitor|market scan|best practices|examples?|sources?|literature|overview)\b"
+        "translation or transformation" = "\b(translate|transcribe cleanup|condense|expand|turn .* into|convert .* into)\b"
         "design direction" = "\b(moodboard|layout concept|design direction|ad concept|poster concept|social concept|image prompt|color palette|typography)\b"
     }
     foreach ($entry in $chatGptSignals.GetEnumerator()) {

@@ -9,6 +9,7 @@ param(
     [switch] $NoOptimizeCredits,
     [switch] $NoOpen,
     [switch] $Print,
+    [switch] $PacketOnly,
     [string] $Cwd = (Get-Location).Path,
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
     [string[]] $PromptParts
@@ -47,7 +48,7 @@ if ($tagForceCodex) { $ForceCodex = $true }
 if ($tagForceChatGPT) { $ForceChatGPT = $true }
 if ($BounceOnly) { $Bounce = $true }
 if (-not $prompt) {
-    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Council] [-NoCouncil] [-ForceCodex] [-ForceChatGPT] [-NoOptimizeCredits] [-NoOpen] [-Print] [-Cwd PATH] <task prompt>"
+    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Council] [-NoCouncil] [-ForceCodex] [-ForceChatGPT] [-NoOptimizeCredits] [-NoOpen] [-Print] [-PacketOnly] [-Cwd PATH] <task prompt>"
     exit 2
 }
 
@@ -84,6 +85,7 @@ if (-not $NoOptimizeCredits) {
         $routeArgs = @()
         if ($NoOpen) { $routeArgs += "-NoOpen" }
         if ($Print) { $routeArgs += "-Print" }
+        if ($PacketOnly) { $routeArgs += "-PacketOnly" }
         $routeArgs += $prompt
         & $routeScript @routeArgs
         exit $LASTEXITCODE

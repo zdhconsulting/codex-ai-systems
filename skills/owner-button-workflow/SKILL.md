@@ -127,7 +127,7 @@ For new Codex CLI/automation work, use the real profile router:
 
 `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
 
-`codex-auto.cmd` includes an AI credits optimizer. Before starting a new Codex session it diverts obvious non-repo writing, brainstorming, strategy, summary, explanation, and design-direction tasks to ChatGPT through `chatgpt-route.cmd`, while keeping local files, code, tests, git, deploys, browser/app verification, connectors, `.codex` systems work, owner-button state, auth, billing, security, database, permissions, and production-risk work in Codex.
+`codex-auto.cmd` includes an AI credits optimizer. Before starting a new Codex session it diverts obvious non-repo writing, brainstorming, strategy, summary, explanation, and design-direction tasks to ChatGPT through `chatgpt-route.cmd`, while keeping local files, code, tests, git, deploys, browser/app verification, connectors, `.codex` systems work, owner-button state, auth, billing, security, database, permissions, and production-risk work in Codex. Use `$codex-chatgpt-bridge` for routing edge cases, handoff preparation, and `CODEX_RETURN_PACKET` imports.
 
 Preview or intentionally dispatch with:
 
@@ -135,7 +135,7 @@ Preview or intentionally dispatch with:
 
 Force Codex with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`. After ChatGPT returns an answer, import it with:
 
-`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`
+`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`
 
 To inspect the selected route without launching work:
 

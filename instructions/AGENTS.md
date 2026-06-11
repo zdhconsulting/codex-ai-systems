@@ -1,6 +1,6 @@
 # Personal Codex Workflow
 
-Use `$owner-button-workflow` for Zev's projects.
+Use `$owner-button-workflow` and `$codex-chatgpt-bridge` for Zev's projects.
 
 Codex should drive implementation work fast: code, tests, debugging, verification, commits, pushes, deployment prep, and clear explanations.
 
@@ -64,6 +64,8 @@ When launching new Codex CLI/automation work, use the real profile router:
 
 `codex-auto.cmd` now runs an AI credits optimizer before launching a new Codex session. It routes obvious non-repo writing, brainstorming, strategy, summary, explanation, and design-direction tasks to ChatGPT through `chatgpt-route.cmd`; it keeps code, local files, tests, git, deploys, browser/app verification, connectors, `.codex` systems work, owner-button state, auth, billing, security, database, permissions, and production-risk work in Codex.
 
+Use `$codex-chatgpt-bridge` whenever deciding whether a task should leave Codex, preparing a ChatGPT handoff, importing a `CODEX_RETURN_PACKET`, or tuning these routing rules.
+
 Preview or intentionally dispatch a task with:
 
 `C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`
@@ -72,7 +74,7 @@ Force Codex when needed with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatG
 
 When the optimizer sends work to ChatGPT, bring the result back by copying the ChatGPT response and running:
 
-`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`
+`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`
 
 ## Browser Preference
 

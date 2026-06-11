@@ -20,7 +20,7 @@ $block = @'
 <!-- ZEV_CODEX_WORKFLOW_START -->
 # Personal Codex Workflow
 
-Use `$owner-button-workflow` and `$chatgpt-routing` for Zev's projects.
+Use `$owner-button-workflow`, `$chatgpt-routing`, and `$codex-chatgpt-bridge` for Zev's projects.
 
 Codex should drive implementation work fast: code, tests, debugging, verification, commits, pushes, deployment prep, browser automation, ChatGPT orchestration, and clear explanations.
 
@@ -50,7 +50,7 @@ Use `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"` for new CLI/automation w
 
 Preview or dispatch with `C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`. Force Codex with `-ForceCodex`, `[codex]`, or `--codex`; force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`.
 
-After ChatGPT returns an answer, import it with `C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`.
+Use `$codex-chatgpt-bridge` for routing edge cases, bounded ChatGPT handoffs, and return-packet imports. After ChatGPT returns an answer, import it with `C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`.
 
 ## ChatGPT Auto-Orchestration
 
