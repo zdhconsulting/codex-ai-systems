@@ -70,7 +70,15 @@ Use the ChatGPT route for brainstorming, naming, ideation, emails, copy, strateg
 
 Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, actual local asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, real-person face work requiring exact pixel preservation, and high-risk auth/billing/security/database/permissions/production work. If Zev explicitly asks ChatGPT to be the image surface, Codex should orchestrate ChatGPT end to end.
 
-When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
+When a new task might be detachable, check the gateway first:
+
+`C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"`
+
+For high-confidence detachable work, dispatch through:
+
+`C:\Users\zev\.codex\scripts\codex-gateway.cmd "TASK"`
+
+When a task should leave Codex manually, say `ChatGPT route recommended - brief reason`, then use:
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
@@ -127,7 +135,7 @@ For new Codex CLI/automation work, use the real profile router:
 
 `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
 
-`codex-auto.cmd` includes an AI credits optimizer. Before starting a new Codex session it diverts obvious non-repo writing, brainstorming, strategy, summary, explanation, and design-direction tasks to ChatGPT through `chatgpt-route.cmd`, while keeping local files, code, tests, git, deploys, browser/app verification, connectors, `.codex` systems work, owner-button state, auth, billing, security, database, permissions, and production-risk work in Codex. Use `$codex-chatgpt-bridge` for routing edge cases, handoff preparation, and `CODEX_RETURN_PACKET` imports.
+`codex-gateway.cmd` is the preferred front door for new work because it classifies tasks as `chatgpt`, `codex`, or `hybrid`. It auto-bounces high-confidence detachable work to ChatGPT, keeps local/risky work in Codex, and asks first for mixed work. `codex-auto.cmd` remains the lower-level Codex launcher and includes a simpler AI credits optimizer. Use `$codex-chatgpt-bridge` for routing edge cases, handoff preparation, and `CODEX_RETURN_PACKET` imports.
 
 Preview or intentionally dispatch with:
 

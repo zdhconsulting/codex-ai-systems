@@ -24,12 +24,14 @@
 ## Edge Cases
 
 - "Summarize this pasted text" can go to ChatGPT.
-- "Summarize `src/app.ts`" stays in Codex because it needs local files.
+- "Summarize `src/app.ts`" is hybrid in the gateway: ChatGPT-style summary intent plus a local file dependency. Ask first or keep in Codex unless a safe excerpt is supplied.
 - "Draft a reply to this pasted email" can go to ChatGPT.
 - "Find urgent Gmail replies" stays in Codex because it needs a connector/private inbox.
 - "Research current competitors" can go to ChatGPT if no local repo or account data is required.
 - "Apply this copy to the site" stays in Codex.
+- "Write homepage copy and add it to `src/app.ts`" is hybrid: ChatGPT can draft copy, Codex must apply and verify locally.
 - "Make up four client logos for a bridge test" goes to ChatGPT because fictional creative generation is detachable.
 - "Download the generated ChatGPT logo image into this project folder" stays in Codex because it needs local filesystem work.
 - "Create client logos for real ZDH clients" can go to ChatGPT for concepts only after Zev supplies the client facts; do not invent real clients unless Zev explicitly says it is a fictional test.
+- Use `codex-gateway.cmd` as the preferred front door when deciding route and dispatch.
 - Use `chatgpt-auto-route.cmd` when the task should be logged as a ChatGPT bridge session with prompt, response, downloaded assets, and savings events.

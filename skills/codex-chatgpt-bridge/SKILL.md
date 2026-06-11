@@ -13,16 +13,22 @@ Use this skill to spend Codex only where Codex is uniquely useful: local files, 
    - Route to ChatGPT when the work is detachable thinking: writing, copy, brainstorming, naming, strategy, summaries, explanations, research synthesis, translation, design direction, critique, or ChatGPT-native image/logo generation that does not require local editing.
    - Keep in Codex when the work needs local files, repo state, terminal commands, tests, git, deployment, browser/app verification, connectors, inboxes, owner-button state, secrets, auth, billing, database, security, permissions, or production judgment.
 2. For new CLI/automation work, prefer the optimizer:
+   `C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"`
+   Dispatch through the gateway with:
+   `C:\Users\zev\.codex\scripts\codex-gateway.cmd "TASK"`
+3. The lower-level optimizer remains available for Codex profile launches:
    `C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`
-3. If routing away, use:
+4. If routing away manually, use:
    `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
    For the one-command session/log helper, use:
    `C:\Users\zev\.codex\scripts\chatgpt-auto-route.cmd -Project "PROJECT" -OutDir "OUTPUT_DIR" "TASK"`
-4. When ChatGPT returns, import with:
+5. When ChatGPT returns, import with:
    `C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`
-5. Codex resumes only the local/verification/execution part from the packet.
+6. Codex resumes only the local/verification/execution part from the packet.
 
 ## Auto Bridge Helper
+
+Use `codex-gateway.cmd` as the front door. It classifies tasks as `chatgpt`, `codex`, or `hybrid`; auto-dispatches pure ChatGPT tasks to `chatgpt-auto-route.cmd`; dispatches pure local work to `codex-auto.cmd`; and marks mixed work as ask-first so Codex can split the detachable part without losing the local execution half.
 
 Use `chatgpt-auto-route.cmd` for repeatable bridge runs. It routes the task, creates a session log, writes the ChatGPT prompt to a file, copies it to the clipboard, opens ChatGPT unless `-NoOpen` is set, and prints the Codex Desktop Chrome runner snippet.
 

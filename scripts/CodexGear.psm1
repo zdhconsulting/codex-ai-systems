@@ -249,6 +249,154 @@ function Select-AiWorkRoute {
     }
 }
 
+function Select-ChatGatewayRoute {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Text,
+        [switch] $ForceCodex,
+        [switch] $ForceChatGPT
+    )
+
+    $normalized = $Text.ToLowerInvariant()
+    $codexSignals = New-Object System.Collections.Generic.List[string]
+    $chatGptSignals = New-Object System.Collections.Generic.List[string]
+
+    $forceCodexTag = $normalized -match "\[(codex|force-codex)\]" -or $normalized -match "\s--(codex|force-codex)\b"
+    $forceChatGptTag = $normalized -match "\[(chatgpt|gpt|force-chatgpt)\]" -or $normalized -match "\s--(chatgpt|gpt|force-chatgpt)\b"
+
+    if ($ForceCodex -or $forceCodexTag) {
+        $codexSignals.Add("explicit Codex override")
+        return [pscustomobject]@{
+            Route = "codex"
+            Dispatch = "codex-auto"
+            Reason = "Explicit Codex override was provided."
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = $codexSignals.ToArray()
+            ChatGPTSignals = @()
+            NextAction = "Dispatch through codex-auto with credit optimization disabled."
+        }
+    }
+
+    if ($ForceChatGPT -or $forceChatGptTag) {
+        $chatGptSignals.Add("explicit ChatGPT override")
+        return [pscustomobject]@{
+            Route = "chatgpt"
+            Dispatch = "chatgpt-auto-route"
+            Reason = "Explicit ChatGPT override was provided."
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = @()
+            ChatGPTSignals = $chatGptSignals.ToArray()
+            NextAction = "Prepare a ChatGPT bridge session with a compact return packet."
+        }
+    }
+
+    $gearOverride = $normalized -match "\[(low|fast|medium|balanced|high|deep|xhigh|max|review)\]" -or
+        $normalized -match "\s--(low|fast|medium|balanced|high|deep|xhigh|max|review)\b"
+    if ($gearOverride) {
+        $codexSignals.Add("explicit Codex gear override")
+    }
+
+    $codexSignalDefs = [ordered]@{
+        "local files or repo context" = "(\b(repo|repository|codebase|workspace|local files?|filesystem|folder|directory|path|cwd|project folder|this project)\b|[a-z]:\\|\.codex|agents\.md)"
+        "code/build/test/git work" = "(\b(code|codebase|implement|implementation|component|page|route|api|endpoint|database|migration|schema|script|fix|bug|debug|tests|build|lint|typecheck|git|commit|branch|push|pull request|pr|ci|github actions|deploy|deployment|logs?|stack trace|crash|terminal|shell|powershell|cmd|npm|pnpm|yarn|python|node)\b|\b(failing|broken|unit|integration|e2e|smoke|regression)\s+tests?\b|\b(run|rerun|execute|write|add)\s+tests?\b)"
+        "browser or app verification" = "\b(browser|chrome|screenshot|playwright|localhost|127\.0\.0\.1|app verification|responsive|mobile|desktop qa)\b"
+        "connected apps or private account state" = "\b(gmail|email inbox|inbox|slack|notion|linear|jira|github|vercel|supabase|stripe|datadog|sentry|google analytics|search console|cloudflare|zapier|make\.com|connector|mcp|app session)\b"
+        "local asset generation or export" = "(\b(save|export|download|render|wire|apply)\b.*\b(logos?|images?|assets?|png|jpe?g|svg|webp|pdf|site|page|project|folder)\b|\b(logos?|images?|assets?|png|jpe?g|svg|webp|pdf)\b.*\b(save|export|download|render|wire|apply)\b)"
+        "sensitive or production risk" = "\b(auth|oauth|security|secret|token|permissions?|billing|payments?|production|prod|owner button|env vars?|api key)\b"
+        "specific file path or extension" = "\b[\w.-]+\.(ts|tsx|js|jsx|py|ps1|cmd|md|json|yml|yaml|toml|css|html|sql|sh|bat|cs|go|rs|java|php|rb)\b"
+    }
+
+    $chatGptSignalDefs = [ordered]@{
+        "writing or copy" = "\b(write|rewrite|draft|polish|edit|improve|email|message|post|copy|tone|headline|tagline|slogan|cold email|sales copy)\b"
+        "ideas or strategy" = "\b(brainstorm|ideate|ideas?|naming|name ideas|domain names?|strategy|plan|critique|second opinion|options?|pros and cons|positioning|offer|angle|campaign|go-to-market|gtm)\b"
+        "summary or explanation" = "\b(summarize|summary|outline|explain|teach|learn|notes?|meeting notes|synthesis|classify|pasted text)\b"
+        "research or comparison without local execution" = "\b(research|compare|competitor|market scan|best practices|examples?|sources?|literature|overview)\b"
+        "translation or transformation" = "\b(translate|transcribe cleanup|condense|expand|turn .* into|convert .* into)\b"
+        "design or creative generation" = "\b(moodboard|layout concept|design direction|ad concept|poster concept|social concept|image prompt|color palette|typography|logos?|logo sheet|logo concepts?|brand identity|visual identity|wordmark|brand mark|visual mockup|ad creative)\b"
+    }
+
+    foreach ($entry in $codexSignalDefs.GetEnumerator()) {
+        if ($normalized -match $entry.Value -and -not $codexSignals.Contains($entry.Key)) {
+            $codexSignals.Add($entry.Key)
+        }
+    }
+    foreach ($entry in $chatGptSignalDefs.GetEnumerator()) {
+        if ($normalized -match $entry.Value) {
+            $chatGptSignals.Add($entry.Key)
+        }
+    }
+
+    $hasSensitiveSignal = $codexSignals.Contains("sensitive or production risk") -or
+        $codexSignals.Contains("connected apps or private account state")
+    $hasCodexSignals = $codexSignals.Count -gt 0
+    $hasChatGptSignals = $chatGptSignals.Count -gt 0
+
+    if ($hasSensitiveSignal) {
+        return [pscustomobject]@{
+            Route = "codex"
+            Dispatch = "codex-auto"
+            Reason = "Sensitive, account, connector, or production-risk work must stay in Codex unless explicitly forced."
+            Confidence = "high"
+            AskFirst = $true
+            CodexSignals = $codexSignals.ToArray()
+            ChatGPTSignals = $chatGptSignals.ToArray()
+            NextAction = "Keep in Codex; use ChatGPT only for a bounded second opinion after approval if needed."
+        }
+    }
+
+    if ($hasCodexSignals -and $hasChatGptSignals) {
+        return [pscustomobject]@{
+            Route = "hybrid"
+            Dispatch = "ask-first"
+            Reason = "The task mixes detachable ChatGPT work with local Codex execution."
+            Confidence = "medium"
+            AskFirst = $true
+            CodexSignals = $codexSignals.ToArray()
+            ChatGPTSignals = $chatGptSignals.ToArray()
+            NextAction = "Ask before splitting: ChatGPT should do the detachable thinking or creative pass, then Codex should apply or verify locally."
+        }
+    }
+
+    if ($hasChatGptSignals) {
+        return [pscustomobject]@{
+            Route = "chatgpt"
+            Dispatch = "chatgpt-auto-route"
+            Reason = "The task is high-confidence detachable work and can preserve Codex usage."
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = @()
+            ChatGPTSignals = $chatGptSignals.ToArray()
+            NextAction = "Prepare a ChatGPT bridge session with a compact return packet."
+        }
+    }
+
+    if ($hasCodexSignals) {
+        return [pscustomobject]@{
+            Route = "codex"
+            Dispatch = "codex-auto"
+            Reason = "The task appears to need local files, tools, verification, or Codex execution."
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = $codexSignals.ToArray()
+            ChatGPTSignals = @()
+            NextAction = "Dispatch through codex-auto with credit optimization disabled."
+        }
+    }
+
+    return [pscustomobject]@{
+        Route = "codex"
+        Dispatch = "codex-auto"
+        Reason = "No high-confidence ChatGPT handoff signal was found."
+        Confidence = "low"
+        AskFirst = $true
+        CodexSignals = @()
+        ChatGPTSignals = @()
+        NextAction = "Keep in Codex unless the user explicitly forces ChatGPT."
+    }
+}
+
 function Get-CodexExecutable {
     $candidates = New-Object System.Collections.Generic.List[string]
 
@@ -295,4 +443,4 @@ function New-CodexConfigArgs {
     return $args
 }
 
-Export-ModuleMember -Function Get-CodexGearMatrix, Get-CodexGear, Select-CodexGear, Select-AiWorkRoute, Get-CodexExecutable, New-CodexConfigArgs
+Export-ModuleMember -Function Get-CodexGearMatrix, Get-CodexGear, Select-CodexGear, Select-AiWorkRoute, Select-ChatGatewayRoute, Get-CodexExecutable, New-CodexConfigArgs

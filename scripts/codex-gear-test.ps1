@@ -85,6 +85,8 @@ $requiredScripts = @(
     "chatgpt-return.ps1",
     "codex-auto.cmd",
     "codex-auto.ps1",
+    "codex-gateway.cmd",
+    "codex-gateway.ps1",
     "codex-bounce.cmd",
     "codex-council.cmd",
     "codex-doctor.cmd",
@@ -177,6 +179,25 @@ foreach ($case in $workRouteTests) {
     Assert-Equal $workRoute.Route $case.Route "Work route '$($case.Prompt)'"
 }
 
+$gatewayRouteTests = @(
+    [pscustomobject]@{ Prompt = "write a cold email"; Route = "chatgpt"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "make up four client logos and generate a logo sheet"; Route = "chatgpt"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "download the generated image into this project"; Route = "codex"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "fix failing tests"; Route = "codex"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "summarize this pasted text"; Route = "chatgpt"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "summarize src/app.ts"; Route = "hybrid"; AskFirst = $true },
+    [pscustomobject]@{ Prompt = "write homepage copy and add it to src/app.ts"; Route = "hybrid"; AskFirst = $true },
+    [pscustomobject]@{ Prompt = "add auth secret to production"; Route = "codex"; AskFirst = $true },
+    [pscustomobject]@{ Prompt = "[chatgpt] fix failing tests"; Route = "chatgpt"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "[codex] write a cold email"; Route = "codex"; AskFirst = $false }
+)
+
+foreach ($case in $gatewayRouteTests) {
+    $gatewayRoute = Select-ChatGatewayRoute -Text $case.Prompt
+    Assert-Equal $gatewayRoute.Route $case.Route "Gateway route '$($case.Prompt)'"
+    Assert-Equal $gatewayRoute.AskFirst $case.AskFirst "Gateway ask-first '$($case.Prompt)'"
+}
+
 $optimizerDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -NoOpen -Cwd $CodexHome "draft a concise apology email to a client" 2>&1 6>&1 | Out-String)
 Assert-True ($optimizerDryRun -match "AI credits optimizer: ChatGPT route selected") "Codex auto dry-run diverts writing task to ChatGPT"
 Assert-True ($optimizerDryRun -notmatch "Codex auto gear:") "ChatGPT dry-run does not launch Codex gear"
@@ -203,6 +224,16 @@ Assert-True ($autoBridgeDryRun -match "Route: chatgpt") "ChatGPT auto bridge dry
 
 $autoBridgeCodex = (& (Join-Path $scriptDir "chatgpt-auto-route.ps1") -NoOpen -Project "gear-test" "fix failing tests in the checkout flow" 2>&1 6>&1 | Out-String)
 Assert-True ($autoBridgeCodex -match "Status: not-routed") "ChatGPT auto bridge refuses Codex-local work"
+
+$gatewayDryRun = (& (Join-Path $scriptDir "codex-gateway.ps1") -DryRun -NoOpen -Project "gear-test" "write a cold email" 2>&1 6>&1 | Out-String)
+Assert-True ($gatewayDryRun -match "Route: chatgpt") "Codex gateway dry-run routes writing to ChatGPT"
+
+$gatewayCodexDryRun = (& (Join-Path $scriptDir "codex-gateway.ps1") -DryRun -NoOpen -Project "gear-test" "fix failing tests" 2>&1 6>&1 | Out-String)
+Assert-True ($gatewayCodexDryRun -match "Route: codex") "Codex gateway dry-run keeps tests in Codex"
+
+$gatewayHybridDryRun = (& (Join-Path $scriptDir "codex-gateway.ps1") -DryRun -NoOpen -Project "gear-test" "write homepage copy and add it to src/app.ts" 2>&1 6>&1 | Out-String)
+Assert-True ($gatewayHybridDryRun -match "Route: hybrid") "Codex gateway dry-run detects hybrid tasks"
+Assert-True ($gatewayHybridDryRun -match "Ask first: True") "Codex gateway hybrid route asks first"
 
 $packetFile = Join-Path $env:TEMP "chatgpt-return-packet-$PID.txt"
 @"

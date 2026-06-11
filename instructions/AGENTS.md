@@ -60,6 +60,20 @@ When launching new Codex CLI/automation work, use the real profile router:
 
 `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
 
+## Auto-Bounce Chat Gateway
+
+Use the gateway before substantial non-local work:
+
+`C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"`
+
+Dispatch through:
+
+`C:\Users\zev\.codex\scripts\codex-gateway.cmd "TASK"`
+
+The gateway classifies tasks as `chatgpt`, `codex`, or `hybrid`. It auto-bounces high-confidence detachable work to ChatGPT, keeps local/risky work in Codex, and marks mixed creative-plus-local work as ask-first so Codex can split the task without losing the local execution half.
+
+Force Codex with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`.
+
 ## AI Credits Usage Optimizer
 
 `codex-auto.cmd` now runs an AI credits optimizer before launching a new Codex session. It routes obvious non-repo writing, brainstorming, strategy, summary, explanation, and design-direction tasks to ChatGPT through `chatgpt-route.cmd`; it keeps code, local files, tests, git, deploys, browser/app verification, connectors, `.codex` systems work, owner-button state, auth, billing, security, database, permissions, and production-risk work in Codex.
@@ -100,7 +114,11 @@ Keep the work in Codex for:
 - Actual local asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, or real-person face work requiring exact pixel preservation, unless Zev explicitly asks ChatGPT to be the image surface; then use ChatGPT auto-orchestration.
 - Auth, security, billing, database, permissions, production risk, and ambiguous failures. Use xhigh/council; ChatGPT can give a second opinion, but Codex should execute only after guardrails.
 
-When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
+When a task may be detachable, check the gateway first:
+
+`C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"`
+
+When a task should leave Codex manually, say `ChatGPT route recommended - brief reason`, then use:
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
