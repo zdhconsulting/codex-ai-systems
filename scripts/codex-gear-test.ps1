@@ -153,10 +153,13 @@ $workRouteTests = @(
     [pscustomobject]@{ Prompt = "summarize meeting notes into decisions and action items"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "research competitor positioning for boutique web design agencies"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "translate this short paragraph into Hebrew"; Route = "chatgpt" },
+    [pscustomobject]@{ Prompt = "I need 4 logos for different clients ZDH Sales worked with"; Route = "chatgpt" },
+    [pscustomobject]@{ Prompt = "brainstorm four logo concepts for ZDH Sales clients"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "fix failing tests in the checkout flow"; Route = "codex" },
     [pscustomobject]@{ Prompt = "summarize src/app.ts"; Route = "codex" },
     [pscustomobject]@{ Prompt = "summarize my Gmail inbox for urgent replies"; Route = "codex" },
     [pscustomobject]@{ Prompt = "draft an email using the notes in C:\Repos\client\notes.md"; Route = "codex" },
+    [pscustomobject]@{ Prompt = "export four logo SVG files to the assets folder"; Route = "codex" },
     [pscustomobject]@{ Prompt = "[low] draft a short email"; Route = "codex" },
     [pscustomobject]@{ Prompt = "[chatgpt] fix failing tests in the checkout flow"; Route = "chatgpt" },
     [pscustomobject]@{ Prompt = "[codex] draft a short email"; Route = "codex" }
