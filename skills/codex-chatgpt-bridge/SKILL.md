@@ -10,7 +10,7 @@ Use this skill to spend Codex only where Codex is uniquely useful: local files, 
 ## Workflow
 
 1. Classify the request before doing substantial work.
-   - Route to ChatGPT when the work is detachable thinking: writing, copy, brainstorming, naming, strategy, summaries, explanations, research synthesis, translation, design direction, or critique.
+   - Route to ChatGPT when the work is detachable thinking: writing, copy, brainstorming, naming, strategy, summaries, explanations, research synthesis, translation, design direction, critique, or ChatGPT-native image/logo generation that does not require local editing.
    - Keep in Codex when the work needs local files, repo state, terminal commands, tests, git, deployment, browser/app verification, connectors, inboxes, owner-button state, secrets, auth, billing, database, security, permissions, or production judgment.
 2. For new CLI/automation work, prefer the optimizer:
    `C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`
@@ -24,6 +24,8 @@ Use this skill to spend Codex only where Codex is uniquely useful: local files, 
 
 - Ask ChatGPT for bounded output, not open-ended agent work.
 - Do not send private account contents, secrets, tokens, unpublished sensitive data, or local file paths unless the user explicitly provided the text for that purpose.
+- If Zev asks ChatGPT to make actual images/logos, the handoff should tell ChatGPT to generate the image asset, not merely describe concepts. Codex should then download/save/inspect the output.
+- Only invent client names, facts, examples, or proof when Zev explicitly says the work is fictional, made up, sample, mock, placeholder, or a test.
 - Ask ChatGPT to admit when the task should return to Codex.
 - Require a `CODEX_RETURN_PACKET` with Summary, Decisions, Deliverable, Codex next action, Files/assets needed, Owner buttons needed, Confidence, and Go back to Codex?.
 - Prefer `-PacketOnly` when the result is meant mainly for Codex to consume.
