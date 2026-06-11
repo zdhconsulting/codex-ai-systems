@@ -39,4 +39,5 @@
 - Use `codex-gateway.cmd -SplitHybrid "TASK"` only when the ChatGPT-safe subtask is obvious and Codex should apply/verify locally after the packet returns.
 - Cache should never be trusted for current/fresh facts. The gateway bypasses obvious latest/current/today/news/price/weather/schedule prompts, but Codex should still use judgment.
 - Use `chatgpt-auto-route.cmd` when the task should be logged as a ChatGPT bridge session with prompt, response, downloaded assets, and savings events.
+- Use `codex-gateway-tally.cmd` when Zev asks how many decisions were routed to ChatGPT, why they were routed, what was dispatched/completed, or how much Codex usage was heuristically avoided.
 - Use `codex-gateway-feedback.cmd` after real runs when the route quality is notably good, mixed, or bad. This makes future tuning evidence-based instead of vibes-based.

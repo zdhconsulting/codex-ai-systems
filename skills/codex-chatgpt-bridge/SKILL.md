@@ -36,6 +36,7 @@ The gateway also acts like a small AI control plane:
 - Cache is bypassed automatically for freshness-sensitive prompts such as latest/current/today/news/price/weather/schedule. Use `-Refresh` to force a new ChatGPT run and `-NoCache` when testing the raw bridge.
 - Dry runs show route, confidence, cache status, heuristic avoided-Codex token estimate, and current Codex rate-limit pressure when session telemetry is available.
 - Hybrid tasks stay ask-first by default. Use `-SplitHybrid` only when the detachable ChatGPT part is clear and Codex should prepare that subtask before applying/verifying locally after return.
+- Use `codex-gateway-tally.cmd` to see a running ledger of route decisions, why each route was chosen, cache status, actual ChatGPT dispatches/completions, and estimated avoided Codex usage.
 - Record quality signals with `codex-gateway-feedback.cmd -SessionPath "SESSION_JSON" -Rating 1-5 -Outcome good|mixed|bad -Notes "..."`.
 
 Use `chatgpt-auto-route.cmd` for repeatable bridge runs. It routes the task, creates a session log, writes the ChatGPT prompt to a file, copies it to the clipboard, opens ChatGPT unless `-NoOpen` is set, and prints the Codex Desktop Chrome runner snippet.

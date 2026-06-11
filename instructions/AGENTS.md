@@ -80,6 +80,7 @@ The gateway also has conservative savings controls:
 - Fresh/current prompts such as latest/current/today/news/price/weather/schedule bypass cache automatically. Use `-Refresh` to force a new ChatGPT run and `-NoCache` to test raw routing.
 - Dry runs show cache status, a heuristic avoided-Codex token estimate, and current Codex rate-limit pressure when session telemetry is available.
 - Hybrid tasks remain ask-first by default. Use `-SplitHybrid` only when the ChatGPT-safe subtask is obvious and Codex will apply or verify locally after the return packet.
+- Review the decision ledger with `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd`. It shows route counts, ChatGPT moves, cache hits, completions, savings estimates, and the reason/signals for each decision.
 - Log route quality with `C:\Users\zev\.codex\scripts\codex-gateway-feedback.cmd -SessionPath "SESSION_JSON" -Rating 1-5 -Outcome good|mixed|bad -Notes "..."`.
 
 ## AI Credits Usage Optimizer

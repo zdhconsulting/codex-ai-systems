@@ -89,6 +89,8 @@ $requiredScripts = @(
     "codex-gateway.ps1",
     "codex-gateway-feedback.cmd",
     "codex-gateway-feedback.ps1",
+    "codex-gateway-tally.cmd",
+    "codex-gateway-tally.ps1",
     "codex-bounce.cmd",
     "codex-council.cmd",
     "codex-doctor.cmd",
@@ -276,6 +278,51 @@ $feedbackOut = (& (Join-Path $scriptDir "codex-gateway-feedback.ps1") -CodexHome
 Assert-True ($feedbackOut -match "Gateway feedback logged") "Gateway feedback command logs feedback"
 $cacheAfterFeedback = Get-Content -LiteralPath (Join-Path $cacheTestHome "cache\chatgpt-bridge\$cacheKey.json") -Raw | ConvertFrom-Json
 Assert-Equal $cacheAfterFeedback.LastFeedback.rating 5 "Gateway feedback updates cache metadata"
+
+$tallyHome = Join-Path $env:TEMP "codex-gateway-tally-test-$PID"
+$tallyLogDir = Join-Path $tallyHome "logs\chatgpt-bridge"
+New-Item -ItemType Directory -Path $tallyLogDir -Force | Out-Null
+$tallyEventsPath = Join-Path $tallyLogDir "events.jsonl"
+@(
+    [ordered]@{
+        type = "gateway-classified"
+        at = (Get-Date).ToString("o")
+        project = "real-project"
+        task = "write a cold email"
+        route = "chatgpt"
+        confidence = "high"
+        askFirst = $false
+        reason = "The task is high-confidence detachable work and can preserve Codex usage."
+        chatgptSignals = @("writing or copy")
+        codexSignals = @()
+        cache = [ordered]@{ Status = "miss" }
+        savingsEstimate = [ordered]@{ EstimatedAvoidedCodexTokens = 9000 }
+    },
+    [ordered]@{
+        type = "gateway-dispatched"
+        at = (Get-Date).ToString("o")
+        project = "real-project"
+        task = "write a cold email"
+        route = "chatgpt"
+        savingsEstimate = [ordered]@{ EstimatedAvoidedCodexTokens = 9000 }
+    },
+    [ordered]@{
+        type = "complete"
+        at = (Get-Date).ToString("o")
+        project = "real-project"
+        task = "write a cold email"
+        route = "chatgpt"
+        assetCount = 0
+    }
+) | ForEach-Object {
+    ($_ | ConvertTo-Json -Compress -Depth 8) | Add-Content -LiteralPath $tallyEventsPath -Encoding UTF8
+}
+$tallyJson = (& (Join-Path $scriptDir "codex-gateway-tally.ps1") -CodexHome $tallyHome -Json 2>&1 6>&1 | Out-String) | ConvertFrom-Json
+Assert-Equal $tallyJson.Summary.ChatGPTDecisions 1 "Gateway tally counts ChatGPT decisions"
+Assert-Equal $tallyJson.Summary.GatewayDispatchesToChatGPT 1 "Gateway tally counts ChatGPT dispatches"
+Assert-Equal $tallyJson.Summary.CompletedChatGPTSessions 1 "Gateway tally counts completed sessions"
+Assert-Equal $tallyJson.Summary.EstimatedAvoidedCodexTokensFromDispatches 9000 "Gateway tally sums dispatched savings"
+Assert-True ($tallyJson.Decisions[0].Reason -match "preserve Codex usage") "Gateway tally keeps decision reasons"
 
 $packetFile = Join-Path $env:TEMP "chatgpt-return-packet-$PID.txt"
 @"

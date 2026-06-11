@@ -33,7 +33,7 @@ Then prepare the handoff, or let the optimizer do it:
 
 `C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd "TASK"`
 
-`codex-gateway.cmd` is the preferred front door. It reuses exact cached ChatGPT packets/assets when safe, bypasses cache for freshness-sensitive prompts, and logs route/savings events. Use `-Refresh` for a new ChatGPT run, `-NoCache` for raw routing tests, and `-SplitHybrid` only when the detachable ChatGPT subtask is clear. `codex-auto.cmd` also runs the lower-level optimizer before launching a new Codex session. Use `[codex]`, `--codex`, or `-ForceCodex` to bypass the optimizer when the task should stay in Codex.
+`codex-gateway.cmd` is the preferred front door. It reuses exact cached ChatGPT packets/assets when safe, bypasses cache for freshness-sensitive prompts, and logs route/savings events. Use `-Refresh` for a new ChatGPT run, `-NoCache` for raw routing tests, and `-SplitHybrid` only when the detachable ChatGPT subtask is clear. Use `codex-gateway-tally.cmd` to inspect route counts, ChatGPT moves, savings estimates, and the reason/signals behind each decision. `codex-auto.cmd` also runs the lower-level optimizer before launching a new Codex session. Use `[codex]`, `--codex`, or `-ForceCodex` to bypass the optimizer when the task should stay in Codex.
 
 ## Keep In Codex
 

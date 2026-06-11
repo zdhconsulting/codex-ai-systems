@@ -58,6 +58,8 @@ Route non-repo writing, brainstorming, strategy, summaries, learning, second opi
 
 Use `C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"` before substantial non-local work. The gateway reuses exact cached ChatGPT packets/assets when safe, bypasses cache for current/latest/today/news/price/weather/schedule style prompts, and shows estimated avoided Codex work plus current rate-limit pressure. Use `-Refresh` to force a fresh ChatGPT run, `-NoCache` to test raw routing, and `-SplitHybrid` only when the ChatGPT-safe part is obvious and Codex will apply or verify locally afterward.
 
+Use `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd` to review route counts, ChatGPT moves, cache hits, completions, savings estimates, and the reason/signals for each decision.
+
 After notable routes, log quality with `C:\Users\zev\.codex\scripts\codex-gateway-feedback.cmd -SessionPath "SESSION_JSON" -Rating 1-5 -Outcome good|mixed|bad -Notes "..."`.
 
 When Chrome/ChatGPT web is available, automate the whole route: open or claim ChatGPT, submit the prompt, wait for completion, copy/import text results, or download generated image assets. Manual paste/copy is fallback only when browser automation is unavailable or ChatGPT requires login, CAPTCHA, payment, account verification, safety confirmation, or another owner-only action.

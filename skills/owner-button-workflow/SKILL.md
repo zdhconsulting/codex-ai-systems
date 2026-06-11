@@ -142,6 +142,7 @@ Gateway savings controls:
 - Exact completed ChatGPT packets/assets are cached by project plus normalized task.
 - Current/fresh prompts such as latest/current/today/news/price/weather/schedule bypass cache automatically.
 - Use `-Refresh` for a new ChatGPT run, `-NoCache` for raw routing tests, and `-SplitHybrid` only when the detachable ChatGPT subtask is clear.
+- Use `codex-gateway-tally.cmd` to audit route counts, ChatGPT moves, cache hits, completions, savings estimates, and the reason/signals behind each decision.
 - Use `codex-gateway-feedback.cmd` to record route quality after useful or bad runs.
 
 Preview or intentionally dispatch with:
