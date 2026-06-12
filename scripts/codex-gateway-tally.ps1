@@ -12,6 +12,10 @@ param(
 $ErrorActionPreference = "Stop"
 $CodexHome = if ($CodexHome) { $CodexHome } else { Split-Path -Parent $PSScriptRoot }
 $eventsPath = Join-Path $CodexHome "logs\chatgpt-bridge\events.jsonl"
+$modulePath = Join-Path $CodexHome "scripts\CodexGear.psm1"
+if (Test-Path -LiteralPath $modulePath) {
+    Import-Module $modulePath -Force
+}
 
 function Get-EventValue {
     param(
@@ -39,6 +43,32 @@ function ConvertTo-StringList {
     param([object] $Value)
     if ($null -eq $Value) { return "" }
     return ((@($Value) | Where-Object { $_ } | ForEach-Object { "$_" }) -join ", ")
+}
+
+function Get-EventSavingsEstimate {
+    param([object] $Event)
+
+    $route = Get-EventValue -Event $Event -Name "route"
+    if ($route -ne "chatgpt" -and $route -ne "hybrid") { return 0 }
+
+    $estimate = Get-EventValue -Event $Event -Name "savingsEstimate"
+    if ($estimate -and $estimate.EstimatedAvoidedCodexTokens -and [int]$estimate.EstimatedAvoidedCodexTokens -gt 0) {
+        return [int]$estimate.EstimatedAvoidedCodexTokens
+    }
+
+    if (-not (Get-Command Get-ChatGatewaySavingsEstimate -ErrorAction SilentlyContinue)) {
+        return 0
+    }
+
+    $task = Get-EventValue -Event $Event -Name "task"
+    $signals = Get-EventValue -Event $Event -Name "chatgptSignals"
+    if (-not $signals) { $signals = Get-EventValue -Event $Event -Name "Signals" }
+    $fallback = Get-EventValue -Event $Event -Name "codexFallbackProfile"
+    if (-not $fallback) { $fallback = Get-EventValue -Event $Event -Name "CodexFallbackProfile" }
+    if (-not $fallback) { $fallback = "fast" }
+
+    $backfill = Get-ChatGatewaySavingsEstimate -Text "$task" -Route "$route" -ChatGPTSignals @($signals) -CodexFallbackProfile "$fallback"
+    return [int]$backfill.EstimatedAvoidedCodexTokens
 }
 
 if (-not (Test-Path -LiteralPath $eventsPath)) {
@@ -114,10 +144,7 @@ function Sum-Savings {
     foreach ($event in $InputEvents) {
         $route = Get-EventValue -Event $event -Name "route"
         if ($route -ne "chatgpt" -and $route -ne "hybrid") { continue }
-        $estimate = Get-EventValue -Event $event -Name "savingsEstimate"
-        if ($estimate -and $estimate.EstimatedAvoidedCodexTokens) {
-            $sum += [int]$estimate.EstimatedAvoidedCodexTokens
-        }
+        $sum += Get-EventSavingsEstimate -Event $event
     }
     return $sum
 }
@@ -127,7 +154,6 @@ $decisionRows = @(
         Sort-Object { Get-EventValue -Event $_ -Name "at" } -Descending |
         ForEach-Object {
             $cache = Get-EventValue -Event $_ -Name "cache"
-            $estimate = Get-EventValue -Event $_ -Name "savingsEstimate"
             [pscustomobject]@{
                 At = Get-EventValue -Event $_ -Name "at"
                 Project = Get-EventValue -Event $_ -Name "project"
@@ -135,7 +161,7 @@ $decisionRows = @(
                 Confidence = Get-EventValue -Event $_ -Name "confidence"
                 AskFirst = Get-EventValue -Event $_ -Name "askFirst"
                 CacheStatus = if ($cache) { $cache.Status } else { "" }
-                EstimatedAvoidedCodexTokens = if ($estimate -and $estimate.EstimatedAvoidedCodexTokens) { [int]$estimate.EstimatedAvoidedCodexTokens } else { 0 }
+                EstimatedAvoidedCodexTokens = Get-EventSavingsEstimate -Event $_
                 Reason = Get-EventValue -Event $_ -Name "reason"
                 ChatGPTSignals = ConvertTo-StringList (Get-EventValue -Event $_ -Name "chatgptSignals")
                 CodexSignals = ConvertTo-StringList (Get-EventValue -Event $_ -Name "codexSignals")

@@ -263,7 +263,20 @@ function Get-CodexLatestTokenSnapshot {
         return $null
     }
 
-    $files = Get-ChildItem -LiteralPath $sessionsDir -Recurse -Filter "*.jsonl" -ErrorAction SilentlyContinue |
+    $candidateFiles = @()
+    for ($dayOffset = 0; $dayOffset -lt 4; $dayOffset++) {
+        $day = (Get-Date).AddDays(-1 * $dayOffset)
+        $dayDir = Join-Path $sessionsDir (Join-Path $day.ToString("yyyy") (Join-Path $day.ToString("MM") $day.ToString("dd")))
+        if (Test-Path -LiteralPath $dayDir) {
+            $candidateFiles += @(Get-ChildItem -LiteralPath $dayDir -Filter "*.jsonl" -File -ErrorAction SilentlyContinue)
+        }
+    }
+
+    if ($candidateFiles.Count -eq 0) {
+        $candidateFiles = @(Get-ChildItem -LiteralPath $sessionsDir -Recurse -Filter "*.jsonl" -File -ErrorAction SilentlyContinue)
+    }
+
+    $files = $candidateFiles |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First $MaxFiles
 
