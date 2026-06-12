@@ -283,6 +283,19 @@ $tallyHome = Join-Path $env:TEMP "codex-gateway-tally-test-$PID"
 $tallyLogDir = Join-Path $tallyHome "logs\chatgpt-bridge"
 New-Item -ItemType Directory -Path $tallyLogDir -Force | Out-Null
 $tallyEventsPath = Join-Path $tallyLogDir "events.jsonl"
+$tallySessionDir = Join-Path $tallyLogDir "fake-session"
+New-Item -ItemType Directory -Path $tallySessionDir -Force | Out-Null
+$tallySessionPath = Join-Path $tallySessionDir "session.json"
+$tallyResponsePath = Join-Path $tallySessionDir "response.txt"
+"CODEX_RETURN_PACKET`nSummary: complete`nEND_CODEX_RETURN_PACKET" | Set-Content -LiteralPath $tallyResponsePath -Encoding UTF8
+[ordered]@{
+    Task = "write a cold email"
+    Route = [ordered]@{
+        Route = "chatgpt"
+        Signals = @("writing or copy")
+    }
+    CodexFallbackProfile = "fast"
+} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $tallySessionPath -Encoding UTF8
 @(
     [ordered]@{
         type = "gateway-classified"
@@ -307,11 +320,22 @@ $tallyEventsPath = Join-Path $tallyLogDir "events.jsonl"
         savingsEstimate = [ordered]@{ EstimatedAvoidedCodexTokens = 9000 }
     },
     [ordered]@{
+        type = "prepared"
+        at = (Get-Date).ToString("o")
+        Project = "real-project"
+        Task = "write a cold email"
+        Route = "chatgpt"
+        Signals = @("writing or copy")
+        CodexFallbackProfile = "fast"
+        savingsEstimate = [ordered]@{ EstimatedAvoidedCodexTokens = 9000 }
+    },
+    [ordered]@{
         type = "complete"
         at = (Get-Date).ToString("o")
         project = "real-project"
         task = "write a cold email"
         route = "chatgpt"
+        responsePath = $tallyResponsePath
         assetCount = 0
     }
 ) | ForEach-Object {
@@ -320,8 +344,12 @@ $tallyEventsPath = Join-Path $tallyLogDir "events.jsonl"
 $tallyJson = (& (Join-Path $scriptDir "codex-gateway-tally.ps1") -CodexHome $tallyHome -Json 2>&1 6>&1 | Out-String) | ConvertFrom-Json
 Assert-Equal $tallyJson.Summary.ChatGPTDecisions 1 "Gateway tally counts ChatGPT decisions"
 Assert-Equal $tallyJson.Summary.GatewayDispatchesToChatGPT 1 "Gateway tally counts ChatGPT dispatches"
+Assert-Equal $tallyJson.Summary.PreparedChatGPTSessions 1 "Gateway tally counts prepared sessions"
 Assert-Equal $tallyJson.Summary.CompletedChatGPTSessions 1 "Gateway tally counts completed sessions"
+Assert-Equal $tallyJson.Summary.UniqueCompletedChatGPTSessions 1 "Gateway tally counts unique completed sessions"
 Assert-Equal $tallyJson.Summary.EstimatedAvoidedCodexTokensFromDispatches 9000 "Gateway tally sums dispatched savings"
+Assert-Equal $tallyJson.Summary.EstimatedAvoidedCodexTokensFromPreparedSessions 9000 "Gateway tally sums prepared-session savings"
+Assert-Equal $tallyJson.Summary.EstimatedAvoidedCodexTokensFromUniqueCompletedSessions 9100 "Gateway tally backfills unique completed-session savings"
 Assert-True ($tallyJson.Decisions[0].Reason -match "preserve Codex usage") "Gateway tally keeps decision reasons"
 
 $packetFile = Join-Path $env:TEMP "chatgpt-return-packet-$PID.txt"

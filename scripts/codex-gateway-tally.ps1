@@ -71,6 +71,33 @@ function Get-EventSavingsEstimate {
     return [int]$backfill.EstimatedAvoidedCodexTokens
 }
 
+function Get-SessionSavingsEstimate {
+    param([object] $Session)
+
+    if (-not $Session) { return 0 }
+    if (-not (Get-Command Get-ChatGatewaySavingsEstimate -ErrorAction SilentlyContinue)) {
+        return 0
+    }
+
+    $route = "chatgpt"
+    $signals = @()
+    if ($Session.Route) {
+        if ($Session.Route.Route) { $route = $Session.Route.Route }
+        if ($Session.Route.Signals) { $signals = @($Session.Route.Signals) }
+    }
+    $fallback = if ($Session.CodexFallbackProfile) { $Session.CodexFallbackProfile } else { "fast" }
+    $task = if ($Session.Task) { "$($Session.Task)" } else { "" }
+    if ([string]::IsNullOrWhiteSpace($task)) { return 0 }
+    $estimate = Get-ChatGatewaySavingsEstimate -Text "$task" -Route "$route" -ChatGPTSignals $signals -CodexFallbackProfile "$fallback"
+    return [int]$estimate.EstimatedAvoidedCodexTokens
+}
+
+function Get-BridgePath {
+    param([string] $Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) { return "" }
+    return ($Path -replace "/", "\")
+}
+
 if (-not (Test-Path -LiteralPath $eventsPath)) {
     $empty = [pscustomobject]@{
         Summary = [ordered]@{
@@ -84,9 +111,12 @@ if (-not (Test-Path -LiteralPath $eventsPath)) {
             GatewayDispatchesToChatGPT = 0
             PreparedChatGPTSessions = 0
             CompletedChatGPTSessions = 0
+            UniqueCompletedChatGPTSessions = 0
             CacheHits = 0
             EstimatedAvoidedCodexTokensFromDecisions = 0
             EstimatedAvoidedCodexTokensFromDispatches = 0
+            EstimatedAvoidedCodexTokensFromPreparedSessions = 0
+            EstimatedAvoidedCodexTokensFromUniqueCompletedSessions = 0
         }
         Decisions = @()
     }
@@ -137,6 +167,41 @@ $gatewayChatGptDispatches = @($events | Where-Object {
 $preparedChatGptSessions = @($events | Where-Object { (Get-EventValue -Event $_ -Name "type") -eq "prepared" -and (Get-EventValue -Event $_ -Name "Route") -eq "chatgpt" })
 $completedChatGptSessions = @($events | Where-Object { (Get-EventValue -Event $_ -Name "type") -eq "complete" })
 $cacheHits = @($events | Where-Object { (Get-EventValue -Event $_ -Name "type") -eq "gateway-cache-hit" })
+
+$preparedBySessionPath = @{}
+foreach ($event in $preparedChatGptSessions) {
+    $preparedSessionPath = Get-BridgePath (Get-EventValue -Event $event -Name "SessionPath")
+    if ($preparedSessionPath -and -not $preparedBySessionPath.ContainsKey($preparedSessionPath)) {
+        $preparedBySessionPath[$preparedSessionPath] = $event
+    }
+}
+
+$uniqueCompletedSessions = @{}
+foreach ($event in $completedChatGptSessions) {
+    $sessionPath = Get-BridgePath (Get-EventValue -Event $event -Name "sessionPath")
+    $responsePath = Get-BridgePath (Get-EventValue -Event $event -Name "responsePath")
+    if (-not $sessionPath -and $responsePath) {
+        $responseDir = Split-Path -Parent $responsePath
+        if ($responseDir) { $sessionPath = Join-Path $responseDir "session.json" }
+    }
+    $key = if ($sessionPath) { $sessionPath } elseif ($responsePath) { $responsePath } else { (Get-EventValue -Event $event -Name "at") }
+    if (-not $uniqueCompletedSessions.ContainsKey($key)) {
+        $session = $null
+        if ($sessionPath -and (Test-Path -LiteralPath $sessionPath)) {
+            try { $session = Get-Content -LiteralPath $sessionPath -Raw | ConvertFrom-Json } catch { $session = $null }
+        }
+        $estimate = Get-SessionSavingsEstimate -Session $session
+        if ($estimate -eq 0 -and $sessionPath -and $preparedBySessionPath.ContainsKey($sessionPath)) {
+            $estimate = Get-EventSavingsEstimate -Event $preparedBySessionPath[$sessionPath]
+        }
+        $uniqueCompletedSessions[$key] = [pscustomobject]@{
+            Key = $key
+            Event = $event
+            Session = $session
+            Estimate = $estimate
+        }
+    }
+}
 
 function Sum-Savings {
     param([object[]] $InputEvents)
@@ -190,9 +255,12 @@ $summary = [ordered]@{
     GatewayDispatchesToChatGPT = $gatewayChatGptDispatches.Count
     PreparedChatGPTSessions = $preparedChatGptSessions.Count
     CompletedChatGPTSessions = $completedChatGptSessions.Count
+    UniqueCompletedChatGPTSessions = $uniqueCompletedSessions.Count
     CacheHits = $cacheHits.Count
     EstimatedAvoidedCodexTokensFromDecisions = Sum-Savings -InputEvents $decisionEvents
     EstimatedAvoidedCodexTokensFromDispatches = (Sum-Savings -InputEvents $gatewayChatGptDispatches) + (Sum-Savings -InputEvents $cacheHits)
+    EstimatedAvoidedCodexTokensFromPreparedSessions = Sum-Savings -InputEvents $preparedChatGptSessions
+    EstimatedAvoidedCodexTokensFromUniqueCompletedSessions = [int](($uniqueCompletedSessions.Values | Measure-Object -Property Estimate -Sum).Sum)
 }
 
 $result = [pscustomobject]@{
@@ -223,11 +291,14 @@ Write-Host "Moves / outcomes"
 Write-Host "  Gateway dispatches to ChatGPT/hybrid: $($summary.GatewayDispatchesToChatGPT)"
 Write-Host "  Prepared ChatGPT sessions: $($summary.PreparedChatGPTSessions)"
 Write-Host "  Completed ChatGPT sessions: $($summary.CompletedChatGPTSessions)"
+Write-Host "  Unique completed ChatGPT sessions: $($summary.UniqueCompletedChatGPTSessions)"
 Write-Host "  Cache hits: $($summary.CacheHits)"
 Write-Host ""
 Write-Host "Savings estimates"
 Write-Host "  From ChatGPT/hybrid decisions: $($summary.EstimatedAvoidedCodexTokensFromDecisions) Codex tokens"
 Write-Host "  From actual dispatch/cache events: $($summary.EstimatedAvoidedCodexTokensFromDispatches) Codex tokens"
+Write-Host "  From prepared ChatGPT sessions: $($summary.EstimatedAvoidedCodexTokensFromPreparedSessions) Codex tokens"
+Write-Host "  From unique completed ChatGPT sessions: $($summary.EstimatedAvoidedCodexTokensFromUniqueCompletedSessions) Codex tokens"
 Write-Host ""
 Write-Host "Recent decisions"
 foreach ($row in $decisionRows) {
