@@ -287,6 +287,8 @@ Use `xhigh` for high-stakes or ambiguous decisions:
 
 Use `low` for tiny visual tweaks, `medium` for normal page/component polish, `high` for multi-screen UX/accessibility/responsive verification, and `xhigh` for brand systems, design architecture, checkout/signup/auth, revenue, trust, or production-risk design.
 
+For all websites, the primary navigation should hide when the user scrolls down and reappear when the user scrolls up. Keep it visible at the top of the page, when focused, and when any mobile menu is open; use a readable solid/glass treatment once it floats over body content.
+
 For design or image-editing tasks involving a real person's face, do not redraw, regenerate, stylize, beautify, smooth, age, or reinterpret the face. Preserve the original face pixels exactly by masking, cutting, copying, and pasting the source face into the final composition. If the source face is unavailable, or the requested edit would require generating a new face, ask for the needed source image or explain that exact preservation is not possible. Backgrounds, layout, clothing, framing, and surrounding design can change; the face itself stays untouched unless Zev explicitly asks to edit the face.
 
 ## Owner Button Queue
