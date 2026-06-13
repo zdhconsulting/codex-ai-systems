@@ -99,12 +99,14 @@ $taskKey = Get-ChatGatewayTaskKey -Text $taskText -Project $Project
 $selectedSignals = if ($route.Route -eq "deepseek") { $route.DeepSeekSignals } else { $route.ChatGPTSignals }
 $savingsEstimate = Get-ChatGatewaySavingsEstimate -Text $taskText -Route $route.Route -ChatGPTSignals $selectedSignals -CodexFallbackProfile $fallbackProfile
 $codexUsageBefore = Get-CodexLatestTokenSnapshot -CodexHome $codexHome
+$deepSeekProjectHook = $route.Route -eq "deepseek" -and (Test-MrSeoDeepSeekHook -Cwd $Cwd -Project $Project -Task $taskText)
+$displayDispatch = if ($deepSeekProjectHook) { "mrseo-deepseek-writer" } else { $route.Dispatch }
 
 $result = [ordered]@{
     Status = if ($DryRun) { "dry-run" } else { "classified" }
     Route = $route.Route
     Provider = $route.Provider
-    Dispatch = $route.Dispatch
+    Dispatch = $displayDispatch
     Confidence = $route.Confidence
     AskFirst = $route.AskFirst
     Reason = $route.Reason
@@ -131,7 +133,7 @@ Write-GatewayEvent ([ordered]@{
     taskKey = $taskKey
     route = $route.Route
     provider = $route.Provider
-    dispatch = $route.Dispatch
+    dispatch = $displayDispatch
     confidence = $route.Confidence
     askFirst = $route.AskFirst
     reason = $route.Reason

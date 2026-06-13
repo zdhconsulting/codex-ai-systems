@@ -259,8 +259,25 @@ function Get-CodexLatestTokenSnapshot {
         [Parameter(Mandatory = $true)]
         [string] $CodexHome,
         [int] $MaxFiles = 8,
-        [int] $Tail = 250
+        [int] $Tail = 250,
+        [int] $CacheSeconds = 60
     )
+
+    $cachePath = Join-Path $CodexHome "cache\codex-latest-token-snapshot.json"
+    if ($CacheSeconds -gt 0 -and (Test-Path -LiteralPath $cachePath)) {
+        try {
+            $cacheFile = Get-Item -LiteralPath $cachePath -ErrorAction Stop
+            if ($cacheFile.LastWriteTime -gt (Get-Date).AddSeconds(-1 * $CacheSeconds)) {
+                $cached = Get-Content -LiteralPath $cachePath -Raw | ConvertFrom-Json
+                if ($cached) {
+                    $cached | Add-Member -NotePropertyName FromCache -NotePropertyValue $true -Force
+                    return $cached
+                }
+            }
+        } catch {
+            # Ignore stale or invalid telemetry cache and rescan.
+        }
+    }
 
     $sessionsDir = Join-Path $CodexHome "sessions"
     if (-not (Test-Path -LiteralPath $sessionsDir)) {
@@ -300,7 +317,7 @@ function Get-CodexLatestTokenSnapshot {
                 $usage = $record.payload.info.total_token_usage
                 $lastUsage = $record.payload.info.last_token_usage
                 $limits = if ($record.rate_limits) { $record.rate_limits } elseif ($record.payload.rate_limits) { $record.payload.rate_limits } else { $null }
-                return [pscustomobject]@{
+                $snapshot = [pscustomobject]@{
                     SessionPath = $file.FullName
                     Timestamp = $record.timestamp
                     TotalTokens = $usage.total_tokens
@@ -317,7 +334,15 @@ function Get-CodexLatestTokenSnapshot {
                     SecondaryUsedPercent = if ($limits -and $limits.secondary) { $limits.secondary.used_percent } else { $null }
                     SecondaryWindowMinutes = if ($limits -and $limits.secondary) { $limits.secondary.window_minutes } else { $null }
                     SecondaryResetsAt = if ($limits -and $limits.secondary) { $limits.secondary.resets_at } else { $null }
+                    FromCache = $false
                 }
+                try {
+                    New-Item -ItemType Directory -Path (Split-Path -Parent $cachePath) -Force | Out-Null
+                    $snapshot | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $cachePath -Encoding UTF8
+                } catch {
+                    # Telemetry cache is best-effort.
+                }
+                return $snapshot
             } catch {
                 continue
             }

@@ -60,6 +60,29 @@ When launching new Codex CLI/automation work, use the real profile router:
 
 `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
 
+## AI Provider Gateway
+
+Use the provider gateway before substantial non-local work when either ChatGPT or DeepSeek could do the detachable part:
+
+`C:\Users\zev\.codex\scripts\ai-provider-gateway.cmd -DryRun "TASK"`
+
+Dispatch through:
+
+`C:\Users\zev\.codex\scripts\ai-provider-gateway.cmd "TASK"`
+
+The provider gateway classifies work as `codex`, `chatgpt`, `deepseek`, or `hybrid`.
+
+- Codex remains the conductor and owns local files, code, tests, browser verification, git, deployment, owner-button state, secrets, auth, billing, database, security, permissions, production risk, and final QA.
+- ChatGPT is the premium detachable lane for polished writing, emails, sales copy, strategy, positioning, explanations, summaries, high-quality creative direction, brand work, and ChatGPT-native image/logo generation.
+- DeepSeek is the low-cost detachable lane for first-pass drafts, bulk/volume long-form content, SEO article packets, rough structured analysis, comparison drafts, and cheap second opinions.
+- Hybrid means split the work: external provider drafts/thinks, then Codex imports, applies, verifies, publishes, or tests locally.
+
+Force routes with `-ForceCodex`, `-ForceChatGPT`, or `-ForceDeepSeek`; inline tags `[codex]`, `[chatgpt]`, and `[deepseek]` work too.
+
+Use `C:\Users\zev\.codex\scripts\deepseek-route.cmd "TASK"` for a direct DeepSeek handoff. It copies a bounded prompt, opens DeepSeek unless `-NoOpen` is set, and requires a `CODEX_RETURN_PACKET`.
+
+Use `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd` to review ChatGPT and DeepSeek route decisions, dispatches, savings estimates, and the reason/signals behind each decision.
+
 ## Auto-Bounce Chat Gateway
 
 Use the gateway before substantial non-local work:

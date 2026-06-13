@@ -49,7 +49,7 @@ function Get-EventSavingsEstimate {
     param([object] $Event)
 
     $route = Get-EventValue -Event $Event -Name "route"
-    if ($route -ne "chatgpt" -and $route -ne "hybrid") { return 0 }
+    if ($route -ne "chatgpt" -and $route -ne "deepseek" -and $route -ne "hybrid") { return 0 }
 
     $estimate = Get-EventValue -Event $Event -Name "savingsEstimate"
     if ($estimate -and $estimate.EstimatedAvoidedCodexTokens -and [int]$estimate.EstimatedAvoidedCodexTokens -gt 0) {
@@ -62,6 +62,7 @@ function Get-EventSavingsEstimate {
 
     $task = Get-EventValue -Event $Event -Name "task"
     $signals = Get-EventValue -Event $Event -Name "chatgptSignals"
+    if (-not $signals) { $signals = Get-EventValue -Event $Event -Name "deepseekSignals" }
     if (-not $signals) { $signals = Get-EventValue -Event $Event -Name "Signals" }
     $fallback = Get-EventValue -Event $Event -Name "codexFallbackProfile"
     if (-not $fallback) { $fallback = Get-EventValue -Event $Event -Name "CodexFallbackProfile" }
@@ -105,10 +106,12 @@ if (-not (Test-Path -LiteralPath $eventsPath)) {
             TotalEvents = 0
             TotalDecisions = 0
             ChatGPTDecisions = 0
+            DeepSeekDecisions = 0
             CodexDecisions = 0
             HybridDecisions = 0
             AskFirstDecisions = 0
             GatewayDispatchesToChatGPT = 0
+            GatewayDispatchesToDeepSeek = 0
             PreparedChatGPTSessions = 0
             CompletedChatGPTSessions = 0
             UniqueCompletedChatGPTSessions = 0
@@ -121,7 +124,7 @@ if (-not (Test-Path -LiteralPath $eventsPath)) {
         Decisions = @()
     }
     if ($Json) { $empty | ConvertTo-Json -Depth 8; exit 0 }
-    Write-Host "ChatGPT bridge tally"
+    Write-Host "AI provider bridge tally"
     Write-Host "Events file not found: $eventsPath"
     exit 0
 }
@@ -157,12 +160,17 @@ foreach ($line in (Get-Content -LiteralPath $eventsPath)) {
 
 $decisionEvents = @($events | Where-Object { (Get-EventValue -Event $_ -Name "type") -eq "gateway-classified" })
 $chatGptDecisions = @($decisionEvents | Where-Object { (Get-EventValue -Event $_ -Name "route") -eq "chatgpt" })
+$deepSeekDecisions = @($decisionEvents | Where-Object { (Get-EventValue -Event $_ -Name "route") -eq "deepseek" })
 $codexDecisions = @($decisionEvents | Where-Object { (Get-EventValue -Event $_ -Name "route") -eq "codex" })
 $hybridDecisions = @($decisionEvents | Where-Object { (Get-EventValue -Event $_ -Name "route") -eq "hybrid" })
 $askFirstDecisions = @($decisionEvents | Where-Object { [bool](Get-EventValue -Event $_ -Name "askFirst") })
 $gatewayChatGptDispatches = @($events | Where-Object {
     (Get-EventValue -Event $_ -Name "type") -eq "gateway-dispatched" -and
     ((Get-EventValue -Event $_ -Name "route") -eq "chatgpt" -or (Get-EventValue -Event $_ -Name "route") -eq "hybrid")
+})
+$gatewayDeepSeekDispatches = @($events | Where-Object {
+    (Get-EventValue -Event $_ -Name "type") -eq "gateway-dispatched" -and
+    (Get-EventValue -Event $_ -Name "route") -eq "deepseek"
 })
 $preparedChatGptSessions = @($events | Where-Object { (Get-EventValue -Event $_ -Name "type") -eq "prepared" -and (Get-EventValue -Event $_ -Name "Route") -eq "chatgpt" })
 $completedChatGptSessions = @($events | Where-Object { (Get-EventValue -Event $_ -Name "type") -eq "complete" })
@@ -208,7 +216,7 @@ function Sum-Savings {
     $sum = 0
     foreach ($event in $InputEvents) {
         $route = Get-EventValue -Event $event -Name "route"
-        if ($route -ne "chatgpt" -and $route -ne "hybrid") { continue }
+        if ($route -ne "chatgpt" -and $route -ne "deepseek" -and $route -ne "hybrid") { continue }
         $sum += Get-EventSavingsEstimate -Event $event
     }
     return $sum
@@ -229,6 +237,7 @@ $decisionRows = @(
                 EstimatedAvoidedCodexTokens = Get-EventSavingsEstimate -Event $_
                 Reason = Get-EventValue -Event $_ -Name "reason"
                 ChatGPTSignals = ConvertTo-StringList (Get-EventValue -Event $_ -Name "chatgptSignals")
+                DeepSeekSignals = ConvertTo-StringList (Get-EventValue -Event $_ -Name "deepseekSignals")
                 CodexSignals = ConvertTo-StringList (Get-EventValue -Event $_ -Name "codexSignals")
                 Task = Get-EventValue -Event $_ -Name "task"
                 TaskKey = Get-EventValue -Event $_ -Name "taskKey"
@@ -249,16 +258,18 @@ $summary = [ordered]@{
     TotalEvents = $events.Count
     TotalDecisions = $decisionEvents.Count
     ChatGPTDecisions = $chatGptDecisions.Count
+    DeepSeekDecisions = $deepSeekDecisions.Count
     CodexDecisions = $codexDecisions.Count
     HybridDecisions = $hybridDecisions.Count
     AskFirstDecisions = $askFirstDecisions.Count
     GatewayDispatchesToChatGPT = $gatewayChatGptDispatches.Count
+    GatewayDispatchesToDeepSeek = $gatewayDeepSeekDispatches.Count
     PreparedChatGPTSessions = $preparedChatGptSessions.Count
     CompletedChatGPTSessions = $completedChatGptSessions.Count
     UniqueCompletedChatGPTSessions = $uniqueCompletedSessions.Count
     CacheHits = $cacheHits.Count
     EstimatedAvoidedCodexTokensFromDecisions = Sum-Savings -InputEvents $decisionEvents
-    EstimatedAvoidedCodexTokensFromDispatches = (Sum-Savings -InputEvents $gatewayChatGptDispatches) + (Sum-Savings -InputEvents $cacheHits)
+    EstimatedAvoidedCodexTokensFromDispatches = (Sum-Savings -InputEvents $gatewayChatGptDispatches) + (Sum-Savings -InputEvents $gatewayDeepSeekDispatches) + (Sum-Savings -InputEvents $cacheHits)
     EstimatedAvoidedCodexTokensFromPreparedSessions = Sum-Savings -InputEvents $preparedChatGptSessions
     EstimatedAvoidedCodexTokensFromUniqueCompletedSessions = [int](($uniqueCompletedSessions.Values | Measure-Object -Property Estimate -Sum).Sum)
 }
@@ -273,7 +284,7 @@ if ($Json) {
     exit 0
 }
 
-Write-Host "ChatGPT bridge tally"
+Write-Host "AI provider bridge tally"
 Write-Host "Events: $eventsPath"
 Write-Host "Window: $(if ($SinceDays -gt 0) { "$SinceDays day(s)" } else { "all time" })"
 if ($Project) { Write-Host "Project filter: $Project" }
@@ -283,19 +294,21 @@ Write-Host ""
 Write-Host "Decisions"
 Write-Host "  Total: $($summary.TotalDecisions)"
 Write-Host "  ChatGPT: $($summary.ChatGPTDecisions)"
+Write-Host "  DeepSeek: $($summary.DeepSeekDecisions)"
 Write-Host "  Codex: $($summary.CodexDecisions)"
 Write-Host "  Hybrid: $($summary.HybridDecisions)"
 Write-Host "  Ask-first: $($summary.AskFirstDecisions)"
 Write-Host ""
 Write-Host "Moves / outcomes"
 Write-Host "  Gateway dispatches to ChatGPT/hybrid: $($summary.GatewayDispatchesToChatGPT)"
+Write-Host "  Gateway dispatches to DeepSeek: $($summary.GatewayDispatchesToDeepSeek)"
 Write-Host "  Prepared ChatGPT sessions: $($summary.PreparedChatGPTSessions)"
 Write-Host "  Completed ChatGPT sessions: $($summary.CompletedChatGPTSessions)"
 Write-Host "  Unique completed ChatGPT sessions: $($summary.UniqueCompletedChatGPTSessions)"
 Write-Host "  Cache hits: $($summary.CacheHits)"
 Write-Host ""
 Write-Host "Savings estimates"
-Write-Host "  From ChatGPT/hybrid decisions: $($summary.EstimatedAvoidedCodexTokensFromDecisions) Codex tokens"
+Write-Host "  From external-provider/hybrid decisions: $($summary.EstimatedAvoidedCodexTokensFromDecisions) Codex tokens"
 Write-Host "  From actual dispatch/cache events: $($summary.EstimatedAvoidedCodexTokensFromDispatches) Codex tokens"
 Write-Host "  From prepared ChatGPT sessions: $($summary.EstimatedAvoidedCodexTokensFromPreparedSessions) Codex tokens"
 Write-Host "  From unique completed ChatGPT sessions: $($summary.EstimatedAvoidedCodexTokensFromUniqueCompletedSessions) Codex tokens"
@@ -307,5 +320,6 @@ foreach ($row in $decisionRows) {
     Write-Host "Task: $(ConvertTo-ShortText $row.Task)"
     Write-Host "Why: $(ConvertTo-ShortText $row.Reason 180)"
     if ($row.ChatGPTSignals) { Write-Host "ChatGPT signals: $($row.ChatGPTSignals)" }
+    if ($row.DeepSeekSignals) { Write-Host "DeepSeek signals: $($row.DeepSeekSignals)" }
     if ($row.CodexSignals) { Write-Host "Codex signals: $($row.CodexSignals)" }
 }
