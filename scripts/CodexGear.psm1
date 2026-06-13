@@ -191,18 +191,22 @@ function Get-ChatGatewaySavingsEstimate {
     $turns = 0
     $tokens = 0
 
-    if ($Route -eq "chatgpt") {
+    if ($Route -eq "chatgpt" -or $Route -eq "deepseek") {
         $turns = 1
         $tokens = 9000 + ([math]::Min($wordCount, 800) * 25)
         if ($signalText -match "research|strategy|ideas") { $tokens += 5000 }
         if ($signalText -match "design|creative|logo|image") { $tokens += 9000; $turns = 2 }
         if ($signalText -match "summary|explanation") { $tokens += 3000 }
+        if ($Route -eq "deepseek") {
+            if ($signalText -match "low-cost|volume|bulk|first-pass|seo|long-form|draft") { $tokens += 6000; $turns = 2 }
+            if ($tokens -gt 4000) { $tokens = [int]($tokens * 0.9) }
+        }
     } elseif ($Route -eq "hybrid") {
         $turns = 1
         $tokens = 6000 + ([math]::Min($wordCount, 600) * 18)
     }
 
-    if ($Route -eq "chatgpt" -or $Route -eq "hybrid") {
+    if ($Route -eq "chatgpt" -or $Route -eq "deepseek" -or $Route -eq "hybrid") {
         if ($CodexFallbackProfile -eq "deep") { $tokens += 6000 }
         if ($CodexFallbackProfile -eq "max") { $tokens += 12000 }
         if ($CacheHit) { $tokens += 3000 }
@@ -671,6 +675,214 @@ function Select-ChatGatewayRoute {
     }
 }
 
+function Select-AiProviderRoute {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Text,
+        [string] $Project = "General",
+        [string] $Cwd = "",
+        [switch] $ForceCodex,
+        [switch] $ForceChatGPT,
+        [switch] $ForceDeepSeek
+    )
+
+    $normalized = $Text.ToLowerInvariant()
+    $projectText = "$Project $Cwd".ToLowerInvariant()
+    $deepSeekSignals = New-Object System.Collections.Generic.List[string]
+    $chatGptStrengthSignals = New-Object System.Collections.Generic.List[string]
+
+    $forceCodexTag = $normalized -match "\[(codex|force-codex)\]" -or $normalized -match "\s--(codex|force-codex)\b"
+    $forceChatGptTag = $normalized -match "\[(chatgpt|gpt|force-chatgpt)\]" -or $normalized -match "\s--(chatgpt|gpt|force-chatgpt)\b"
+    $forceDeepSeekTag = $normalized -match "\[(deepseek|force-deepseek)\]" -or $normalized -match "\s--(deepseek|force-deepseek)\b"
+
+    if ($ForceCodex -or $forceCodexTag) {
+        $base = Select-ChatGatewayRoute -Text $Text -ForceCodex
+        return [pscustomobject]@{
+            Route = "codex"
+            Provider = "codex"
+            Dispatch = $base.Dispatch
+            Reason = $base.Reason
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = $base.CodexSignals
+            ChatGPTSignals = @()
+            DeepSeekSignals = @()
+            NextAction = $base.NextAction
+        }
+    }
+
+    if ($ForceChatGPT -or $forceChatGptTag) {
+        $base = Select-ChatGatewayRoute -Text $Text -ForceChatGPT
+        return [pscustomobject]@{
+            Route = "chatgpt"
+            Provider = "chatgpt"
+            Dispatch = $base.Dispatch
+            Reason = $base.Reason
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = @()
+            ChatGPTSignals = $base.ChatGPTSignals
+            DeepSeekSignals = @()
+            NextAction = $base.NextAction
+        }
+    }
+
+    if ($ForceDeepSeek -or $forceDeepSeekTag) {
+        $deepSeekSignals.Add("explicit DeepSeek override")
+        return [pscustomobject]@{
+            Route = "deepseek"
+            Provider = "deepseek"
+            Dispatch = "deepseek-route"
+            Reason = "Explicit DeepSeek override was provided."
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = @()
+            ChatGPTSignals = @()
+            DeepSeekSignals = $deepSeekSignals.ToArray()
+            NextAction = "Prepare a DeepSeek bridge session with a compact return packet."
+        }
+    }
+
+    $baseRoute = Select-ChatGatewayRoute -Text $Text
+
+    $deepSeekSignalDefs = [ordered]@{
+        "explicit DeepSeek mention" = "\bdeepseek\b"
+        "low-cost or volume work" = "\b(low[- ]cost|cheap|cheaper|free|unlimited|bulk|volume|scale|many|batch|first[- ]pass|first pass|rough draft|quick draft)\b"
+        "SEO or long-form draft" = "\b(seo article|seo content|blog post|article draft|content draft|content packet|writer packet|writer lane|long[- ]form|longform|draft article|draft content)\b"
+        "comparison or alternate draft" = "\b(compare drafts?|comparison draft|alternate draft|alternative draft|second draft|second opinion draft|variant draft)\b"
+        "Mr.SEO DeepSeek lane" = "\b(mr\.?seo|mr seo|article desk|writer room|deepseek writer|provider grades?)\b"
+    }
+    $chatGptStrengthDefs = [ordered]@{
+        "premium writing or final polish" = "\b(polish|final draft|premium|best quality|executive|client-ready|sales email|cold email|email|copy|tone|rewrite)\b"
+        "creative brand or image generation" = "\b(logos?|logo sheet|brand identity|visual identity|image generation|generate images?|ad creative|poster|moodboard|layout concept|design direction)\b"
+        "strategy or positioning" = "\b(strategy|positioning|offer|angle|go-to-market|gtm|campaign|critique|pros and cons|options?)\b"
+        "research synthesis or explanation" = "\b(research synthesis|explain|teach|learning|summary|summarize|meeting notes|outline|market scan)\b"
+        "explicit ChatGPT mention" = "\b(chatgpt|gpt)\b"
+    }
+
+    foreach ($entry in $deepSeekSignalDefs.GetEnumerator()) {
+        if (($normalized -match $entry.Value -or $projectText -match $entry.Value) -and -not $deepSeekSignals.Contains($entry.Key)) {
+            $deepSeekSignals.Add($entry.Key)
+        }
+    }
+    foreach ($entry in $chatGptStrengthDefs.GetEnumerator()) {
+        if ($normalized -match $entry.Value -and -not $chatGptStrengthSignals.Contains($entry.Key)) {
+            $chatGptStrengthSignals.Add($entry.Key)
+        }
+    }
+
+    $codexSignals = @($baseRoute.CodexSignals)
+    $chatGptSignals = @($baseRoute.ChatGPTSignals + $chatGptStrengthSignals.ToArray()) | Where-Object { $_ } | Select-Object -Unique
+    $hasCodexSignals = $codexSignals.Count -gt 0
+    $hasDeepSeekSignals = $deepSeekSignals.Count -gt 0
+    $hasChatGptSignals = $chatGptSignals.Count -gt 0
+    $hasSensitiveSignal = $codexSignals -contains "sensitive or production risk" -or
+        $codexSignals -contains "connected apps or private account state"
+
+    if ($hasSensitiveSignal) {
+        return [pscustomobject]@{
+            Route = "codex"
+            Provider = "codex"
+            Dispatch = "codex-auto"
+            Reason = "Sensitive, account, connector, or production-risk work must stay in Codex unless explicitly forced."
+            Confidence = "high"
+            AskFirst = $true
+            CodexSignals = $codexSignals
+            ChatGPTSignals = $chatGptSignals
+            DeepSeekSignals = $deepSeekSignals.ToArray()
+            NextAction = "Keep in Codex; use external providers only for bounded second opinions after approval if needed."
+        }
+    }
+
+    $deepSeekScore = 0
+    foreach ($signal in $deepSeekSignals) {
+        if ($signal -eq "explicit DeepSeek mention") { $deepSeekScore += 4 }
+        elseif ($signal -eq "low-cost or volume work") { $deepSeekScore += 3 }
+        elseif ($signal -eq "SEO or long-form draft") { $deepSeekScore += 3 }
+        elseif ($signal -eq "Mr.SEO DeepSeek lane") { $deepSeekScore += 3 }
+        else { $deepSeekScore += 2 }
+    }
+
+    $chatGptScore = 0
+    foreach ($signal in $chatGptSignals) {
+        if ($signal -eq "explicit ChatGPT mention") { $chatGptScore += 4 }
+        elseif ($signal -eq "creative brand or image generation") { $chatGptScore += 4 }
+        elseif ($signal -eq "premium writing or final polish") { $chatGptScore += 3 }
+        else { $chatGptScore += 2 }
+    }
+
+    $selectedProvider = ""
+    $selectedSignals = @()
+    if ($hasDeepSeekSignals -and ($deepSeekScore -gt $chatGptScore)) {
+        $selectedProvider = "deepseek"
+        $selectedSignals = $deepSeekSignals.ToArray()
+    } elseif ($hasChatGptSignals) {
+        $selectedProvider = "chatgpt"
+        $selectedSignals = $chatGptSignals
+    } elseif ($hasDeepSeekSignals) {
+        $selectedProvider = "deepseek"
+        $selectedSignals = $deepSeekSignals.ToArray()
+    }
+
+    if ($hasCodexSignals -and $selectedProvider) {
+        return [pscustomobject]@{
+            Route = "hybrid"
+            Provider = $selectedProvider
+            Dispatch = "ask-first"
+            Reason = "The task mixes $selectedProvider-safe work with local Codex execution."
+            Confidence = "medium"
+            AskFirst = $true
+            CodexSignals = $codexSignals
+            ChatGPTSignals = $chatGptSignals
+            DeepSeekSignals = $deepSeekSignals.ToArray()
+            NextAction = "Split the external-provider part from the local Codex execution; Codex should apply or verify after the return packet."
+        }
+    }
+
+    if ($selectedProvider -eq "deepseek") {
+        return [pscustomobject]@{
+            Route = "deepseek"
+            Provider = "deepseek"
+            Dispatch = "deepseek-route"
+            Reason = "The task matches DeepSeek's low-cost, first-pass, volume, SEO-content, or comparison lane."
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = @()
+            ChatGPTSignals = $chatGptSignals
+            DeepSeekSignals = $selectedSignals
+            NextAction = "Prepare a DeepSeek bridge session with a compact return packet; Codex handles local QA and publishing."
+        }
+    }
+
+    if ($selectedProvider -eq "chatgpt") {
+        return [pscustomobject]@{
+            Route = "chatgpt"
+            Provider = "chatgpt"
+            Dispatch = "chatgpt-auto-route"
+            Reason = "The task matches ChatGPT's premium creative, image, strategy, explanation, or polished writing lane."
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = @()
+            ChatGPTSignals = $selectedSignals
+            DeepSeekSignals = $deepSeekSignals.ToArray()
+            NextAction = "Prepare a ChatGPT bridge session with a compact return packet."
+        }
+    }
+
+    return [pscustomobject]@{
+        Route = $baseRoute.Route
+        Provider = if ($baseRoute.Route -eq "chatgpt") { "chatgpt" } elseif ($baseRoute.Route -eq "hybrid") { "chatgpt" } else { "codex" }
+        Dispatch = $baseRoute.Dispatch
+        Reason = $baseRoute.Reason
+        Confidence = $baseRoute.Confidence
+        AskFirst = $baseRoute.AskFirst
+        CodexSignals = $codexSignals
+        ChatGPTSignals = $chatGptSignals
+        DeepSeekSignals = $deepSeekSignals.ToArray()
+        NextAction = $baseRoute.NextAction
+    }
+}
+
 function Get-CodexExecutable {
     $candidates = New-Object System.Collections.Generic.List[string]
 
@@ -717,4 +929,4 @@ function New-CodexConfigArgs {
     return $args
 }
 
-Export-ModuleMember -Function Get-CodexGearMatrix, Get-CodexGear, Select-CodexGear, Select-AiWorkRoute, Select-ChatGatewayRoute, ConvertTo-ChatGatewayTaskText, Get-ChatGatewayTaskKey, Test-ChatGatewayFreshnessSensitive, Get-ChatGatewayCacheEntry, Get-ChatGatewaySavingsEstimate, New-ChatGatewayHybridSplit, Get-CodexLatestTokenSnapshot, Get-CodexExecutable, New-CodexConfigArgs
+Export-ModuleMember -Function Get-CodexGearMatrix, Get-CodexGear, Select-CodexGear, Select-AiWorkRoute, Select-ChatGatewayRoute, Select-AiProviderRoute, ConvertTo-ChatGatewayTaskText, Get-ChatGatewayTaskKey, Test-ChatGatewayFreshnessSensitive, Get-ChatGatewayCacheEntry, Get-ChatGatewaySavingsEstimate, New-ChatGatewayHybridSplit, Get-CodexLatestTokenSnapshot, Get-CodexExecutable, New-CodexConfigArgs

@@ -76,6 +76,8 @@ $expected = @(
 $requiredScripts = @(
     "ai-credits-optimizer.cmd",
     "ai-credits-optimizer.ps1",
+    "ai-provider-gateway.cmd",
+    "ai-provider-gateway.ps1",
     "chatgpt-auto-route.cmd",
     "chatgpt-auto-route.ps1",
     "chatgpt-chrome-bridge.mjs",
@@ -83,6 +85,8 @@ $requiredScripts = @(
     "chatgpt-route.ps1",
     "chatgpt-return.cmd",
     "chatgpt-return.ps1",
+    "deepseek-route.cmd",
+    "deepseek-route.ps1",
     "codex-auto.cmd",
     "codex-auto.ps1",
     "codex-gateway.cmd",
@@ -204,6 +208,25 @@ foreach ($case in $gatewayRouteTests) {
     Assert-Equal $gatewayRoute.AskFirst $case.AskFirst "Gateway ask-first '$($case.Prompt)'"
 }
 
+$providerRouteTests = @(
+    [pscustomobject]@{ Prompt = "write a cold email"; Route = "chatgpt"; Provider = "chatgpt"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "make up four client logos and generate a logo sheet"; Route = "chatgpt"; Provider = "chatgpt"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "draft 10 low-cost SEO article first passes"; Route = "deepseek"; Provider = "deepseek"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "create bulk first-pass content drafts for Mr.SEO"; Route = "deepseek"; Provider = "deepseek"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "fix failing tests"; Route = "codex"; Provider = "codex"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "draft a low-cost SEO article and save it into src/app.ts"; Route = "hybrid"; Provider = "deepseek"; AskFirst = $true },
+    [pscustomobject]@{ Prompt = "[deepseek] write a cold email"; Route = "deepseek"; Provider = "deepseek"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "[chatgpt] draft 10 low-cost SEO article first passes"; Route = "chatgpt"; Provider = "chatgpt"; AskFirst = $false },
+    [pscustomobject]@{ Prompt = "[codex] draft 10 low-cost SEO article first passes"; Route = "codex"; Provider = "codex"; AskFirst = $false }
+)
+
+foreach ($case in $providerRouteTests) {
+    $providerRoute = Select-AiProviderRoute -Text $case.Prompt -Project "gear-test"
+    Assert-Equal $providerRoute.Route $case.Route "Provider route '$($case.Prompt)'"
+    Assert-Equal $providerRoute.Provider $case.Provider "Provider selected '$($case.Prompt)'"
+    Assert-Equal $providerRoute.AskFirst $case.AskFirst "Provider ask-first '$($case.Prompt)'"
+}
+
 $optimizerDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -NoOpen -Cwd $CodexHome "draft a concise apology email to a client" 2>&1 6>&1 | Out-String)
 Assert-True ($optimizerDryRun -match "AI credits optimizer: ChatGPT route selected") "Codex auto dry-run diverts writing task to ChatGPT"
 Assert-True ($optimizerDryRun -notmatch "Codex auto gear:") "ChatGPT dry-run does not launch Codex gear"
@@ -246,6 +269,19 @@ $gatewayHybridSplitJson = (& (Join-Path $scriptDir "codex-gateway.ps1") -DryRun 
 Assert-Equal $gatewayHybridSplitJson.Route "hybrid" "Codex gateway split dry-run keeps hybrid route"
 Assert-True ($gatewayHybridSplitJson.HybridSplit.WillDispatchChatGPT -eq $true) "Codex gateway split dry-run prepares ChatGPT subtask"
 Assert-True ($gatewayHybridSplitJson.HybridSplit.CodexTask -match "apply or verify") "Codex gateway split dry-run prepares Codex follow-up"
+
+$providerGatewayChatGpt = (& (Join-Path $scriptDir "ai-provider-gateway.ps1") -DryRun -NoOpen -Project "gear-test" "write a cold email" 2>&1 6>&1 | Out-String)
+Assert-True ($providerGatewayChatGpt -match "Route: chatgpt") "AI provider gateway dry-run routes cold email to ChatGPT"
+
+$providerGatewayDeepSeek = (& (Join-Path $scriptDir "ai-provider-gateway.ps1") -DryRun -NoOpen -Project "gear-test" "draft 10 low-cost SEO article first passes" 2>&1 6>&1 | Out-String)
+Assert-True ($providerGatewayDeepSeek -match "Route: deepseek") "AI provider gateway dry-run routes bulk SEO drafts to DeepSeek"
+
+$providerGatewayCodex = (& (Join-Path $scriptDir "ai-provider-gateway.ps1") -DryRun -NoOpen -Project "gear-test" "fix failing tests" 2>&1 6>&1 | Out-String)
+Assert-True ($providerGatewayCodex -match "Route: codex") "AI provider gateway dry-run keeps tests in Codex"
+
+$providerGatewayHybrid = (& (Join-Path $scriptDir "ai-provider-gateway.ps1") -DryRun -NoOpen -Project "gear-test" "draft a low-cost SEO article and save it into src/app.ts" 2>&1 6>&1 | Out-String)
+Assert-True ($providerGatewayHybrid -match "Route: hybrid") "AI provider gateway dry-run detects DeepSeek/Codex hybrid"
+Assert-True ($providerGatewayHybrid -match "Provider: deepseek") "AI provider gateway hybrid names DeepSeek provider"
 
 $cacheTestHome = Join-Path $env:TEMP "codex-gateway-cache-test-$PID"
 New-Item -ItemType Directory -Path (Join-Path $cacheTestHome "cache\chatgpt-bridge") -Force | Out-Null
