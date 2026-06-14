@@ -369,6 +369,38 @@ async function readBodyText(tab) {
   }
 }
 
+async function findChatGptComposer(tab, maxWaitMs = 45000) {
+  const start = Date.now();
+  let lastError = "";
+
+  while (Date.now() - start < maxWaitMs) {
+    const candidates = [
+      () => tab.playwright.getByRole("textbox", { name: "Chat with ChatGPT" }),
+      () => tab.playwright.getByPlaceholder("Ask anything", { exact: true }),
+      () => tab.playwright.locator("[contenteditable=\"true\"][role=\"textbox\"]"),
+      () => tab.playwright.locator("textarea"),
+    ];
+
+    for (const makeCandidate of candidates) {
+      const candidate = makeCandidate();
+      try {
+        const count = await candidate.count();
+        if (count === 1) return { textbox: candidate, count };
+        if (count > 1) return { textbox: candidate.nth(count - 1), count };
+      } catch (error) {
+        lastError = String(error?.message || error);
+      }
+    }
+
+    await tab.playwright.waitForTimeout(1500);
+  }
+
+  const bodyText = await readBodyText(tab);
+  throw new Error(
+    `ChatGPT composer not ready or login required. Last selector error: ${lastError}. Body excerpt: ${bodyText.slice(0, 500)}`,
+  );
+}
+
 async function readPrompt(fs, options) {
   if (options.prompt) return String(options.prompt);
   if (options.promptPath) return await fs.readFile(options.promptPath, "utf8");
@@ -467,19 +499,18 @@ export async function runChatGptChromeBridge(options = {}) {
 
   let snapshot = "";
   if (shouldSubmit) {
-    let textbox = tab.playwright.getByRole("textbox", { name: "Chat with ChatGPT" });
-    let textboxCount = await textbox.count();
-    if (textboxCount !== 1) {
-      textbox = tab.playwright.getByPlaceholder("Ask anything", { exact: true });
-      textboxCount = await textbox.count();
-    }
-    if (textboxCount !== 1) {
-      throw new Error(`ChatGPT composer not ready or login required. Textbox count: ${textboxCount}. Snapshot excerpt: ${snapshot.slice(0, 500)}`);
-    }
+    await writeSession(fs, options.sessionPath, {
+      Status: "waiting_for_composer",
+      ComposerWaitStartedAt: new Date().toISOString(),
+      ResponsePath: responsePath,
+      AssetOutDir: outputDir,
+    });
+    const { textbox, count: textboxCount } = await findChatGptComposer(tab, Number(options.composerWaitMs || 45000));
 
     await writeSession(fs, options.sessionPath, {
       Status: "submitting",
       SubmitStartedAt: new Date().toISOString(),
+      TextboxCount: textboxCount,
       ResponsePath: responsePath,
       AssetOutDir: outputDir,
     });
