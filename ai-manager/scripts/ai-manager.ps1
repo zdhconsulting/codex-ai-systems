@@ -150,7 +150,16 @@ function Get-OwnerButtons {
         if ([string]::IsNullOrWhiteSpace($raw)) {
             $items = @()
         } else {
-            $items = @($raw | ConvertFrom-Json)
+            $parsed = ConvertFrom-Json -InputObject $raw
+            if ($null -eq $parsed) {
+                $items = @()
+            } elseif ($parsed -is [System.Array]) {
+                $items = @($parsed)
+            } elseif ($parsed.value -is [System.Array]) {
+                $items = @($parsed.value)
+            } else {
+                $items = @($parsed)
+            }
         }
         $open = @($items | Where-Object { $_.Status -eq "open" })
         return [pscustomobject]@{
@@ -360,8 +369,11 @@ function Write-HumanReport {
     if ($Report.OwnerButtons.OpenCount -gt 0) {
         Write-Host ""
         Write-Host "Owner buttons"
-        foreach ($item in $Report.OwnerButtons.Open) {
+        foreach ($item in ($Report.OwnerButtons.Open | Select-Object -First 10)) {
             Write-Host "  $($item.Project): $($item.Needed)"
+        }
+        if ($Report.OwnerButtons.OpenCount -gt 10) {
+            Write-Host "  ...and $($Report.OwnerButtons.OpenCount - 10) more."
         }
     }
 }
@@ -417,5 +429,5 @@ if ($Json) {
 }
 
 if ($notRunning -gt 0) { exit 2 }
-if ($attention -gt 0) { exit 1 }
+if ($attention -gt 0 -or $report.OwnerButtons.OpenCount -gt 0) { exit 1 }
 exit 0
