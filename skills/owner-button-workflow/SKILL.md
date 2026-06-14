@@ -70,15 +70,7 @@ Use the ChatGPT route for brainstorming, naming, ideation, emails, copy, strateg
 
 Keep work in Codex for code, repo inspection, local files, tests, builds, commits, pushes, PRs, deployments, CI, logs, screenshots, browser/app verification, durable `.codex` system changes, active goals, owner-button queues, actual local asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, real-person face work requiring exact pixel preservation, and high-risk auth/billing/security/database/permissions/production work. If Zev explicitly asks ChatGPT to be the image surface, Codex should orchestrate ChatGPT end to end.
 
-When a new task might be detachable, check the gateway first:
-
-`C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"`
-
-For high-confidence detachable work, dispatch through:
-
-`C:\Users\zev\.codex\scripts\codex-gateway.cmd "TASK"`
-
-When a task should leave Codex manually, say `ChatGPT route recommended - brief reason`, then use:
+When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
@@ -134,24 +126,6 @@ Default to the lightest gear that can do the job safely. Begin substantial tasks
 For new Codex CLI/automation work, use the real profile router:
 
 `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
-
-`codex-gateway.cmd` is the preferred front door for new work because it classifies tasks as `chatgpt`, `codex`, or `hybrid`. It auto-bounces high-confidence detachable work to ChatGPT, keeps local/risky work in Codex, and asks first for mixed work. `codex-auto.cmd` remains the lower-level Codex launcher and includes a simpler AI credits optimizer. Use `$codex-chatgpt-bridge` for routing edge cases, handoff preparation, and `CODEX_RETURN_PACKET` imports.
-
-Gateway savings controls:
-
-- Exact completed ChatGPT packets/assets are cached by project plus normalized task.
-- Current/fresh prompts such as latest/current/today/news/price/weather/schedule bypass cache automatically.
-- Use `-Refresh` for a new ChatGPT run, `-NoCache` for raw routing tests, and `-SplitHybrid` only when the detachable ChatGPT subtask is clear.
-- Use `codex-gateway-tally.cmd` to audit route counts, ChatGPT moves, cache hits, completions, savings estimates, and the reason/signals behind each decision.
-- Use `codex-gateway-feedback.cmd` to record route quality after useful or bad runs.
-
-Preview or intentionally dispatch with:
-
-`C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`
-
-Force Codex with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`. After ChatGPT returns an answer, import it with:
-
-`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`
 
 To inspect the selected route without launching work:
 

@@ -1,6 +1,6 @@
 # Personal Codex Workflow
 
-Use `$owner-button-workflow` and `$codex-chatgpt-bridge` for Zev's projects.
+Use `$owner-button-workflow` for Zev's projects.
 
 Codex should drive implementation work fast: code, tests, debugging, verification, commits, pushes, deployment prep, and clear explanations.
 
@@ -60,72 +60,6 @@ When launching new Codex CLI/automation work, use the real profile router:
 
 `C:\Users\zev\.codex\scripts\codex-auto.cmd "TASK"`
 
-## AI Provider Gateway
-
-Use the provider gateway before substantial non-local work when either ChatGPT or DeepSeek could do the detachable part:
-
-`C:\Users\zev\.codex\scripts\ai-provider-gateway.cmd -DryRun "TASK"`
-
-Dispatch through:
-
-`C:\Users\zev\.codex\scripts\ai-provider-gateway.cmd "TASK"`
-
-The provider gateway classifies work as `codex`, `chatgpt`, `deepseek`, or `hybrid`.
-
-- Codex remains the conductor and owns local files, code, tests, browser verification, git, deployment, owner-button state, secrets, auth, billing, database, security, permissions, production risk, and final QA.
-- ChatGPT is the premium detachable lane for polished writing, emails, sales copy, strategy, positioning, explanations, summaries, high-quality creative direction, brand work, and ChatGPT-native image/logo generation.
-- DeepSeek is the low-cost detachable lane for first-pass drafts, bulk/volume long-form content, SEO article packets, rough structured analysis, comparison drafts, and cheap second opinions.
-- Hybrid means split the work: external provider drafts/thinks, then Codex imports, applies, verifies, publishes, or tests locally.
-
-Force routes with `-ForceCodex`, `-ForceChatGPT`, or `-ForceDeepSeek`; inline tags `[codex]`, `[chatgpt]`, and `[deepseek]` work too.
-
-Use `C:\Users\zev\.codex\scripts\deepseek-route.cmd "TASK"` for a direct DeepSeek handoff. It copies a bounded prompt, opens DeepSeek unless `-NoOpen` is set, and requires a `CODEX_RETURN_PACKET`.
-
-Use `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd` to review ChatGPT and DeepSeek route decisions, dispatches, savings estimates, and the reason/signals behind each decision.
-
-## Auto-Bounce Chat Gateway
-
-Use the gateway before substantial non-local work:
-
-`C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"`
-
-Dispatch through:
-
-`C:\Users\zev\.codex\scripts\codex-gateway.cmd "TASK"`
-
-The gateway classifies tasks as `chatgpt`, `codex`, or `hybrid`. It auto-bounces high-confidence detachable work to ChatGPT, keeps local/risky work in Codex, and marks mixed creative-plus-local work as ask-first so Codex can split the task without losing the local execution half.
-
-Force Codex with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`.
-
-The gateway also has conservative savings controls:
-
-- Exact completed ChatGPT packets/assets are cached by project plus normalized task. Cache hits reuse the prior packet without another Codex or ChatGPT run.
-- Fresh/current prompts such as latest/current/today/news/price/weather/schedule bypass cache automatically. Use `-Refresh` to force a new ChatGPT run and `-NoCache` to test raw routing.
-- Dry runs show cache status, a heuristic avoided-Codex token estimate, and current Codex rate-limit pressure when session telemetry is available.
-- Hybrid tasks remain ask-first by default. Use `-SplitHybrid` only when the ChatGPT-safe subtask is obvious and Codex will apply or verify locally after the return packet.
-- Review the decision ledger with `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd`. It shows route counts, ChatGPT moves, cache hits, completions, savings estimates, and the reason/signals for each decision.
-- Log route quality with `C:\Users\zev\.codex\scripts\codex-gateway-feedback.cmd -SessionPath "SESSION_JSON" -Rating 1-5 -Outcome good|mixed|bad -Notes "..."`.
-
-## AI Credits Usage Optimizer
-
-`codex-auto.cmd` now runs an AI credits optimizer before launching a new Codex session. It routes obvious non-repo writing, brainstorming, strategy, summary, explanation, and design-direction tasks to ChatGPT through `chatgpt-route.cmd`; it keeps code, local files, tests, git, deploys, browser/app verification, connectors, `.codex` systems work, owner-button state, auth, billing, security, database, permissions, and production-risk work in Codex.
-
-Use `$codex-chatgpt-bridge` whenever deciding whether a task should leave Codex, preparing a ChatGPT handoff, importing a `CODEX_RETURN_PACKET`, or tuning these routing rules.
-
-Preview or intentionally dispatch a task with:
-
-`C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd -DryRun "TASK"`
-
-Force Codex when needed with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`. Use `-NoOptimizeCredits` on `codex-auto.cmd` only when testing the raw gear router.
-
-When the optimizer sends work to ChatGPT, bring the result back by copying the ChatGPT response and running:
-
-`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`
-
-## Browser Preference
-
-For all chats and projects, use Chrome or Chromium instead of Microsoft Edge for browser work by default: local previews, browser automation, screenshots, responsive checks, ChatGPT handoffs, and web app verification. Do not launch Edge unless Zev explicitly asks for Edge, Chrome is unavailable, or the task specifically requires Edge compatibility testing.
-
 ## ChatGPT Usage Routing
 
 To save Codex usage, route work away from Codex when it does not need local repo access, terminal commands, filesystem edits, tests, git, deployment/debugging, browser verification, app connectors, or owner-button queue state.
@@ -146,11 +80,7 @@ Keep the work in Codex for:
 - Actual local asset generation or editing, local design files, web/app UI implementation, screenshot QA, brand-system work, production deliverables, or real-person face work requiring exact pixel preservation, unless Zev explicitly asks ChatGPT to be the image surface; then use ChatGPT auto-orchestration.
 - Auth, security, billing, database, permissions, production risk, and ambiguous failures. Use xhigh/council; ChatGPT can give a second opinion, but Codex should execute only after guardrails.
 
-When a task may be detachable, check the gateway first:
-
-`C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"`
-
-When a task should leave Codex manually, say `ChatGPT route recommended - brief reason`, then use:
+When a task should leave Codex, say `ChatGPT route recommended - brief reason`, then use:
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
@@ -309,8 +239,6 @@ Use `xhigh` for high-stakes or ambiguous decisions:
 ## Design Work Rules
 
 Use `low` for tiny visual tweaks, `medium` for normal page/component polish, `high` for multi-screen UX/accessibility/responsive verification, and `xhigh` for brand systems, design architecture, checkout/signup/auth, revenue, trust, or production-risk design.
-
-For all websites, the primary navigation should hide when the user scrolls down and reappear when the user scrolls up. Keep it visible at the top of the page, when focused, and when any mobile menu is open; use a readable solid/glass treatment once it floats over body content.
 
 For design or image-editing tasks involving a real person's face, do not redraw, regenerate, stylize, beautify, smooth, age, or reinterpret the face. Preserve the original face pixels exactly by masking, cutting, copying, and pasting the source face into the final composition. If the source face is unavailable, or the requested edit would require generating a new face, ask for the needed source image or explain that exact preservation is not possible. Backgrounds, layout, clothing, framing, and surrounding design can change; the face itself stays untouched unless Zev explicitly asks to edit the face.
 
