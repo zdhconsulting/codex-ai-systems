@@ -11,3 +11,5 @@ auth.json
 *.sqlite-wal
 __pycache__/
 *.pyc
+ai-manager/projects.local.json
+ai-manager/reports/

@@ -209,10 +209,19 @@ async function submitTextMessage(tab, textbox, text, project, { allowAttachmentI
 async function submitPromptWorkflow(tab, textbox, prompt, project, options = {}) {
   const directCharLimit = Number(options.directCharLimit || 11000);
   const chunkCharLimit = Number(options.chunkCharLimit || 6200);
+  const chunkAckWaitMs = Number(options.chunkAckWaitMs || 25000);
   const promptText = String(prompt || "");
+  const onProgress = typeof options.onProgress === "function" ? options.onProgress : async () => {};
 
   if (promptText.length <= directCharLimit || options.chunkLongPrompt === false) {
     const previousAssistantCount = await assistantMessageCount(tab);
+    await onProgress({
+      Status: "submitting_prompt",
+      PromptSubmitMode: "direct_or_attachment",
+      PromptChunks: 1,
+      CurrentPromptChunk: 1,
+      ExpectedAssistantCount: previousAssistantCount + 1,
+    });
     const submitResult = await submitTextMessage(tab, textbox, promptText, project, {
       allowAttachmentInstruction: true,
     });
@@ -226,6 +235,12 @@ async function submitPromptWorkflow(tab, textbox, prompt, project, options = {})
 
   const chunks = splitPromptChunks(promptText, chunkCharLimit);
   let lastSubmitResult = {};
+  await onProgress({
+    Status: "submitting_prompt_chunks",
+    PromptSubmitMode: "chunked_text",
+    PromptChunks: chunks.length,
+    CurrentPromptChunk: 0,
+  });
   for (let index = 0; index < chunks.length; index += 1) {
     const chunkNumber = index + 1;
     const finalChunk = chunkNumber === chunks.length;
@@ -246,12 +261,34 @@ async function submitPromptWorkflow(tab, textbox, prompt, project, options = {})
           `Do not execute the assignment yet. Store this part as context and reply only: ACK ${chunkNumber}/${chunks.length}.`,
         ].join("\n");
 
+    await onProgress({
+      Status: finalChunk ? "submitting_final_chunk" : "submitting_context_chunk",
+      PromptSubmitMode: "chunked_text",
+      PromptChunks: chunks.length,
+      CurrentPromptChunk: chunkNumber,
+      ExpectedAssistantCount: previousAssistantCount + 1,
+    });
     lastSubmitResult = await submitTextMessage(tab, textbox, message, project, {
       allowAttachmentInstruction: false,
     });
+    await onProgress({
+      Status: finalChunk ? "submitted_final_chunk" : "submitted_context_chunk",
+      PromptSubmitMode: "chunked_text",
+      PromptChunks: chunks.length,
+      CurrentPromptChunk: chunkNumber,
+      SubmitMethod: lastSubmitResult.submitMethod,
+      SubmitTried: lastSubmitResult.submitTried,
+      ExpectedAssistantCount: previousAssistantCount + 1,
+    });
 
     if (!finalChunk) {
-      await waitForNewAssistant(tab, previousAssistantCount, 60000);
+      await waitForNewAssistant(tab, previousAssistantCount, chunkAckWaitMs);
+      await onProgress({
+        Status: "context_chunk_acknowledged",
+        PromptSubmitMode: "chunked_text",
+        PromptChunks: chunks.length,
+        CurrentPromptChunk: chunkNumber,
+      });
       continue;
     }
 
@@ -428,7 +465,23 @@ export async function runChatGptChromeBridge(options = {}) {
       throw new Error(`ChatGPT composer not ready or login required. Textbox count: ${textboxCount}. Snapshot excerpt: ${snapshot.slice(0, 500)}`);
     }
 
-    const promptSubmitResult = await submitPromptWorkflow(tab, textbox, prompt, project, options);
+    await writeSession(fs, options.sessionPath, {
+      Status: "submitting",
+      SubmitStartedAt: new Date().toISOString(),
+      ResponsePath: responsePath,
+      AssetOutDir: outputDir,
+    });
+    const promptSubmitResult = await submitPromptWorkflow(tab, textbox, prompt, project, {
+      ...options,
+      onProgress: async (patch) => {
+        await writeSession(fs, options.sessionPath, {
+          ...patch,
+          UpdatedAt: new Date().toISOString(),
+          ResponsePath: responsePath,
+          AssetOutDir: outputDir,
+        });
+      },
+    });
     const submittedUrl = await tab.url();
     await writeSession(fs, options.sessionPath, {
       Status: "submitted",

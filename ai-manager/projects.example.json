@@ -1,0 +1,54 @@
+{
+  "projects": [
+    {
+      "name": "Codex AI Systems",
+      "enabled": true,
+      "path": "C:\\Repos\\codex-ai-systems",
+      "expectedBranch": "main",
+      "expectedRemoteContains": "zdhconsulting/codex-ai-systems",
+      "requiredPaths": [
+        "README.md",
+        "scripts",
+        "skills",
+        "ai-manager/planning/STATE.md"
+      ],
+      "processNames": [],
+      "healthUrls": [],
+      "checkCommands": [],
+      "fixCommands": []
+    },
+    {
+      "name": "Example Web Project",
+      "enabled": false,
+      "path": "C:\\Repos\\example-web-project",
+      "expectedBranch": "main",
+      "expectedRemoteContains": "github.com/example/example-web-project",
+      "requiredPaths": [
+        "README.md",
+        "package.json"
+      ],
+      "processNames": [
+        "node"
+      ],
+      "healthUrls": [
+        "http://localhost:3000"
+      ],
+      "checkCommands": [
+        {
+          "name": "Unit tests",
+          "command": "npm.cmd",
+          "args": ["test"],
+          "timeoutSeconds": 120
+        }
+      ],
+      "fixCommands": [
+        {
+          "name": "Install dependencies",
+          "command": "npm.cmd",
+          "args": ["install"],
+          "timeoutSeconds": 300
+        }
+      ]
+    }
+  ]
+}
