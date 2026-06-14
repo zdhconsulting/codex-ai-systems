@@ -51,12 +51,22 @@ function Invoke-GitText {
         [string[]] $GitArgs
     )
 
-    $output = & git -C $RepoPath @GitArgs 2>&1
+    try {
+        $output = & git -C $RepoPath @GitArgs 2>$null
+        $exitCode = $LASTEXITCODE
+    } catch {
+        return [pscustomobject]@{
+            Ok = $false
+            Text = $_.Exception.Message
+            ExitCode = -1
+        }
+    }
+
     $text = (($output | Out-String).Trim())
     return [pscustomobject]@{
-        Ok = ($LASTEXITCODE -eq 0)
+        Ok = ($exitCode -eq 0)
         Text = $text
-        ExitCode = $LASTEXITCODE
+        ExitCode = $exitCode
     }
 }
 

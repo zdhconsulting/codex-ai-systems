@@ -515,7 +515,17 @@ export async function runChatGptChromeBridge(options = {}) {
   if (!/chatgpt\.com/i.test(currentUrl || "")) {
     await tab.goto("https://chatgpt.com/");
   }
-  await tab.playwright.waitForLoadState({ state: "domcontentloaded", timeoutMs: 15000 });
+  try {
+    await tab.playwright.waitForLoadState({ state: "domcontentloaded", timeoutMs: 20000 });
+  } catch (error) {
+    await writeSession(fs, options.sessionPath, {
+      Status: "chatgpt_load_state_timeout",
+      LoadStateTimeoutAt: new Date().toISOString(),
+      LoadStateError: String(error?.message || error).slice(0, 300),
+      ResponsePath: responsePath,
+      AssetOutDir: outputDir,
+    });
+  }
 
   if (shouldSubmit && options.newChat !== false && !useFreshTab) {
     await tab.cua.keypress({ keys: ["CTRL", "SHIFT", "O"] });
