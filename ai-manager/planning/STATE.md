@@ -44,3 +44,4 @@ Build the smallest useful manager loop: inspect configured projects, report stat
 - 2026-06-14: Moved scaffold into `C:\Repos\codex-ai-systems\ai-manager` for GitHub home `zdhconsulting/codex-ai-systems`.
 - 2026-06-14: Confirmed AI Manager is a conductor worker for all projects.
 - 2026-06-14: Added live project registry and interaction map from local repos, Mr.SEO roster, pinned projects, owner-button queue, and live URL checks.
+- 2026-06-14: Ran `.\ai-manager\scripts\ai-manager.cmd` against 22 live projects. Result: 2 running, 18 needs-attention, 2 not-running. Hard failures: `https://mr-reviewer.vercel.app/` and `https://zdhconsulting.github.io/contactformblaster/` return 404. Owner queue has 32 open buttons.

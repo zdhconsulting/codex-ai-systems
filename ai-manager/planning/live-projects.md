@@ -68,6 +68,25 @@ Checked on 2026-06-14.
 - 200: `botoxtelaviv.com`, `englishcomedytelaviv.com`, `explainmybusiness.com`, `israeldigitalarmy.com`, `israeloffshore.com`, `webdesignisrael.com`, `zdhconsulting.com`, `zdhsales.com`, `zevhecht.com`, `sponderstandup.com`, `icecreamfinder.vercel.app`, `mr-seo.vercel.app`, `bossmanai.vercel.app`.
 - 404: `mr-reviewer.vercel.app`, `zdhconsulting.github.io/contactformblaster/`.
 
+## Current Manager Report
+
+Checked on 2026-06-14 with:
+
+```powershell
+.\ai-manager\scripts\ai-manager.cmd
+```
+
+- Projects in registry: 22
+- Running: 2
+- Needs attention: 18
+- Not running: 2
+- Open owner buttons: 32
+
+The two `not-running` projects are not hidden behind vague status:
+
+- `MrReviewer`: public health URL `https://mr-reviewer.vercel.app/` returns 404.
+- `ContactFormBlaster`: public health URL `https://zdhconsulting.github.io/contactformblaster/` returns 404.
+
 ## Worktree Notes
 
 - `C:\Repos\webdesignisrael` is canonical. `C:\Repos\webdesignisrael-wrong-remote-archive-20260614` is archive/history.
