@@ -35,6 +35,13 @@ function isLikelyGeneratedImage(asset) {
   return /backend-api\/estuary\/content|files\.oaiusercontent|oaidalle|dalle|generated/i.test(url);
 }
 
+function shouldRequireTextResponse(options, project, task, prompt) {
+  if (options.requireTextResponse === true) return true;
+  if (options.requireTextResponse === false) return false;
+  const haystack = `${project || ""}\n${task || ""}\n${prompt || ""}`;
+  return /writer|editor|content|article|seo|recommended_publish_status|task_type|CODEX_RETURN_PACKET/i.test(haystack);
+}
+
 async function waitForSettled(tab, maxWaitMs = 180000) {
   const start = Date.now();
   let lastSnapshot = "";
@@ -119,6 +126,7 @@ export async function runChatGptChromeBridge(options = {}) {
   const startingSession = await readSession(fs, options.sessionPath);
   const task = options.task || startingSession.Task || "";
   const taskKey = task ? await taskKeyFor(project, task) : "";
+  const requireTextResponse = shouldRequireTextResponse(options, project, task, prompt);
 
   let tab;
   const openTabs = await browser.user.openTabs();
@@ -208,6 +216,70 @@ export async function runChatGptChromeBridge(options = {}) {
     await copyButtons.nth(copyCount - 1).click({ timeoutMs: 10000 });
     await tab.playwright.waitForTimeout(700);
     responseText = await tab.clipboard.readText();
+  }
+
+  if (!responseText.trim()) {
+    const packetMatch = snapshot.match(/CODEX_RETURN_PACKET[\s\S]*?END_CODEX_RETURN_PACKET/i);
+    if (packetMatch) {
+      responseText = packetMatch[0]
+        .replace(/^\s*-\s*/gm, "")
+        .replace(/\n\s+-\s+/g, "\n")
+        .trim();
+    }
+  }
+
+  if (!/CODEX_RETURN_PACKET/i.test(responseText) && requireTextResponse) {
+    const failureText = [
+      "CHATGPT_BRIDGE_HARVEST_FAILED",
+      "",
+      `Project: ${project}`,
+      `Task: ${task || "unknown"}`,
+      `Prompt path: ${options.promptPath || ""}`,
+      `Response path: ${responsePath}`,
+      "",
+      "Reason: ChatGPT appeared reachable, but the bridge could not capture a text CODEX_RETURN_PACKET.",
+      "This text-route run was not converted into a synthetic image packet, because that would create a false content import.",
+      "",
+      "Next action: Re-run resumeChatGptChromeBridge after the ChatGPT answer is visible, or manually copy the real CODEX_RETURN_PACKET.",
+      "",
+    ].join("\n");
+    await fs.writeFile(responsePath, failureText, "utf8");
+    await fs.writeFile(handoffPath, failureText, "utf8");
+    await writeSession(fs, options.sessionPath, {
+      Status: "harvest_failed_no_text",
+      FailedAt: new Date().toISOString(),
+      TaskKey: taskKey,
+      ResponsePath: responsePath,
+      HandoffPath: handoffPath,
+      HasPacket: false,
+      FailureReason: "Text-route bridge could not capture a CODEX_RETURN_PACKET.",
+    });
+    await appendJsonLine(fs, eventsPath, {
+      type: "harvest_failed_no_text",
+      at: new Date().toISOString(),
+      project,
+      task,
+      taskKey,
+      responsePath,
+      handoffPath,
+      avoidedCodexCreativeWork: true,
+    });
+    if (options.finalize !== false) {
+      await browser.tabs.finalize({ keep: [{ tab, status: "handoff" }] });
+    }
+    return {
+      status: "harvest_failed_no_text",
+      project,
+      task,
+      taskKey,
+      promptPath: options.promptPath || "",
+      responsePath,
+      handoffPath,
+      outputDir,
+      assets: [],
+      hasPacket: false,
+      sessionPath: options.sessionPath || "",
+    };
   }
 
   const pageAssets = await tab.capabilities.get("pageAssets");
