@@ -429,15 +429,29 @@ export async function runChatGptChromeBridge(options = {}) {
   const task = options.task || startingSession.Task || "";
   const taskKey = task ? await taskKeyFor(project, task) : "";
   const requireTextResponse = shouldRequireTextResponse(options, project, task, prompt);
+  const shouldSubmit = options.submitPrompt !== false;
+
+  await writeSession(fs, options.sessionPath, {
+    Status: shouldSubmit ? "opening_chatgpt" : "opening_chatgpt_for_harvest",
+    OpenStartedAt: new Date().toISOString(),
+    ResponsePath: responsePath,
+    AssetOutDir: outputDir,
+  });
 
   let tab;
-  const openTabs = await browser.user.openTabs();
-  const chatgptTab = openTabs.find((candidate) => /chatgpt\.com/i.test(candidate.url || candidate.title || ""));
-  if (chatgptTab) {
-    tab = await browser.user.claimTab(chatgptTab);
-  } else {
+  const useFreshTab = shouldSubmit && options.newChat !== false && options.freshTab !== false;
+  if (useFreshTab) {
     tab = await browser.tabs.new();
     await tab.goto("https://chatgpt.com/");
+  } else {
+    const openTabs = await browser.user.openTabs();
+    const chatgptTab = openTabs.find((candidate) => /chatgpt\.com/i.test(candidate.url || candidate.title || ""));
+    if (chatgptTab) {
+    tab = await browser.user.claimTab(chatgptTab);
+    } else {
+    tab = await browser.tabs.new();
+    await tab.goto("https://chatgpt.com/");
+    }
   }
 
   const currentUrl = await tab.url();
@@ -446,14 +460,12 @@ export async function runChatGptChromeBridge(options = {}) {
   }
   await tab.playwright.waitForLoadState({ state: "domcontentloaded", timeoutMs: 15000 });
 
-  const shouldSubmit = options.submitPrompt !== false;
-
   if (shouldSubmit && options.newChat !== false) {
     await tab.cua.keypress({ keys: ["CTRL", "SHIFT", "O"] });
     await tab.playwright.waitForTimeout(1200);
   }
 
-  let snapshot = await tab.playwright.domSnapshot();
+  let snapshot = "";
   if (shouldSubmit) {
     let textbox = tab.playwright.getByRole("textbox", { name: "Chat with ChatGPT" });
     let textboxCount = await textbox.count();
