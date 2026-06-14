@@ -199,7 +199,21 @@ async function submitTextMessage(tab, textbox, text, project, { allowAttachmentI
   let attachmentInstruction = "";
 
   if (allowAttachmentInstruction) {
-    const attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
+    let attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
+    if (attachmentResult.mode === "empty_textbox") {
+      try {
+        await tab.clipboard.writeText(text);
+        await textbox.click({ timeoutMs: 10000 });
+        await tab.cua.keypress({ keys: ["CTRL", "V"] });
+        await tab.playwright.waitForTimeout(1000);
+        attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
+      } catch {
+        // The explicit empty-composer check below turns this into a useful failure.
+      }
+    }
+    if (attachmentResult.mode === "empty_textbox") {
+      throw new Error("ChatGPT composer stayed empty after fill and clipboard-paste fallback.");
+    }
     promptMode = attachmentResult.mode;
     attachmentInstruction = attachmentResult.instruction;
   } else {
