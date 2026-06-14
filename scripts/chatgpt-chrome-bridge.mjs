@@ -485,19 +485,36 @@ async function openChromeProfileWindow(browserClientPath) {
   });
 }
 
-async function getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPath) {
-  await setupBrowserRuntime({ globals: globalThis });
-  try {
-    return await agent.browsers.get("extension");
-  } catch (firstError) {
-    if (!/not available|extension/i.test(String(firstError?.message || firstError))) {
-      throw firstError;
-    }
-    await openChromeProfileWindow(browserClientPath);
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+async function getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPath, options = {}) {
+  const allowLaunchBrowser = options.allowLaunchBrowser === true;
+  const retryCount = Number(options.extensionRetryCount || 3);
+  const retryDelayMs = Number(options.extensionRetryDelayMs || 1500);
+
+  for (let attempt = 0; attempt < retryCount; attempt += 1) {
     await setupBrowserRuntime({ globals: globalThis });
-    return await agent.browsers.get("extension");
+    try {
+      return await agent.browsers.get("extension");
+    } catch (error) {
+      const message = String(error?.message || error);
+      if (!/not available|extension/i.test(message)) {
+        throw error;
+      }
+      if (attempt < retryCount - 1) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        continue;
+      }
+      if (!allowLaunchBrowser) {
+        throw new Error(
+          `ChatGPT bridge could not claim the existing Chrome extension session after ${retryCount} attempts. ${message}`,
+        );
+      }
+    }
   }
+
+  await openChromeProfileWindow(browserClientPath);
+  await new Promise((resolve) => setTimeout(resolve, 2500));
+  await setupBrowserRuntime({ globals: globalThis });
+  return await agent.browsers.get("extension");
 }
 
 function looksLikeChatGptTab(candidate) {
@@ -556,7 +573,7 @@ export async function runChatGptChromeBridge(options = {}) {
     AssetOutDir: outputDir,
   });
 
-  const browser = await getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPath);
+  const browser = await getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPath, options);
   await browser.nameSession?.("chatgpt-bridge");
 
   let tab;
