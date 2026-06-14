@@ -50,8 +50,14 @@ async function waitForSettled(tab, maxWaitMs = 180000) {
 
   while (Date.now() - start < maxWaitMs) {
     lastSnapshot = await tab.playwright.domSnapshot();
-    const busy = /Stop answering|Generating image|Creating image/i.test(lastSnapshot);
-    const hasResult = /Response actions|Copy response|Generated image|CODEX_RETURN_PACKET/i.test(lastSnapshot);
+    const busy = /Stop answering|Generating image|Creating image|Reading documents?|Reading files?|Pro thinking|Thinking|Analyzing|Working/i.test(lastSnapshot);
+    let assistantCount = 0;
+    try {
+      assistantCount = await tab.playwright.locator("[data-message-author-role=\"assistant\"]").count();
+    } catch {
+      assistantCount = 0;
+    }
+    const hasResult = /Response actions|Copy response|Generated image/i.test(lastSnapshot) || assistantCount > 0;
     lastBusy = busy;
 
     if (!busy && hasResult) {
@@ -68,9 +74,29 @@ async function waitForSettled(tab, maxWaitMs = 180000) {
 }
 
 async function submitChatGptPrompt(tab, textbox) {
-  const buttonLabels = ["Send prompt", "Send message"];
+  const selectorButtons = [
+    "button[aria-label=\"Send prompt\"]",
+    "button[aria-label=\"Send message\"]",
+    "[data-testid=\"send-button\"]",
+  ];
   const tried = [];
 
+  for (const selector of selectorButtons) {
+    const buttons = tab.playwright.locator(selector);
+    const count = await buttons.count();
+    tried.push(`${selector}:${count}`);
+    for (let index = count - 1; index >= 0; index -= 1) {
+      try {
+        await buttons.nth(index).click({ timeoutMs: 10000, force: true });
+        await tab.playwright.waitForTimeout(800);
+        return { method: `selector:${selector}`, tried };
+      } catch {
+        // Keep looking for a clickable send control before falling back to role/Enter.
+      }
+    }
+  }
+
+  const buttonLabels = ["Send prompt", "Send message"];
   for (const label of buttonLabels) {
     const buttons = tab.playwright.getByRole("button", { name: label });
     const count = await buttons.count();
@@ -89,6 +115,37 @@ async function submitChatGptPrompt(tab, textbox) {
   await textbox.press("Enter", { timeoutMs: 15000 });
   await tab.playwright.waitForTimeout(800);
   return { method: "keyboard:enter", tried };
+}
+
+async function readTextboxText(textbox) {
+  try {
+    return await textbox.innerText({ timeoutMs: 3000 });
+  } catch {
+    try {
+      return await textbox.inputValue({ timeoutMs: 3000 });
+    } catch {
+      return "";
+    }
+  }
+}
+
+async function ensureAttachedPromptHasInstruction(tab, textbox, project) {
+  await tab.playwright.waitForTimeout(1200);
+  const textboxText = await readTextboxText(textbox);
+  if (String(textboxText || "").trim()) {
+    return { mode: "direct_text", instruction: "" };
+  }
+
+  const bodyText = await readBodyText(tab);
+  const hasTextAttachment = /Show in text field|Remove file|Pasted text/i.test(bodyText);
+  if (!hasTextAttachment) {
+    return { mode: "empty_textbox", instruction: "" };
+  }
+
+  const instruction = `Please process the attached ${project} prompt exactly. Return only the requested CODEX_RETURN_PACKET.`;
+  await textbox.fill(instruction, { timeoutMs: 15000 });
+  await tab.playwright.waitForTimeout(800);
+  return { mode: "attachment_plus_instruction", instruction };
 }
 
 function cleanPacketText(value) {
@@ -254,6 +311,7 @@ export async function runChatGptChromeBridge(options = {}) {
     }
 
     await textbox.fill(prompt, { timeoutMs: 15000 });
+    const attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
     const submitResult = await submitChatGptPrompt(tab, textbox);
     const submittedUrl = await tab.url();
     await writeSession(fs, options.sessionPath, {
@@ -262,6 +320,8 @@ export async function runChatGptChromeBridge(options = {}) {
       SubmittedUrl: submittedUrl,
       SubmitMethod: submitResult.method,
       SubmitTried: submitResult.tried,
+      PromptSubmitMode: attachmentResult.mode,
+      AttachmentInstruction: attachmentResult.instruction,
       ResponsePath: responsePath,
       AssetOutDir: outputDir,
     });
