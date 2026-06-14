@@ -401,6 +401,20 @@ async function findChatGptComposer(tab, maxWaitMs = 45000) {
   );
 }
 
+async function gotoChatGpt(tab, fs, sessionPath, responsePath, outputDir) {
+  try {
+    await tab.goto("https://chatgpt.com/", { timeoutMs: 20000 });
+  } catch (error) {
+    await writeSession(fs, sessionPath, {
+      Status: "chatgpt_goto_timeout",
+      GotoTimeoutAt: new Date().toISOString(),
+      GotoError: String(error?.message || error).slice(0, 300),
+      ResponsePath: responsePath,
+      AssetOutDir: outputDir,
+    });
+  }
+}
+
 async function readPrompt(fs, options) {
   if (options.prompt) return String(options.prompt);
   if (options.promptPath) return await fs.readFile(options.promptPath, "utf8");
@@ -499,7 +513,7 @@ export async function runChatGptChromeBridge(options = {}) {
   const useFreshTab = shouldSubmit && options.newChat !== false && options.freshTab !== false;
   if (useFreshTab) {
     tab = await browser.tabs.new();
-    await tab.goto("https://chatgpt.com/");
+    await gotoChatGpt(tab, fs, options.sessionPath, responsePath, outputDir);
   } else {
     const openTabs = await browser.user.openTabs();
     const chatgptTab = openTabs.find((candidate) => /chatgpt\.com/i.test(candidate.url || candidate.title || ""));
@@ -507,13 +521,13 @@ export async function runChatGptChromeBridge(options = {}) {
       tab = await browser.user.claimTab(chatgptTab);
     } else {
       tab = await browser.tabs.new();
-      await tab.goto("https://chatgpt.com/");
+      await gotoChatGpt(tab, fs, options.sessionPath, responsePath, outputDir);
     }
   }
 
   const currentUrl = await tab.url();
   if (!/chatgpt\.com/i.test(currentUrl || "")) {
-    await tab.goto("https://chatgpt.com/");
+    await gotoChatGpt(tab, fs, options.sessionPath, responsePath, outputDir);
   }
   try {
     await tab.playwright.waitForLoadState({ state: "domcontentloaded", timeoutMs: 20000 });
