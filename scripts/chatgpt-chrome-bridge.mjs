@@ -500,6 +500,29 @@ async function getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPa
   }
 }
 
+function looksLikeChatGptTab(candidate) {
+  return /chatgpt\.com/i.test(`${candidate?.url || ""} ${candidate?.title || ""}`);
+}
+
+function findPreferredChatGptTab(openTabs, session = {}) {
+  const preferredId = String(session.BridgeTabId || session.TabId || "").trim();
+  if (preferredId) {
+    const exact = openTabs.find((candidate) => String(candidate.id || "") === preferredId);
+    if (exact) return exact;
+  }
+
+  const submittedUrl = String(session.SubmittedUrl || "").trim();
+  if (submittedUrl) {
+    const sameUrl = openTabs.find((candidate) => String(candidate.url || "").trim() === submittedUrl);
+    if (sameUrl) return sameUrl;
+  }
+
+  const grouped = openTabs.find((candidate) => candidate.tabGroup === "chatgpt-bridge" && looksLikeChatGptTab(candidate));
+  if (grouped) return grouped;
+
+  return openTabs.find(looksLikeChatGptTab) || null;
+}
+
 export async function runChatGptChromeBridge(options = {}) {
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
@@ -537,14 +560,16 @@ export async function runChatGptChromeBridge(options = {}) {
   await browser.nameSession?.("chatgpt-bridge");
 
   let tab;
-  const useFreshTab = shouldSubmit && options.newChat !== false && options.freshTab !== false;
+  let claimedTabMeta = null;
+  const useFreshTab = shouldSubmit && (options.newChat === true || options.freshTab === true);
   if (useFreshTab) {
     tab = await browser.tabs.new();
     await gotoChatGpt(tab, fs, options.sessionPath, responsePath, outputDir);
   } else {
     const openTabs = await browser.user.openTabs();
-    const chatgptTab = openTabs.find((candidate) => /chatgpt\.com/i.test(candidate.url || candidate.title || ""));
+    const chatgptTab = findPreferredChatGptTab(openTabs, startingSession);
     if (chatgptTab) {
+      claimedTabMeta = chatgptTab;
       tab = await browser.user.claimTab(chatgptTab);
     } else {
       tab = await browser.tabs.new();
@@ -553,6 +578,12 @@ export async function runChatGptChromeBridge(options = {}) {
   }
 
   const currentUrl = await tab.url();
+  const currentTabId = String(claimedTabMeta?.id || "");
+  await writeSession(fs, options.sessionPath, {
+    BridgeTabId: currentTabId,
+    ClaimedTabUrl: currentUrl || "",
+    ReusedExistingTab: Boolean(claimedTabMeta),
+  });
   if (!/chatgpt\.com/i.test(currentUrl || "")) {
     await gotoChatGpt(tab, fs, options.sessionPath, responsePath, outputDir);
   }
