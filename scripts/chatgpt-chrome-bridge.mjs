@@ -82,6 +82,20 @@ async function waitForNewAssistant(tab, previousCount, maxWaitMs = 60000) {
   return await waitForSettled(tab, maxWaitMs, previousCount + 1);
 }
 
+async function withTimeout(promise, ms, label) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function submitChatGptPrompt(tab, textbox) {
   const selectorButtons = [
     "button[aria-label=\"Send prompt\"]",
@@ -182,9 +196,9 @@ function splitPromptChunks(prompt, maxChars = 6200) {
 
 async function submitTextMessage(tab, textbox, text, project, { allowAttachmentInstruction = true } = {}) {
   let fillError = "";
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
-      await textbox.fill(text, { timeoutMs: 20000 });
+      await withTimeout(textbox.fill(text, { timeoutMs: 9000 }), 10000, "ChatGPT composer fill");
       fillError = "";
       break;
     } catch (error) {
@@ -202,9 +216,9 @@ async function submitTextMessage(tab, textbox, text, project, { allowAttachmentI
     let attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
     if (attachmentResult.mode === "empty_textbox") {
       try {
-        await tab.clipboard.writeText(text);
-        await textbox.click({ timeoutMs: 10000 });
-        await tab.cua.keypress({ keys: ["CTRL", "V"] });
+        await withTimeout(tab.clipboard.writeText(text), 5000, "clipboard write");
+        await withTimeout(textbox.click({ timeoutMs: 8000 }), 9000, "composer click");
+        await withTimeout(tab.cua.keypress({ keys: ["CTRL", "V"] }), 9000, "composer paste");
         await tab.playwright.waitForTimeout(1000);
         attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
       } catch {
@@ -595,17 +609,57 @@ export async function runChatGptChromeBridge(options = {}) {
       ResponsePath: responsePath,
       AssetOutDir: outputDir,
     });
-    const promptSubmitResult = await submitPromptWorkflow(tab, textbox, prompt, project, {
-      ...options,
-      onProgress: async (patch) => {
-        await writeSession(fs, options.sessionPath, {
-          ...patch,
-          UpdatedAt: new Date().toISOString(),
-          ResponsePath: responsePath,
-          AssetOutDir: outputDir,
-        });
-      },
-    });
+    let promptSubmitResult;
+    try {
+      promptSubmitResult = await submitPromptWorkflow(tab, textbox, prompt, project, {
+        ...options,
+        onProgress: async (patch) => {
+          await writeSession(fs, options.sessionPath, {
+            ...patch,
+            UpdatedAt: new Date().toISOString(),
+            ResponsePath: responsePath,
+            AssetOutDir: outputDir,
+          });
+        },
+      });
+    } catch (error) {
+      const failureText = [
+        "CHATGPT_BRIDGE_SUBMIT_FAILED",
+        "",
+        `Project: ${project}`,
+        `Task: ${task || "unknown"}`,
+        `Prompt path: ${options.promptPath || ""}`,
+        `Response path: ${responsePath}`,
+        "",
+        `Reason: ${String(error?.message || error)}`,
+        "",
+        "Next action: retry after ChatGPT composer is responsive, or use a non-browser provider/API path.",
+        "",
+      ].join("\n");
+      await fs.writeFile(responsePath, failureText, "utf8");
+      await fs.writeFile(handoffPath, failureText, "utf8");
+      await writeSession(fs, options.sessionPath, {
+        Status: "submit_failed",
+        FailedAt: new Date().toISOString(),
+        FailureReason: String(error?.message || error).slice(0, 500),
+        ResponsePath: responsePath,
+        HandoffPath: handoffPath,
+        HasPacket: false,
+      });
+      return {
+        status: "submit_failed",
+        project,
+        task,
+        taskKey,
+        promptPath: options.promptPath || "",
+        responsePath,
+        handoffPath,
+        outputDir,
+        assets: [],
+        hasPacket: false,
+        sessionPath: options.sessionPath || "",
+      };
+    }
     const submittedUrl = await tab.url();
     await writeSession(fs, options.sessionPath, {
       Status: "submitted",
