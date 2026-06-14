@@ -516,7 +516,8 @@ export async function runChatGptChromeBridge(options = {}) {
     await gotoChatGpt(tab, fs, options.sessionPath, responsePath, outputDir);
   } else {
     const openTabs = await browser.user.openTabs();
-    const chatgptTab = openTabs.find((candidate) => /chatgpt\.com/i.test(candidate.url || candidate.title || ""));
+    const chatgptTabs = openTabs.filter((candidate) => /chatgpt\.com/i.test(candidate.url || candidate.title || ""));
+    const chatgptTab = chatgptTabs.length > 0 ? chatgptTabs[chatgptTabs.length - 1] : null;
     if (chatgptTab) {
       tab = await browser.user.claimTab(chatgptTab);
     } else {
