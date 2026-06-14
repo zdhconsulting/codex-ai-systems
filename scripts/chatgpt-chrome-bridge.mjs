@@ -42,7 +42,15 @@ function shouldRequireTextResponse(options, project, task, prompt) {
   return /writer|editor|content|article|seo|recommended_publish_status|task_type|CODEX_RETURN_PACKET/i.test(haystack);
 }
 
-async function waitForSettled(tab, maxWaitMs = 180000) {
+async function assistantMessageCount(tab) {
+  try {
+    return await tab.playwright.locator("[data-message-author-role=\"assistant\"]").count();
+  } catch {
+    return 0;
+  }
+}
+
+async function waitForSettled(tab, maxWaitMs = 180000, minAssistantCount = 0) {
   const start = Date.now();
   let lastSnapshot = "";
   let stableCount = 0;
@@ -51,13 +59,10 @@ async function waitForSettled(tab, maxWaitMs = 180000) {
   while (Date.now() - start < maxWaitMs) {
     lastSnapshot = await tab.playwright.domSnapshot();
     const busy = /Stop answering|Generating image|Creating image|Reading documents?|Reading files?|Pro thinking|Thinking|Analyzing|Working/i.test(lastSnapshot);
-    let assistantCount = 0;
-    try {
-      assistantCount = await tab.playwright.locator("[data-message-author-role=\"assistant\"]").count();
-    } catch {
-      assistantCount = 0;
-    }
-    const hasResult = /Response actions|Copy response|Generated image/i.test(lastSnapshot) || assistantCount > 0;
+    const assistantCount = await assistantMessageCount(tab);
+    const hasResult = /Response actions|Copy response|Generated image/i.test(lastSnapshot)
+      || (minAssistantCount > 0 && assistantCount >= minAssistantCount)
+      || (minAssistantCount <= 0 && assistantCount > 0);
     lastBusy = busy;
 
     if (!busy && hasResult) {
@@ -71,6 +76,10 @@ async function waitForSettled(tab, maxWaitMs = 180000) {
   }
 
   return { snapshot: lastSnapshot, timedOut: true, busy: lastBusy };
+}
+
+async function waitForNewAssistant(tab, previousCount, maxWaitMs = 60000) {
+  return await waitForSettled(tab, maxWaitMs, previousCount + 1);
 }
 
 async function submitChatGptPrompt(tab, textbox) {
@@ -146,6 +155,115 @@ async function ensureAttachedPromptHasInstruction(tab, textbox, project) {
   await textbox.fill(instruction, { timeoutMs: 15000 });
   await tab.playwright.waitForTimeout(800);
   return { mode: "attachment_plus_instruction", instruction };
+}
+
+function splitPromptChunks(prompt, maxChars = 6200) {
+  const chunks = [];
+  let current = "";
+  const paragraphs = String(prompt || "").split(/\n{2,}/);
+
+  for (const paragraph of paragraphs) {
+    const next = current ? `${current}\n\n${paragraph}` : paragraph;
+    if (next.length <= maxChars) {
+      current = next;
+      continue;
+    }
+    if (current) chunks.push(current);
+    current = paragraph;
+    while (current.length > maxChars) {
+      chunks.push(current.slice(0, maxChars));
+      current = current.slice(maxChars);
+    }
+  }
+
+  if (current.trim()) chunks.push(current);
+  return chunks.length > 0 ? chunks : [String(prompt || "")];
+}
+
+async function submitTextMessage(tab, textbox, text, project, { allowAttachmentInstruction = true } = {}) {
+  await textbox.fill(text, { timeoutMs: 15000 });
+  let promptMode = "direct_text";
+  let attachmentInstruction = "";
+
+  if (allowAttachmentInstruction) {
+    const attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
+    promptMode = attachmentResult.mode;
+    attachmentInstruction = attachmentResult.instruction;
+  } else {
+    await tab.playwright.waitForTimeout(600);
+    const textboxText = await readTextboxText(textbox);
+    if (!String(textboxText || "").trim()) {
+      throw new Error("ChatGPT converted a chunk into an attachment. Reduce chunkCharLimit and retry.");
+    }
+  }
+
+  const submitResult = await submitChatGptPrompt(tab, textbox);
+  return {
+    promptMode,
+    attachmentInstruction,
+    submitMethod: submitResult.method,
+    submitTried: submitResult.tried,
+  };
+}
+
+async function submitPromptWorkflow(tab, textbox, prompt, project, options = {}) {
+  const directCharLimit = Number(options.directCharLimit || 11000);
+  const chunkCharLimit = Number(options.chunkCharLimit || 6200);
+  const promptText = String(prompt || "");
+
+  if (promptText.length <= directCharLimit || options.chunkLongPrompt === false) {
+    const previousAssistantCount = await assistantMessageCount(tab);
+    const submitResult = await submitTextMessage(tab, textbox, promptText, project, {
+      allowAttachmentInstruction: true,
+    });
+    return {
+      ...submitResult,
+      promptMode: submitResult.promptMode,
+      chunks: 1,
+      expectedAssistantCount: previousAssistantCount + 1,
+    };
+  }
+
+  const chunks = splitPromptChunks(promptText, chunkCharLimit);
+  let lastSubmitResult = {};
+  for (let index = 0; index < chunks.length; index += 1) {
+    const chunkNumber = index + 1;
+    const finalChunk = chunkNumber === chunks.length;
+    const previousAssistantCount = await assistantMessageCount(tab);
+    const message = finalChunk
+      ? [
+          `FINAL PART ${chunkNumber}/${chunks.length}`,
+          "",
+          chunks[index],
+          "",
+          `Now use all ${chunks.length} parts above as one complete ${project} prompt. Execute the full assignment and return the requested final output plus CODEX_RETURN_PACKET.`,
+        ].join("\n")
+      : [
+          `PART ${chunkNumber}/${chunks.length}`,
+          "",
+          chunks[index],
+          "",
+          `Do not execute the assignment yet. Store this part as context and reply only: ACK ${chunkNumber}/${chunks.length}.`,
+        ].join("\n");
+
+    lastSubmitResult = await submitTextMessage(tab, textbox, message, project, {
+      allowAttachmentInstruction: false,
+    });
+
+    if (!finalChunk) {
+      await waitForNewAssistant(tab, previousAssistantCount, 60000);
+      continue;
+    }
+
+    return {
+      ...lastSubmitResult,
+      promptMode: "chunked_text",
+      chunks: chunks.length,
+      expectedAssistantCount: previousAssistantCount + 1,
+    };
+  }
+
+  throw new Error("Prompt chunk submission failed before final chunk.");
 }
 
 function cleanPacketText(value) {
@@ -310,24 +428,29 @@ export async function runChatGptChromeBridge(options = {}) {
       throw new Error(`ChatGPT composer not ready or login required. Textbox count: ${textboxCount}. Snapshot excerpt: ${snapshot.slice(0, 500)}`);
     }
 
-    await textbox.fill(prompt, { timeoutMs: 15000 });
-    const attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
-    const submitResult = await submitChatGptPrompt(tab, textbox);
+    const promptSubmitResult = await submitPromptWorkflow(tab, textbox, prompt, project, options);
     const submittedUrl = await tab.url();
     await writeSession(fs, options.sessionPath, {
       Status: "submitted",
       SubmittedAt: new Date().toISOString(),
       SubmittedUrl: submittedUrl,
-      SubmitMethod: submitResult.method,
-      SubmitTried: submitResult.tried,
-      PromptSubmitMode: attachmentResult.mode,
-      AttachmentInstruction: attachmentResult.instruction,
+      SubmitMethod: promptSubmitResult.submitMethod,
+      SubmitTried: promptSubmitResult.submitTried,
+      PromptSubmitMode: promptSubmitResult.promptMode,
+      AttachmentInstruction: promptSubmitResult.attachmentInstruction,
+      PromptChunks: promptSubmitResult.chunks,
+      ExpectedAssistantCount: promptSubmitResult.expectedAssistantCount,
       ResponsePath: responsePath,
       AssetOutDir: outputDir,
     });
   }
 
-  const waitResult = await waitForSettled(tab, options.maxWaitMs || 95000);
+  const submittedSession = await readSession(fs, options.sessionPath);
+  const waitResult = await waitForSettled(
+    tab,
+    options.maxWaitMs || 95000,
+    Number(submittedSession.ExpectedAssistantCount || 0),
+  );
   snapshot = waitResult.snapshot;
   if (waitResult.timedOut && waitResult.busy) {
     const waitingResult = {
