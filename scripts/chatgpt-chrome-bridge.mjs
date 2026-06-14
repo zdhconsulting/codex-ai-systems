@@ -517,7 +517,11 @@ export async function runChatGptChromeBridge(options = {}) {
   } else {
     const openTabs = await browser.user.openTabs();
     const chatgptTabs = openTabs.filter((candidate) => /chatgpt\.com/i.test(candidate.url || candidate.title || ""));
-    const chatgptTab = chatgptTabs.length > 0 ? chatgptTabs[chatgptTabs.length - 1] : null;
+    const preferredChatUrl = String(startingSession.WaitingUrl || startingSession.ChatUrl || startingSession.SubmittedUrl || "");
+    const exactChatTab = preferredChatUrl && /chatgpt\.com\/c\//i.test(preferredChatUrl)
+      ? chatgptTabs.find((candidate) => candidate.url === preferredChatUrl)
+      : null;
+    const chatgptTab = exactChatTab || (chatgptTabs.length > 0 ? chatgptTabs[chatgptTabs.length - 1] : null);
     if (chatgptTab) {
       tab = await browser.user.claimTab(chatgptTab);
     } else {
@@ -599,6 +603,7 @@ export async function runChatGptChromeBridge(options = {}) {
   );
   snapshot = waitResult.snapshot;
   if (waitResult.timedOut && waitResult.busy) {
+    const waitingUrl = await tab.url();
     const waitingResult = {
       status: "waiting",
       project,
@@ -614,6 +619,8 @@ export async function runChatGptChromeBridge(options = {}) {
     await writeSession(fs, options.sessionPath, {
       Status: "waiting",
       WaitingAt: new Date().toISOString(),
+      WaitingUrl: waitingUrl,
+      ChatUrl: /chatgpt\.com\/c\//i.test(waitingUrl || "") ? waitingUrl : startingSession.ChatUrl || "",
       ResumeHint: "Run chatgpt-chrome-bridge.mjs again with submitPrompt:false and newChat:false.",
     });
     await appendJsonLine(fs, eventsPath, {
@@ -795,6 +802,7 @@ END_CODEX_RETURN_PACKET`;
     ResponsePath: responsePath,
     HandoffPath: handoffPath,
     Assets: copiedAssets,
+    ChatUrl: await tab.url(),
     HasPacket: result.hasPacket,
   });
 
