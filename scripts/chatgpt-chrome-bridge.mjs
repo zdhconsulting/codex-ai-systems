@@ -181,7 +181,20 @@ function splitPromptChunks(prompt, maxChars = 6200) {
 }
 
 async function submitTextMessage(tab, textbox, text, project, { allowAttachmentInstruction = true } = {}) {
-  await textbox.fill(text, { timeoutMs: 15000 });
+  let fillError = "";
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await textbox.fill(text, { timeoutMs: 20000 });
+      fillError = "";
+      break;
+    } catch (error) {
+      fillError = String(error?.message || error);
+      await tab.playwright.waitForTimeout(1500);
+    }
+  }
+  if (fillError) {
+    throw new Error(`ChatGPT composer fill failed after retries: ${fillError}`);
+  }
   let promptMode = "direct_text";
   let attachmentInstruction = "";
 
