@@ -67,6 +67,96 @@ async function waitForSettled(tab, maxWaitMs = 180000) {
   return { snapshot: lastSnapshot, timedOut: true, busy: lastBusy };
 }
 
+async function submitChatGptPrompt(tab, textbox) {
+  const buttonLabels = ["Send prompt", "Send message"];
+  const tried = [];
+
+  for (const label of buttonLabels) {
+    const buttons = tab.playwright.getByRole("button", { name: label });
+    const count = await buttons.count();
+    tried.push(`${label}:${count}`);
+    for (let index = count - 1; index >= 0; index -= 1) {
+      try {
+        await buttons.nth(index).click({ timeoutMs: 10000 });
+        await tab.playwright.waitForTimeout(800);
+        return { method: `button:${label}`, tried };
+      } catch {
+        // Keep looking for a clickable send control before falling back to Enter.
+      }
+    }
+  }
+
+  await textbox.press("Enter", { timeoutMs: 15000 });
+  await tab.playwright.waitForTimeout(800);
+  return { method: "keyboard:enter", tried };
+}
+
+function cleanPacketText(value) {
+  return String(value || "")
+    .replace(/^\s*-\s*/gm, "")
+    .replace(/\n\s+-\s+/g, "\n")
+    .trim();
+}
+
+function isPromptEcho(value, prompt) {
+  const normalizedValue = normalizeTaskText(value);
+  const normalizedPrompt = normalizeTaskText(prompt);
+  if (!normalizedValue || !normalizedPrompt) return false;
+
+  const lead = normalizedPrompt.slice(0, Math.min(220, normalizedPrompt.length));
+  if (lead.length >= 80 && normalizedValue.includes(lead)) return true;
+
+  const fingerprint = normalizedValue.slice(0, Math.min(650, normalizedValue.length));
+  return fingerprint.length >= 120 && normalizedPrompt.includes(fingerprint);
+}
+
+function extractLastReturnPacket(value, prompt = "") {
+  const packetRegex = /CODEX_RETURN_PACKET[\s\S]*?END_CODEX_RETURN_PACKET/gi;
+  let match;
+  let lastPacket = "";
+  while ((match = packetRegex.exec(String(value || ""))) !== null) {
+    const candidate = cleanPacketText(match[0]);
+    if (isPromptEcho(candidate, prompt)) continue;
+    lastPacket = candidate;
+  }
+  return lastPacket;
+}
+
+async function readLatestAssistantText(tab, prompt = "") {
+  const selectors = [
+    "[data-message-author-role=\"assistant\"]",
+    "article",
+  ];
+  let fallbackText = "";
+
+  for (const selector of selectors) {
+    const messages = tab.playwright.locator(selector);
+    const count = await messages.count();
+    for (let index = count - 1; index >= 0; index -= 1) {
+      let text = "";
+      try {
+        text = await messages.nth(index).innerText({ timeoutMs: 5000 });
+      } catch {
+        continue;
+      }
+      const cleaned = String(text || "").trim();
+      if (!cleaned || isPromptEcho(cleaned, prompt)) continue;
+      if (!fallbackText) fallbackText = cleaned;
+      if (/CODEX_RETURN_PACKET/i.test(cleaned)) return cleaned;
+    }
+  }
+
+  return fallbackText;
+}
+
+async function readBodyText(tab) {
+  try {
+    return await tab.playwright.locator("body").innerText({ timeoutMs: 10000 });
+  } catch {
+    return "";
+  }
+}
+
 async function readPrompt(fs, options) {
   if (options.prompt) return String(options.prompt);
   if (options.promptPath) return await fs.readFile(options.promptPath, "utf8");
@@ -164,10 +254,14 @@ export async function runChatGptChromeBridge(options = {}) {
     }
 
     await textbox.fill(prompt, { timeoutMs: 15000 });
-    await textbox.press("Enter", { timeoutMs: 15000 });
+    const submitResult = await submitChatGptPrompt(tab, textbox);
+    const submittedUrl = await tab.url();
     await writeSession(fs, options.sessionPath, {
       Status: "submitted",
       SubmittedAt: new Date().toISOString(),
+      SubmittedUrl: submittedUrl,
+      SubmitMethod: submitResult.method,
+      SubmitTried: submitResult.tried,
       ResponsePath: responsePath,
       AssetOutDir: outputDir,
     });
@@ -218,14 +312,24 @@ export async function runChatGptChromeBridge(options = {}) {
     responseText = await tab.clipboard.readText();
   }
 
-  if (!responseText.trim()) {
-    const packetMatch = snapshot.match(/CODEX_RETURN_PACKET[\s\S]*?END_CODEX_RETURN_PACKET/i);
-    if (packetMatch) {
-      responseText = packetMatch[0]
-        .replace(/^\s*-\s*/gm, "")
-        .replace(/\n\s+-\s+/g, "\n")
-        .trim();
+  if (!responseText.trim() || (requireTextResponse && !extractLastReturnPacket(responseText, prompt))) {
+    const assistantText = await readLatestAssistantText(tab, prompt);
+    const assistantPacket = extractLastReturnPacket(assistantText, prompt);
+    if (assistantPacket) {
+      responseText = assistantPacket;
+    } else if (!responseText.trim() && assistantText.trim()) {
+      responseText = assistantText.trim();
     }
+  }
+
+  if (!responseText.trim()) {
+    const bodyPacket = extractLastReturnPacket(await readBodyText(tab), prompt);
+    if (bodyPacket) responseText = bodyPacket;
+  }
+
+  if (!responseText.trim()) {
+    const snapshotPacket = extractLastReturnPacket(snapshot, prompt);
+    if (snapshotPacket) responseText = snapshotPacket;
   }
 
   if (!/CODEX_RETURN_PACKET/i.test(responseText) && requireTextResponse) {
