@@ -6,3 +6,5 @@
 - AI Manager is a conductor worker and project manager for Zev's projects.
 - First slice is a local manager report before a UI or scheduled daemon.
 - Repair behavior must be bounded: report by default, run only explicit configured fix commands with a fix flag, and keep existing owner/commander approval gates.
+- `projects.live.json` is the default tracked live registry; `projects.local.json` remains a gitignored override.
+- The manager should report owner buttons per project using aliases, not only as one global queue.

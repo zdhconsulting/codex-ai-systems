@@ -517,7 +517,7 @@ export async function runChatGptChromeBridge(options = {}) {
   }
   await tab.playwright.waitForLoadState({ state: "domcontentloaded", timeoutMs: 15000 });
 
-  if (shouldSubmit && options.newChat !== false) {
+  if (shouldSubmit && options.newChat !== false && !useFreshTab) {
     await tab.cua.keypress({ keys: ["CTRL", "SHIFT", "O"] });
     await tab.playwright.waitForTimeout(1200);
   }

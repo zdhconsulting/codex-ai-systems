@@ -9,6 +9,8 @@ AI Manager is a conductor worker for Zev's projects. It makes sure important pro
 - Track configured projects and their expected running state.
 - Check whether each project path exists and whether its git repo is healthy enough to work from.
 - Check project-specific signals such as required files, expected branch, expected remote, local process names, health URLs, and optional check commands.
+- Map owner-button aliases to the correct project so blockers are reported next to the affected project.
+- Maintain a durable live project registry and interaction map.
 - Explain failures in plain language: missing path, missing repo, branch mismatch, remote mismatch, dirty worktree, missing required file, stopped process, failing URL, failing command, or owner-only blocker.
 - Report a compact status across all projects: running, needs attention, or not running.
 - Support explicit fix commands, but only run them when the operator passes a fix flag.

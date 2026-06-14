@@ -9,11 +9,14 @@ param(
 $ErrorActionPreference = "Stop"
 $managerRoot = Split-Path -Parent $PSScriptRoot
 $defaultLocalConfig = Join-Path $managerRoot "projects.local.json"
+$defaultLiveConfig = Join-Path $managerRoot "projects.live.json"
 $defaultExampleConfig = Join-Path $managerRoot "projects.example.json"
 
 if (-not $ConfigPath) {
     if (Test-Path -LiteralPath $defaultLocalConfig) {
         $ConfigPath = $defaultLocalConfig
+    } elseif (Test-Path -LiteralPath $defaultLiveConfig) {
+        $ConfigPath = $defaultLiveConfig
     } else {
         $ConfigPath = $defaultExampleConfig
     }
@@ -177,9 +180,29 @@ function Get-OwnerButtons {
     }
 }
 
+function Get-ProjectOwnerButtons {
+    param(
+        $Project,
+        $OpenOwnerButtons
+    )
+
+    $names = New-Object System.Collections.Generic.HashSet[string]
+    if ($Project.name) { [void] $names.Add(([string] $Project.name).ToLowerInvariant()) }
+    foreach ($alias in (Convert-ToArray $Project.ownerButtonNames)) {
+        if ($alias) { [void] $names.Add(([string] $alias).ToLowerInvariant()) }
+    }
+
+    if ($names.Count -eq 0) { return @() }
+
+    return @($OpenOwnerButtons | Where-Object {
+        $_.Project -and $names.Contains(([string] $_.Project).ToLowerInvariant())
+    })
+}
+
 function Test-Project {
     param(
         $Project,
+        $OpenOwnerButtons = @(),
         [switch] $RunCommands,
         [switch] $Fix
     )
@@ -189,6 +212,15 @@ function Test-Project {
     $changes = New-Object System.Collections.Generic.List[object]
     $details = [ordered]@{}
     $projectPath = [string] $Project.path
+    $projectOwnerButtons = @(Get-ProjectOwnerButtons -Project $Project -OpenOwnerButtons $OpenOwnerButtons)
+
+    if ($Project.interaction) {
+        $details.Interaction = [string] $Project.interaction
+    }
+
+    if ($projectOwnerButtons.Count -gt 0) {
+        Add-Reason $warnings "owner-buttons-open" "$($projectOwnerButtons.Count) owner button(s) are open for this project."
+    }
 
     if (-not $projectPath) {
         Add-Reason $failures "missing-path-config" "No project path is configured."
@@ -199,6 +231,7 @@ function Test-Project {
             Warnings = @($warnings.ToArray())
             Failures = @($failures.ToArray())
             Changes = @($changes.ToArray())
+            OwnerButtons = @($projectOwnerButtons)
             Details = $details
         }
     }
@@ -212,6 +245,7 @@ function Test-Project {
             Warnings = @($warnings.ToArray())
             Failures = @($failures.ToArray())
             Changes = @($changes.ToArray())
+            OwnerButtons = @($projectOwnerButtons)
             Details = $details
         }
     }
@@ -324,6 +358,7 @@ function Test-Project {
         Warnings = @($warnings.ToArray())
         Failures = @($failures.ToArray())
         Changes = @($changes.ToArray())
+        OwnerButtons = @($projectOwnerButtons)
         Details = $details
     }
 }
@@ -353,6 +388,13 @@ function Write-HumanReport {
 
         foreach ($warning in $project.Warnings) {
             Write-Host "  Attention: [$($warning.Kind)] $($warning.Message)"
+        }
+
+        foreach ($button in ($project.OwnerButtons | Select-Object -First 3)) {
+            Write-Host "  Owner button: $($button.Site) - $($button.Needed)"
+        }
+        if ($project.OwnerButtons.Count -gt 3) {
+            Write-Host "  Owner button: ...and $($project.OwnerButtons.Count - 3) more."
         }
 
         foreach ($change in $project.Changes) {
@@ -395,7 +437,7 @@ $projects = New-Object System.Collections.Generic.List[object]
 
 foreach ($project in (Convert-ToArray $config.projects)) {
     if ($project.enabled -eq $false) { continue }
-    [void] $projects.Add((Test-Project -Project $project -RunCommands:$RunCommands -Fix:$Fix))
+    [void] $projects.Add((Test-Project -Project $project -OpenOwnerButtons @($ownerButtons.Open) -RunCommands:$RunCommands -Fix:$Fix))
 }
 
 $running = @($projects | Where-Object { $_.Status -eq "running" }).Count
