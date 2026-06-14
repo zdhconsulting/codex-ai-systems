@@ -83,6 +83,23 @@ function Write-BridgeResult {
     }
 }
 
+function Open-UrlInChrome {
+    param([string] $Url)
+    $chromeCandidates = @(
+        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+        "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
+        "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+    )
+    foreach ($candidate in $chromeCandidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            Start-Process -FilePath $candidate -ArgumentList $Url | Out-Null
+            return $true
+        }
+    }
+    Start-Process $Url
+    return $false
+}
+
 if (-not (Test-Path -LiteralPath $modulePath)) {
     throw "Missing CodexGear module: $modulePath"
 }
@@ -193,7 +210,7 @@ if ($PacketOnly) { $routeParams.PacketOnly = $true }
 $routeOutput = (& $routeScript @routeParams $taskText 2>&1 | Out-String).Trim()
 
 if (-not $NoOpen) {
-    Start-Process "https://chatgpt.com/"
+    Open-UrlInChrome "https://chatgpt.com/" | Out-Null
 }
 
 $runnerUri = "file:///" + (($runnerPath -replace '\\', '/') -replace ' ', '%20')

@@ -92,13 +92,36 @@ if (Test-Path -LiteralPath $gearModule) {
         Format-Table -AutoSize
 
     if ($Task) {
+        $workRoute = Select-AiWorkRoute -Text $Task
+        $gatewayRoute = Select-ChatGatewayRoute -Text $Task
+        $cacheEntry = if ($gatewayRoute.Route -eq "chatgpt") { Get-ChatGatewayCacheEntry -CodexHome $CodexHome -Task $Task -Project "Gateway" } else { $null }
         $profile = Select-CodexGear -Text $Task
         $gear = Get-CodexGear -Profile $profile
         Write-Host "Task route: $Task"
-        Write-Host "Selected: $($gear.Profile) / $($gear.Gear) / $($gear.Model) / $($gear.Effort)"
+        Write-Host "AI work route: $($workRoute.Route) ($($workRoute.Reason))"
+        Write-Host "Gateway route: $($gatewayRoute.Route) ($($gatewayRoute.Reason))"
+        if ($cacheEntry) { Write-Host "Gateway cache: $($cacheEntry.Status) ($($cacheEntry.Reason))" }
+        Write-Host "Codex fallback: $($gear.Profile) / $($gear.Gear) / $($gear.Model) / $($gear.Effort)"
     }
 } else {
     Write-Host "CodexGear.psm1 not found."
+}
+
+Write-Section "ChatGPT Bridge Cache"
+$cacheDir = Join-Path $CodexHome "cache\chatgpt-bridge"
+if (Test-Path -LiteralPath $cacheDir) {
+    $cacheFiles = @(Get-ChildItem -LiteralPath $cacheDir -Filter "*.json" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
+    Write-Host "Cache entries: $($cacheFiles.Count)"
+    foreach ($item in ($cacheFiles | Select-Object -First 5)) {
+        try {
+            $entry = Get-Content -LiteralPath $item.FullName -Raw | ConvertFrom-Json
+            Write-Host "  $($entry.Project) | $($entry.CompletedAt) | assets=$($entry.AssetCount) | $($entry.Task)"
+        } catch {
+            Write-Host "  invalid cache entry: $($item.FullName)"
+        }
+    }
+} else {
+    Write-Host "Cache entries: 0"
 }
 
 Write-Section "Systems Backup"
@@ -121,6 +144,12 @@ if (Test-Path -LiteralPath $SystemsRepo) {
 
 Write-Section "Useful Commands"
 Write-Host "$scriptRoot\codex-systems-status.cmd"
+Write-Host "$scriptRoot\ai-credits-optimizer.cmd -DryRun `"draft a client email from these notes`""
+Write-Host "$scriptRoot\codex-gateway.cmd -DryRun `"write a cold email`""
+Write-Host "$scriptRoot\codex-gateway.cmd -Refresh `"write a cold email`""
+Write-Host "$scriptRoot\codex-gateway-tally.cmd"
+Write-Host "$scriptRoot\codex-gateway-tally.cmd -All -IncludeTestProjects"
+Write-Host "$scriptRoot\codex-gateway-feedback.cmd -Task `"write a cold email`" -Rating 5 -Outcome good"
 Write-Host "$scriptRoot\chatgpt-route.cmd `"draft a client email from these notes`""
 Write-Host "$scriptRoot\chatgpt-route.cmd `"brainstorm poster concepts for this launch`""
 Write-Host "$scriptRoot\chatgpt-return.cmd -Print"

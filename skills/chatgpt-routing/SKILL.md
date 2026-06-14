@@ -1,11 +1,27 @@
 ---
 name: chatgpt-routing
-description: Use when deciding whether to route non-code work out of Codex to ChatGPT to preserve Codex usage, preparing or importing a ChatGPT handoff, or distinguishing ChatGPT writing/strategy/design direction work from Codex repo execution.
+description: Use when deciding whether to route non-code work out of Codex to ChatGPT or DeepSeek to preserve Codex usage, preparing or importing a provider handoff, or distinguishing external writing/strategy/design/draft work from Codex repo execution.
 ---
 
 # ChatGPT Routing
 
 Use this skill when a task can be completed without Codex-specific tools or local repo execution.
+
+For Zev's projects, also use `$codex-chatgpt-bridge` when the task involves preserving Codex credits, choosing ChatGPT vs DeepSeek, preparing a bounded handoff, or importing a structured return packet.
+
+## Provider First
+
+When either ChatGPT or DeepSeek might be right, check the provider gateway first:
+
+`C:\Users\zev\.codex\scripts\ai-provider-gateway.cmd -DryRun "TASK"`
+
+Dispatch through:
+
+`C:\Users\zev\.codex\scripts\ai-provider-gateway.cmd "TASK"`
+
+Use ChatGPT for premium polished writing, emails, sales copy, strategy, positioning, explanations, summaries, high-quality creative direction, brand work, and ChatGPT-native image/logo generation.
+
+Use DeepSeek for low-cost first-pass drafts, bulk or volume long-form content, SEO article packets, rough structured analysis, comparison drafts, and cheap second opinions that Codex will QA before publishing.
 
 ## Route To ChatGPT
 
@@ -21,9 +37,19 @@ Say:
 
 `ChatGPT route recommended - brief reason`
 
-Then prepare the handoff:
+Then prepare the handoff, or let the optimizer do it:
+
+`C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"`
+
+`C:\Users\zev\.codex\scripts\codex-gateway.cmd "TASK"`
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
+
+`C:\Users\zev\.codex\scripts\deepseek-route.cmd "TASK"`
+
+`C:\Users\zev\.codex\scripts\ai-credits-optimizer.cmd "TASK"`
+
+`ai-provider-gateway.cmd` is the preferred front door when DeepSeek is in play. `codex-gateway.cmd` remains the ChatGPT-specific front door. It reuses exact cached ChatGPT packets/assets when safe, bypasses cache for freshness-sensitive prompts, and logs route/savings events. Use `-Refresh` for a new ChatGPT run, `-NoCache` for raw routing tests, and `-SplitHybrid` only when the detachable ChatGPT subtask is clear. Use `codex-gateway-tally.cmd` to inspect route counts, ChatGPT and DeepSeek moves, savings estimates, and the reason/signals behind each decision. `codex-auto.cmd` also runs the lower-level optimizer before launching a new Codex session. Use `[codex]`, `--codex`, or `-ForceCodex` to bypass the optimizer when the task should stay in Codex.
 
 ## Keep In Codex
 
@@ -37,7 +63,7 @@ Keep the task in Codex when it needs:
 
 ## Return To Codex
 
-Routed prompts should require ChatGPT to end with a `CODEX_RETURN_PACKET` containing summary, decisions, deliverable, Codex next action, files/assets needed, and owner buttons needed.
+Routed prompts should require ChatGPT or DeepSeek to end with a `CODEX_RETURN_PACKET` containing summary, provider used, decisions, deliverable, Codex next action, files/assets needed, and owner buttons needed.
 
 Default to full automation when Chrome/ChatGPT web is available:
 
@@ -52,9 +78,13 @@ Use manual clipboard return only when browser automation is unavailable or ChatG
 
 After Zev copies the ChatGPT answer and says `import ChatGPT result`, import it with:
 
-`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print`
+`C:\Users\zev\.codex\scripts\chatgpt-return.cmd -Print -RequirePacket`
 
 Then continue the Codex mission from the imported packet without asking Zev to repeat context.
+
+After useful or bad routes, record quality with:
+
+`C:\Users\zev\.codex\scripts\codex-gateway-feedback.cmd -SessionPath "SESSION_JSON" -Rating 1-5 -Outcome good|mixed|bad -Notes "..."`
 
 ## Boundary
 

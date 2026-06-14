@@ -19,6 +19,7 @@ if ($Profile) {
 } else {
     $gear = $null
 }
+$workRoute = if ($prompt) { Select-AiWorkRoute -Text $prompt } else { $null }
 
 if ($Json) {
     if ($gear) {
@@ -30,7 +31,24 @@ if ($Json) {
 }
 
 if ($gear) {
-    Write-Host "Codex gear route"
+    if ($workRoute) {
+        $signalText = if ($workRoute.Signals -and $workRoute.Signals.Count -gt 0) {
+            $workRoute.Signals -join ", "
+        } else {
+            "none"
+        }
+        Write-Host "AI credits optimizer route"
+        Write-Host "Work route: $($workRoute.Route)"
+        Write-Host "Reason: $($workRoute.Reason)"
+        Write-Host "Confidence: $($workRoute.Confidence)"
+        Write-Host "Signals: $signalText"
+        Write-Host ""
+    }
+    if ($workRoute -and $workRoute.Route -eq "chatgpt") {
+        Write-Host "Codex fallback gear route"
+    } else {
+        Write-Host "Codex gear route"
+    }
     Write-Host "Profile: $($gear.Profile)"
     Write-Host "Gear: $($gear.Gear)"
     Write-Host "Model: $($gear.Model)"

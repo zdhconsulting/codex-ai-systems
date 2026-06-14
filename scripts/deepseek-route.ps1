@@ -37,6 +37,23 @@ function Write-DeepSeekEvent {
     ($Event | ConvertTo-Json -Compress -Depth 8) | Add-Content -LiteralPath $eventsPath -Encoding UTF8
 }
 
+function Open-UrlInChrome {
+    param([string] $Url)
+    $chromeCandidates = @(
+        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+        "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
+        "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+    )
+    foreach ($candidate in $chromeCandidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            Start-Process -FilePath $candidate -ArgumentList $Url | Out-Null
+            return $true
+        }
+    }
+    Start-Process $Url
+    return $false
+}
+
 $deliverableMode = if ($PacketOnly) {
     "Return only the CODEX_RETURN_PACKET block. Put the useful answer inside Deliverable."
 } else {
@@ -104,7 +121,7 @@ if ($Print -or $PromptOnly) {
 
 $opened = $false
 if (-not $NoOpen -and -not $PromptOnly) {
-    Start-Process "https://chat.deepseek.com/"
+    Open-UrlInChrome "https://chat.deepseek.com/" | Out-Null
     $opened = $true
 }
 
