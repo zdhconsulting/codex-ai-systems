@@ -37,6 +37,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `queues/owner-buttons.example.json`: empty queue template.
 - `dashboard/`: ZDH Dashboard source for project, git, and owner-button monitoring.
 - `codexui/`: standalone Codex custom UI prototype and launcher source.
+- `ai-manager/`: new AI Manager project workspace and planning scaffold.
 
 ## Save
 
