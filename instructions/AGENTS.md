@@ -16,6 +16,68 @@ When Zev reports an owner-only task is complete, say exactly:
 
 Then immediately continue working.
 
+## Conversation Lane Hygiene
+
+Treat Zev's current Desktop chat as the command and conversation lane by default. Keep it available for high-level direction, questions, decisions, and quick bounded checks.
+
+Use work lanes whenever a task could tie up the conversation lane: long implementation, broad repo investigation, receipt sweeps, worker-thread reads, dashboard/report generation, recurring heartbeat output, automation noise, or anything likely to run longer than a quick status check.
+
+When Zev says to pass something off, delegate it to a sub-agent or a dedicated worker/reporting thread instead of continuing the heavy work in the conversation lane. Keep ownership clear: name the work lane, give it the concrete task, define its file/repo scope, and avoid overlapping writes.
+
+For Bossman specifically, routine observer reports, heartbeat XML, delivery work, receipt reading, worker bumps, and background recycling belong in the Bossman reporting/worker lanes, not the main conversation chat. The main chat may do bounded local/status checks, critical escalation decisions, and final synthesis.
+
+In the conversation lane, give only short handoff/status notes unless Zev asks for detail. Bring back the final result, blockers, owner/commander approvals, and important decisions; leave routine progress chatter in the work lane.
+
+## Agent Lane Operating Standard
+
+AI Manager owns the quality of its own delegation. When work is passed to a sub-agent, worker thread, reporting lane, or background lane, the lane must be named by function, not an opaque nickname.
+
+Every non-trivial pass-off should include:
+
+- Agent / lane name.
+- Role and why this lane is the right lane.
+- Mission and desired behavior.
+- Exact scope: repos, files, threads, queues, or dashboards.
+- Authority: inspect only, edit Bossman only, edit project repo, commit/push, or recommend.
+- No-touch rules.
+- Success criteria.
+- Escalation rules.
+- Required return packet.
+
+The standard return packet is:
+
+```text
+Agent:
+Status:
+What Was Supposed To Happen:
+What Actually Happened:
+Root Cause:
+Actions Taken:
+Files/Threads Touched:
+Verification:
+Result:
+Blockers:
+Owner Button Needed:
+Commander Approval Needed:
+Critical Escalation:
+Next Best Action:
+System Hardening Note:
+```
+
+Use the right lane for the problem:
+
+- `Glitch Fix Lane`: broken tools, wrong repo, stale queue state, failed sends, context drift.
+- `Shallow Response Rescue Lane`: weak, no-op, or one-minute receipts.
+- `Project Push Lane`: scoped implementation, verification, commit, and push.
+- `Creative Growth Lane`: bigger offer, funnel, page, positioning, or product-movement ideas.
+- `Approval Gatekeeper Lane`: fake approval requests versus true owner/commander blockers.
+- `Receipt Auditor Lane`: completed, in-progress, blocked, failed, rescue, or critical classification.
+- `Process Efficiency Reviewer` / `Efficiency Man`: repeated waste, noisy lanes, vague handoffs, bad cadence, fake approvals, or systemic friction.
+
+Bossman is the small-sprint dispatcher: he creates repeated safe, useful, verified pushes and receipts. AI Manager owns strategy, lane routing, repair loops, and final synthesis. Efficiency Man reviews whether the way the AI system is operating is efficient enough.
+
+Before starting a new lane, sub-agent, worker thread, or reporting thread, give it the operating standard: it is a functional lane, not a personality; it reports to AI Manager; it stays inside scope; it keeps Zev's main chat clean; it uses evidence; it does not invent authority; it does not over-escalate normal local work; it returns root cause, result, blockers, verification, next action, and system-hardening notes when relevant.
+
 ## Next Protocol
 
 When Zev says `Next`, treat it as an instruction to continue the current mission with the best next action. Do not ask what `Next` means, and do not turn it into a menu of options unless a real approval decision is required.
@@ -79,6 +141,8 @@ The provider gateway classifies work as `codex`, `chatgpt`, `deepseek`, or `hybr
 
 Force routes with `-ForceCodex`, `-ForceChatGPT`, or `-ForceDeepSeek`; inline tags `[codex]`, `[chatgpt]`, and `[deepseek]` work too.
 
+Optimizer-selected ChatGPT or DeepSeek routes are soft by default. If the provider window/composer is not usable within the configured readiness window, normally 30 seconds, Codex may continue the task locally using the generated Codex fallback command. Direct provider commands and explicit provider overrides are firm unless a gateway passes the soft fallback flag; firm routes include `-ForceChatGPT`, `-ForceDeepSeek`, `[chatgpt]`, `[deepseek]`, `[firm-provider]`, `[provider-required]`, `[no-provider-fallback]`, or `--firm-provider`, and should report the bridge/provider problem instead of silently falling back. Routing outputs and session JSON should expose `ProviderFirm`, `CodexFallbackAllowed`, `ProviderReadyTimeoutSeconds`, `FallbackReason`, `FallbackCommand`, and `FallbackNextAction` where applicable.
+
 Use `C:\Users\zev\.codex\scripts\deepseek-route.cmd "TASK"` for a direct DeepSeek handoff. It copies a bounded prompt, opens DeepSeek unless `-NoOpen` is set, and requires a `CODEX_RETURN_PACKET`.
 
 Use `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd` to review ChatGPT and DeepSeek route decisions, dispatches, savings estimates, and the reason/signals behind each decision.
@@ -96,6 +160,8 @@ Dispatch through:
 The gateway classifies tasks as `chatgpt`, `codex`, or `hybrid`. It auto-bounces high-confidence detachable work to ChatGPT, keeps local/risky work in Codex, and marks mixed creative-plus-local work as ask-first so Codex can split the task without losing the local execution half.
 
 Force Codex with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`.
+
+Normal ChatGPT gateway selections are soft provider routes: if Chrome/ChatGPT is not ready within the configured readiness window, continue in Codex rather than blocking the work. Explicit ChatGPT overrides, direct provider commands, and `[firm-provider]` style tags make the provider route firm unless the gateway deliberately passes the soft fallback flag.
 
 The gateway also has conservative savings controls:
 
