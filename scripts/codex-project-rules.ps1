@@ -55,7 +55,7 @@ The provider gateway classifies work as `codex`, `chatgpt`, `deepseek`, or `hybr
 - DeepSeek is the low-cost detachable lane for first-pass drafts, bulk/volume long-form content, SEO article packets, rough structured analysis, comparison drafts, and cheap second opinions.
 - Hybrid means split the work: external provider drafts/thinks, then Codex imports, applies, verifies, publishes, or tests locally.
 
-Force routes with `-ForceCodex`, `-ForceChatGPT`, or `-ForceDeepSeek`; inline tags `[codex]`, `[chatgpt]`, and `[deepseek]` work too. Use `C:\Users\zev\.codex\scripts\deepseek-route.cmd "TASK"` for a direct DeepSeek handoff. Use `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd` to review ChatGPT and DeepSeek route decisions, dispatches, savings estimates, and the reason/signals behind each decision.
+Force routes with `-ForceCodex`, `-ForceChatGPT`, or `-ForceDeepSeek`; inline tags `[codex]`, `[chatgpt]`, and `[deepseek]` work too. Optimizer-selected provider routes are soft by default: if ChatGPT or DeepSeek is not ready within the configured readiness window, normally 30 seconds, Codex may continue locally using the generated fallback command. Direct provider commands and explicit provider overrides are firm unless a gateway deliberately passes the soft fallback flag. Routing outputs/session JSON should expose `ProviderFirm`, `CodexFallbackAllowed`, `ProviderReadyTimeoutSeconds`, `FallbackReason`, `FallbackCommand`, and `FallbackNextAction` where applicable. Use `C:\Users\zev\.codex\scripts\deepseek-route.cmd "TASK"` for a direct DeepSeek handoff. Use `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd` to review ChatGPT and DeepSeek route decisions, dispatches, savings estimates, and the reason/signals behind each decision.
 
 ## AI Credits Usage Optimizer
 
@@ -70,6 +70,8 @@ Use `$codex-chatgpt-bridge` for routing edge cases, bounded ChatGPT handoffs, an
 Route non-repo writing, brainstorming, strategy, summaries, learning, second opinions, and graphic design direction to ChatGPT to preserve Codex usage.
 
 Use `C:\Users\zev\.codex\scripts\codex-gateway.cmd -DryRun "TASK"` before substantial non-local work. The gateway reuses exact cached ChatGPT packets/assets when safe, bypasses cache for current/latest/today/news/price/weather/schedule style prompts, and shows estimated avoided Codex work plus current rate-limit pressure. Use `-Refresh` to force a fresh ChatGPT run, `-NoCache` to test raw routing, and `-SplitHybrid` only when the ChatGPT-safe part is obvious and Codex will apply or verify locally afterward.
+
+Normal ChatGPT gateway selections are soft provider routes; explicit ChatGPT overrides, direct provider commands, and `[firm-provider]` style tags are firm and should surface the bridge/provider blocker instead of silently falling back.
 
 Use `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd` to review route counts, ChatGPT moves, cache hits, completions, savings estimates, and the reason/signals for each decision.
 

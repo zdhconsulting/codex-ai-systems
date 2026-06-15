@@ -153,28 +153,43 @@ $firmProviderTag = $taskText.ToLowerInvariant() -match "\[(firm-provider|provide
     $taskText.ToLowerInvariant() -match "\s--(firm-provider|provider-required|no-provider-fallback|strict-provider)\b"
 $forceChatGptTag = $taskText.ToLowerInvariant() -match "\[(chatgpt|gpt|force-chatgpt)\]" -or
     $taskText.ToLowerInvariant() -match "\s--(chatgpt|gpt|force-chatgpt)\b"
+$gatewayRoute = Select-ChatGatewayRoute -Text $taskText -ForceChatGPT:$ForceChatGPT -ForceCodex:$ForceCodex
 $providerReadyTimeoutSeconds = [Math]::Max(5, $ProviderReadyTimeoutSeconds)
-$providerFirm = [bool]($FirmProvider -or $firmProviderTag -or (($ForceChatGPT -or $forceChatGptTag) -and -not $AllowProviderFallback))
-$codexFallbackAllowed = -not $providerFirm
+$providerRouteSelected = $gatewayRoute.Route -eq "chatgpt" -or $gatewayRoute.Route -eq "hybrid"
+$providerFirm = [bool]($providerRouteSelected -and ($FirmProvider -or $firmProviderTag -or (($ForceChatGPT -or $forceChatGptTag) -and -not $AllowProviderFallback)))
+$codexFallbackAllowed = $providerRouteSelected -and -not $providerFirm
 $codexFallbackCommand = if ($codexFallbackAllowed) {
     "& $(ConvertTo-PowerShellSingleQuotedArgument $codexAuto) -ForceCodex -NoOptimizeCredits -Cwd $(ConvertTo-PowerShellSingleQuotedArgument $Cwd) $(ConvertTo-PowerShellSingleQuotedArgument $taskText)"
 } else {
     ""
 }
+$fallbackReason = if (-not $providerRouteSelected) {
+    "No external ChatGPT provider route selected."
+} elseif ($providerFirm) {
+    "Provider route is firm because ChatGPT was explicitly forced or provider fallback was disabled."
+} else {
+    "Provider route is soft; if ChatGPT is not ready quickly, continue in Codex."
+}
+$fallbackNextAction = if ($codexFallbackAllowed) {
+    "If ChatGPT is unavailable after $providerReadyTimeoutSeconds seconds, run the fallback command and continue in Codex."
+} elseif ($gatewayRoute.Route -eq "chatgpt" -or $gatewayRoute.Route -eq "hybrid") {
+    "Fix or retry the ChatGPT bridge/provider lane; do not continue in Codex silently."
+} else {
+    $gatewayRoute.NextAction
+}
 $providerFallbackPolicy = [ordered]@{
     Provider = "chatgpt"
     Firm = $providerFirm
+    ProviderFirm = $providerFirm
     CodexFallbackAllowed = $codexFallbackAllowed
     ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
     CodexFallbackCommand = $codexFallbackCommand
-    Reason = if ($providerFirm) {
-        "Provider route is firm because ChatGPT was explicitly forced or provider fallback was disabled."
-    } else {
-        "Provider route is soft; if ChatGPT is not ready quickly, continue in Codex."
-    }
+    FallbackCommand = $codexFallbackCommand
+    Reason = $fallbackReason
+    FallbackReason = $fallbackReason
+    FallbackNextAction = $fallbackNextAction
 }
 
-$gatewayRoute = Select-ChatGatewayRoute -Text $taskText -ForceChatGPT:$ForceChatGPT -ForceCodex:$ForceCodex
 $fallbackProfile = Select-CodexGear -Text $taskText
 $taskKey = Get-ChatGatewayTaskKey -Text $taskText -Project $Project
 $cache = $null

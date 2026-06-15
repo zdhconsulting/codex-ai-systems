@@ -141,7 +141,7 @@ The provider gateway classifies work as `codex`, `chatgpt`, `deepseek`, or `hybr
 
 Force routes with `-ForceCodex`, `-ForceChatGPT`, or `-ForceDeepSeek`; inline tags `[codex]`, `[chatgpt]`, and `[deepseek]` work too.
 
-Provider routes are soft by default. If ChatGPT or DeepSeek is selected by the optimizer but the provider window/composer is not usable within about 30 seconds, Codex may continue the task locally using the generated Codex fallback command. Provider routes are firm only when Zev or a lane explicitly forces them with `-ForceChatGPT`, `-ForceDeepSeek`, `[chatgpt]`, `[deepseek]`, `[firm-provider]`, `[provider-required]`, `[no-provider-fallback]`, or `--firm-provider`; firm routes should report the bridge/provider problem instead of silently falling back.
+Optimizer-selected ChatGPT or DeepSeek routes are soft by default. If the provider window/composer is not usable within the configured readiness window, normally 30 seconds, Codex may continue the task locally using the generated Codex fallback command. Direct provider commands and explicit provider overrides are firm unless a gateway passes the soft fallback flag; firm routes include `-ForceChatGPT`, `-ForceDeepSeek`, `[chatgpt]`, `[deepseek]`, `[firm-provider]`, `[provider-required]`, `[no-provider-fallback]`, or `--firm-provider`, and should report the bridge/provider problem instead of silently falling back. Routing outputs and session JSON should expose `ProviderFirm`, `CodexFallbackAllowed`, `ProviderReadyTimeoutSeconds`, `FallbackReason`, `FallbackCommand`, and `FallbackNextAction` where applicable.
 
 Use `C:\Users\zev\.codex\scripts\deepseek-route.cmd "TASK"` for a direct DeepSeek handoff. It copies a bounded prompt, opens DeepSeek unless `-NoOpen` is set, and requires a `CODEX_RETURN_PACKET`.
 
@@ -161,7 +161,7 @@ The gateway classifies tasks as `chatgpt`, `codex`, or `hybrid`. It auto-bounces
 
 Force Codex with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`.
 
-Normal ChatGPT gateway selections are soft provider routes: if Chrome/ChatGPT is not ready within the configured readiness window, continue in Codex rather than blocking the work. Explicit ChatGPT overrides and `[firm-provider]` style tags make the provider route firm.
+Normal ChatGPT gateway selections are soft provider routes: if Chrome/ChatGPT is not ready within the configured readiness window, continue in Codex rather than blocking the work. Explicit ChatGPT overrides, direct provider commands, and `[firm-provider]` style tags make the provider route firm unless the gateway deliberately passes the soft fallback flag.
 
 The gateway also has conservative savings controls:
 

@@ -139,19 +139,31 @@ $codexFallbackCommand = if ($codexFallbackAllowed) {
 } else {
     ""
 }
+$fallbackReason = if ($route.Route -ne "chatgpt" -and $route.Route -ne "deepseek") {
+    "No external provider route selected."
+} elseif ($providerFirm) {
+    "Provider route is firm because the provider was explicitly forced or provider fallback was disabled."
+} else {
+    "Provider route is soft; if the provider is not ready quickly, continue in Codex."
+}
+$fallbackNextAction = if ($codexFallbackAllowed) {
+    "If the provider is unavailable after $providerReadyTimeoutSeconds seconds, run the fallback command and continue in Codex."
+} elseif ($route.Route -eq "chatgpt" -or $route.Route -eq "deepseek") {
+    "Fix or retry the provider bridge lane; do not continue in Codex silently."
+} else {
+    $route.NextAction
+}
 $providerFallbackPolicy = [ordered]@{
     Provider = $route.Provider
     Firm = $providerFirm
+    ProviderFirm = $providerFirm
     CodexFallbackAllowed = $codexFallbackAllowed
     ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
     CodexFallbackCommand = $codexFallbackCommand
-    Reason = if ($route.Route -ne "chatgpt" -and $route.Route -ne "deepseek") {
-        "No external provider route selected."
-    } elseif ($providerFirm) {
-        "Provider route is firm because the provider was explicitly forced or provider fallback was disabled."
-    } else {
-        "Provider route is soft; if the provider is not ready quickly, continue in Codex."
-    }
+    FallbackCommand = $codexFallbackCommand
+    Reason = $fallbackReason
+    FallbackReason = $fallbackReason
+    FallbackNextAction = $fallbackNextAction
 }
 
 $result = [ordered]@{
@@ -289,6 +301,7 @@ if ($route.Route -eq "deepseek") {
 
     $params = @{
         Project = $Project
+        Cwd = $Cwd
     }
     if ($providerFirm) { $params.FirmProvider = $true } else { $params.AllowProviderFallback = $true }
     $params.ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds

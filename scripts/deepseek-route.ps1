@@ -1,5 +1,6 @@
 param(
     [string] $Project = "General",
+    [string] $Cwd = (Get-Location).Path,
     [int] $ProviderReadyTimeoutSeconds = 30,
     [switch] $AllowProviderFallback,
     [switch] $FirmProvider,
@@ -77,25 +78,42 @@ $deliverableMode = if ($PacketOnly) {
     "Give the useful answer first, then end with the CODEX_RETURN_PACKET block."
 }
 
+$normalizedTaskText = $taskText.ToLowerInvariant()
+$firmProviderTag = $normalizedTaskText -match "\[(firm-provider|provider-required|no-provider-fallback|strict-provider)\]" -or
+    $normalizedTaskText -match "\s--(firm-provider|provider-required|no-provider-fallback|strict-provider)\b"
+$forceDeepSeekTag = $normalizedTaskText -match "\[(deepseek|force-deepseek)\]" -or
+    $normalizedTaskText -match "\s--(deepseek|force-deepseek)\b"
 $providerReadyTimeoutSeconds = [Math]::Max(5, $ProviderReadyTimeoutSeconds)
-$providerFirm = [bool]($FirmProvider -or -not $AllowProviderFallback)
+$providerFirm = [bool]($FirmProvider -or $firmProviderTag -or $forceDeepSeekTag -or -not $AllowProviderFallback)
 $codexAutoCmd = Join-Path $PSScriptRoot "codex-auto.cmd"
 $codexFallbackCommand = if (-not $providerFirm) {
-    "& $(ConvertTo-PowerShellSingleQuotedArgument $codexAutoCmd) -ForceCodex -NoOptimizeCredits $(ConvertTo-PowerShellSingleQuotedArgument $taskText)"
+    "& $(ConvertTo-PowerShellSingleQuotedArgument $codexAutoCmd) -ForceCodex -NoOptimizeCredits -Cwd $(ConvertTo-PowerShellSingleQuotedArgument $Cwd) $(ConvertTo-PowerShellSingleQuotedArgument $taskText)"
 } else {
     ""
+}
+$fallbackReason = if ($providerFirm -and $forceDeepSeekTag) {
+    "Provider route is firm because DeepSeek was explicitly tagged."
+} elseif ($providerFirm) {
+    "Provider route is firm because DeepSeek was directly requested or provider fallback was disabled."
+} else {
+    "Provider route is soft; if DeepSeek is not ready quickly, continue in Codex."
+}
+$fallbackNextAction = if (-not $providerFirm) {
+    "If DeepSeek is unavailable after $providerReadyTimeoutSeconds seconds, run the fallback command and continue in Codex."
+} else {
+    "Fix or retry the DeepSeek bridge/provider lane; do not continue in Codex silently."
 }
 $providerFallbackPolicy = [ordered]@{
     Provider = "deepseek"
     Firm = $providerFirm
+    ProviderFirm = $providerFirm
     CodexFallbackAllowed = (-not $providerFirm)
     ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
     CodexFallbackCommand = $codexFallbackCommand
-    Reason = if ($providerFirm) {
-        "Provider route is firm because DeepSeek was directly requested or provider fallback was disabled."
-    } else {
-        "Provider route is soft; if DeepSeek is not ready quickly, continue in Codex."
-    }
+    FallbackCommand = $codexFallbackCommand
+    Reason = $fallbackReason
+    FallbackReason = $fallbackReason
+    FallbackNextAction = $fallbackNextAction
 }
 
 $prompt = @"
@@ -168,6 +186,7 @@ $session = [ordered]@{
     Status = "prepared"
     CreatedAt = (Get-Date).ToString("o")
     Project = $Project
+    Cwd = $Cwd
     Provider = "deepseek"
     Task = $taskText
     PromptPath = $promptPath
@@ -185,6 +204,7 @@ Write-DeepSeekEvent ([ordered]@{
     Type = "prepared"
     At = (Get-Date).ToString("o")
     Project = $Project
+    Cwd = $Cwd
     Provider = "deepseek"
     Route = "deepseek"
     Task = $taskText
