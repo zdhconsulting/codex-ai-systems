@@ -208,9 +208,9 @@ if args.apply and archive_list:
             [(now_ms, item["id"]) for item in archive_list],
         )
 
-remaining_counts = {}
+remaining_counts = []
 for row in con.execute("select cwd, count(*) as n from threads where archived=0 group by cwd order by n desc"):
-    remaining_counts[row["cwd"]] = row["n"]
+    remaining_counts.append({"cwd": row["cwd"], "count": row["n"]})
 
 report = {
     "apply": bool(args.apply),
