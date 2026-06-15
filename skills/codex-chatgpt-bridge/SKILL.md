@@ -56,6 +56,14 @@ Use `chatgpt-auto-route.cmd` for repeatable bridge runs. It routes the task, cre
 
 In Codex Desktop, run the printed snippet with the Node REPL tool to submit the prompt through Chrome, wait for completion, bundle generated page images, save them under the requested output folder, write/import the return packet, and append a savings event to `.codex/logs/chatgpt-bridge/events.jsonl`.
 
+Provider fallback policy:
+
+- Optimizer-selected ChatGPT or DeepSeek routes are soft by default.
+- If the provider window/composer is not usable within the configured readiness window, normally 30 seconds, continue in Codex using the generated fallback command instead of blocking the work.
+- Provider routes are firm when explicitly forced with `-ForceChatGPT`, `-ForceDeepSeek`, `[chatgpt]`, `[deepseek]`, `[firm-provider]`, `[provider-required]`, `[no-provider-fallback]`, or `--firm-provider`.
+- Firm routes should report the provider/bridge problem and wait for the provider lane to be fixed rather than silently continuing in Codex.
+- Direct `chatgpt-auto-route.cmd` or `deepseek-route.cmd` usage is treated as firm unless the caller passes the soft fallback flag through the gateway.
+
 Important limitation: the PowerShell command cannot directly call the Codex Chrome extension outside a Codex Desktop tool runtime. The Chrome automation layer lives in `chatgpt-chrome-bridge.mjs` and must run from Codex Desktop where the `agent.browsers` API exists.
 
 ## Handoff Rules

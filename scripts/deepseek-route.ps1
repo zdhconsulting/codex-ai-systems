@@ -1,5 +1,8 @@
 param(
     [string] $Project = "General",
+    [int] $ProviderReadyTimeoutSeconds = 30,
+    [switch] $AllowProviderFallback,
+    [switch] $FirmProvider,
     [switch] $NoOpen,
     [switch] $NoCopy,
     [switch] $Print,
@@ -34,7 +37,21 @@ function ConvertTo-SafeName {
 function Write-DeepSeekEvent {
     param([object] $Event)
     New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
-    ($Event | ConvertTo-Json -Compress -Depth 8) | Add-Content -LiteralPath $eventsPath -Encoding UTF8
+    $line = $Event | ConvertTo-Json -Compress -Depth 8
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        try {
+            $line | Add-Content -LiteralPath $eventsPath -Encoding UTF8
+            return
+        } catch [System.IO.IOException] {
+            Start-Sleep -Milliseconds (100 * $attempt)
+        }
+    }
+    Write-Warning "Could not append DeepSeek bridge event after retries: $eventsPath"
+}
+
+function ConvertTo-PowerShellSingleQuotedArgument {
+    param([string] $Value)
+    return "'" + ($Value -replace "'", "''") + "'"
 }
 
 function Open-UrlInChrome {
@@ -58,6 +75,27 @@ $deliverableMode = if ($PacketOnly) {
     "Return only the CODEX_RETURN_PACKET block. Put the useful answer inside Deliverable."
 } else {
     "Give the useful answer first, then end with the CODEX_RETURN_PACKET block."
+}
+
+$providerReadyTimeoutSeconds = [Math]::Max(5, $ProviderReadyTimeoutSeconds)
+$providerFirm = [bool]($FirmProvider -or -not $AllowProviderFallback)
+$codexAutoCmd = Join-Path $PSScriptRoot "codex-auto.cmd"
+$codexFallbackCommand = if (-not $providerFirm) {
+    "& $(ConvertTo-PowerShellSingleQuotedArgument $codexAutoCmd) -ForceCodex -NoOptimizeCredits $(ConvertTo-PowerShellSingleQuotedArgument $taskText)"
+} else {
+    ""
+}
+$providerFallbackPolicy = [ordered]@{
+    Provider = "deepseek"
+    Firm = $providerFirm
+    CodexFallbackAllowed = (-not $providerFirm)
+    ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
+    CodexFallbackCommand = $codexFallbackCommand
+    Reason = if ($providerFirm) {
+        "Provider route is firm because DeepSeek was directly requested or provider fallback was disabled."
+    } else {
+        "Provider route is soft; if DeepSeek is not ready quickly, continue in Codex."
+    }
 }
 
 $prompt = @"
@@ -137,6 +175,7 @@ $session = [ordered]@{
     SessionPath = $sessionPath
     OpenedDeepSeek = $opened
     CopiedPrompt = $copied
+    ProviderFallbackPolicy = $providerFallbackPolicy
     DeepSeekUrl = "https://chat.deepseek.com/"
     NextManualAction = "Paste the prompt into DeepSeek if needed, wait for the CODEX_RETURN_PACKET, then import it with chatgpt-return.cmd -Print -RequirePacket or a project-specific importer."
 }
@@ -154,11 +193,16 @@ Write-DeepSeekEvent ([ordered]@{
     SessionPath = $sessionPath
     OpenedDeepSeek = $opened
     CopiedPrompt = $copied
+    ProviderFallbackPolicy = $providerFallbackPolicy
 })
 
 if (-not $Quiet -and -not $PromptOnly) {
     Write-Host "DeepSeek route prepared."
     Write-Host "Provider: deepseek"
+    $mode = if ($providerFallbackPolicy.Firm) { "firm" } else { "soft" }
+    $fallbackText = if ($providerFallbackPolicy.CodexFallbackAllowed) { "Codex fallback allowed after $($providerFallbackPolicy.ProviderReadyTimeoutSeconds)s readiness failure" } else { "no automatic Codex fallback" }
+    Write-Host "Provider route: $mode ($fallbackText)"
+    if ($providerFallbackPolicy.CodexFallbackCommand) { Write-Host "Fallback command: $($providerFallbackPolicy.CodexFallbackCommand)" }
     Write-Host "Session: $sessionPath"
     Write-Host "Prompt: $promptPath"
     Write-Host "Response: $responsePath"

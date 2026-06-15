@@ -1,13 +1,17 @@
 param(
     [string] $Project = "General",
     [string] $OutDir = "",
+    [string] $Cwd = (Get-Location).Path,
     [string] $InputFile = "",
     [string] $SessionPath = "",
+    [int] $ProviderReadyTimeoutSeconds = 30,
     [switch] $DryRun,
     [switch] $NoOpen,
     [switch] $PacketOnly,
     [switch] $ForceChatGPT,
     [switch] $ForceCodex,
+    [switch] $AllowProviderFallback,
+    [switch] $FirmProvider,
     [switch] $RequirePacket,
     [switch] $Json,
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
@@ -35,10 +39,24 @@ function ConvertTo-JsString {
     return ($Value -replace '\\', '/') | ConvertTo-Json -Compress
 }
 
+function ConvertTo-PowerShellSingleQuotedArgument {
+    param([string] $Value)
+    return "'" + ($Value -replace "'", "''") + "'"
+}
+
 function Write-BridgeEvent {
     param([object] $Event)
     New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
-    ($Event | ConvertTo-Json -Compress -Depth 8) | Add-Content -LiteralPath $eventsPath -Encoding UTF8
+    $line = $Event | ConvertTo-Json -Compress -Depth 8
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        try {
+            $line | Add-Content -LiteralPath $eventsPath -Encoding UTF8
+            return
+        } catch [System.IO.IOException] {
+            Start-Sleep -Milliseconds (100 * $attempt)
+        }
+    }
+    Write-Warning "Could not append ChatGPT bridge event after retries: $eventsPath"
 }
 
 function Write-BridgeResult {
@@ -67,6 +85,13 @@ function Write-BridgeResult {
     if ($Result.HandoffPath) { Write-Host "Handoff: $($Result.HandoffPath)" }
     if ($Result.AssetOutDir) { Write-Host "Assets: $($Result.AssetOutDir)" }
     if ($Result.TaskKey) { Write-Host "Task key: $($Result.TaskKey)" }
+    if ($Result.ProviderFallbackPolicy) {
+        $policy = $Result.ProviderFallbackPolicy
+        $mode = if ($policy.Firm) { "firm" } else { "soft" }
+        $fallbackText = if ($policy.CodexFallbackAllowed) { "Codex fallback allowed after $($policy.ProviderReadyTimeoutSeconds)s readiness failure" } else { "no automatic Codex fallback" }
+        Write-Host "Provider route: $mode ($fallbackText)"
+        if ($policy.CodexFallbackCommand) { Write-Host "Fallback command: $($policy.CodexFallbackCommand)" }
+    }
     if ($Result.SavingsEstimate) {
         Write-Host "Savings estimate: $($Result.SavingsEstimate.EstimatedAvoidedCodexTokens) Codex tokens / $($Result.SavingsEstimate.AvoidedCodexTurns) turn(s) avoided ($($Result.SavingsEstimate.Basis))"
     }
@@ -151,12 +176,46 @@ if ([string]::IsNullOrWhiteSpace($taskText)) {
     exit 1
 }
 
-$route = if ($ForceChatGPT) {
+$firmProviderTag = $taskText.ToLowerInvariant() -match "\[(firm-provider|provider-required|no-provider-fallback|strict-provider)\]" -or
+    $taskText.ToLowerInvariant() -match "\s--(firm-provider|provider-required|no-provider-fallback|strict-provider)\b"
+$providerReadyTimeoutSeconds = [Math]::Max(5, $ProviderReadyTimeoutSeconds)
+$providerFirm = [bool]($FirmProvider -or $firmProviderTag -or ($ForceChatGPT -and -not $AllowProviderFallback))
+$codexFallbackAllowed = -not $providerFirm
+$codexAutoCmd = Join-Path $PSScriptRoot "codex-auto.cmd"
+$codexFallbackCommand = if ($codexFallbackAllowed) {
+    "& $(ConvertTo-PowerShellSingleQuotedArgument $codexAutoCmd) -ForceCodex -NoOptimizeCredits -Cwd $(ConvertTo-PowerShellSingleQuotedArgument $Cwd) $(ConvertTo-PowerShellSingleQuotedArgument $taskText)"
+} else {
+    ""
+}
+$providerFallbackPolicy = [ordered]@{
+    Provider = "chatgpt"
+    Firm = $providerFirm
+    CodexFallbackAllowed = $codexFallbackAllowed
+    ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
+    CodexFallbackCommand = $codexFallbackCommand
+    Reason = if ($providerFirm) {
+        "Provider route is firm because ChatGPT was explicitly forced or provider fallback was disabled."
+    } else {
+        "Provider route is soft; if ChatGPT is not ready quickly, continue in Codex."
+    }
+}
+
+$route = if ($ForceChatGPT -and -not $AllowProviderFallback) {
     Select-AiWorkRoute -Text $taskText -ForceChatGPT
 } elseif ($ForceCodex) {
     Select-AiWorkRoute -Text $taskText -ForceCodex
 } else {
     Select-AiWorkRoute -Text $taskText
+}
+if ($ForceChatGPT -and $AllowProviderFallback) {
+    $signals = @($route.Signals) | Where-Object { $_ }
+    if ($signals.Count -eq 0) { $signals = @("gateway-selected ChatGPT route") }
+    $route = [pscustomobject]@{
+        Route = "chatgpt"
+        Reason = "Gateway-selected ChatGPT route with soft Codex fallback."
+        Confidence = if ($route.Confidence) { $route.Confidence } else { "high" }
+        Signals = $signals
+    }
 }
 
 $fallbackProfile = Select-CodexGear -Text $taskText
@@ -180,7 +239,9 @@ if ($DryRun -or $route.Route -ne "chatgpt") {
         Task = $taskText
         TaskKey = $taskKey
         Project = $Project
+        Cwd = $Cwd
         AssetOutDir = $assetOutDir
+        ProviderFallbackPolicy = $providerFallbackPolicy
         CodexFallbackProfile = $fallbackProfile
         SavingsEstimate = $savingsEstimate
         CodexUsageBefore = $codexUsageBefore
@@ -213,18 +274,23 @@ if (-not $NoOpen) {
     Open-UrlInChrome "https://chatgpt.com/" | Out-Null
 }
 
+$providerReadyTimeoutMs = $providerReadyTimeoutSeconds * 1000
+$fallbackAllowedJs = if ($codexFallbackAllowed) { "true" } else { "false" }
+$providerFirmJs = if ($providerFirm) { "true" } else { "false" }
 $runnerUri = "file:///" + (($runnerPath -replace '\\', '/') -replace ' ', '%20')
-$runnerSnippet = "const { runChatGptChromeBridge } = await import(`"$runnerUri`"); await runChatGptChromeBridge({ promptPath: $(ConvertTo-JsString $promptPath), responsePath: $(ConvertTo-JsString $responsePath), project: $(ConvertTo-JsString $Project), outputDir: $(ConvertTo-JsString $assetOutDir), sessionPath: $(ConvertTo-JsString $sessionJsonPath), maxWaitMs: 95000 });"
-$resumeSnippet = "const { resumeChatGptChromeBridge } = await import(`"$runnerUri`"); await resumeChatGptChromeBridge({ promptPath: $(ConvertTo-JsString $promptPath), responsePath: $(ConvertTo-JsString $responsePath), project: $(ConvertTo-JsString $Project), outputDir: $(ConvertTo-JsString $assetOutDir), sessionPath: $(ConvertTo-JsString $sessionJsonPath), maxWaitMs: 95000 });"
+$runnerSnippet = "const { runChatGptChromeBridge } = await import(`"$runnerUri`"); await runChatGptChromeBridge({ promptPath: $(ConvertTo-JsString $promptPath), responsePath: $(ConvertTo-JsString $responsePath), project: $(ConvertTo-JsString $Project), outputDir: $(ConvertTo-JsString $assetOutDir), sessionPath: $(ConvertTo-JsString $sessionJsonPath), maxWaitMs: 95000, composerWaitMs: $providerReadyTimeoutMs, fallbackAllowed: $fallbackAllowedJs, providerFirm: $providerFirmJs, providerReadyTimeoutSeconds: $providerReadyTimeoutSeconds, codexFallbackCommand: $(ConvertTo-JsString $codexFallbackCommand) });"
+$resumeSnippet = "const { resumeChatGptChromeBridge } = await import(`"$runnerUri`"); await resumeChatGptChromeBridge({ promptPath: $(ConvertTo-JsString $promptPath), responsePath: $(ConvertTo-JsString $responsePath), project: $(ConvertTo-JsString $Project), outputDir: $(ConvertTo-JsString $assetOutDir), sessionPath: $(ConvertTo-JsString $sessionJsonPath), maxWaitMs: 95000, composerWaitMs: $providerReadyTimeoutMs, fallbackAllowed: $fallbackAllowedJs, providerFirm: $providerFirmJs, providerReadyTimeoutSeconds: $providerReadyTimeoutSeconds, codexFallbackCommand: $(ConvertTo-JsString $codexFallbackCommand) });"
 
 $session = [ordered]@{
     SessionId = $sessionId
     Status = "prepared"
     CreatedAt = (Get-Date).ToString("o")
     Project = $Project
+    Cwd = $Cwd
     Task = $taskText
     TaskKey = $taskKey
     Route = $route
+    ProviderFallbackPolicy = $providerFallbackPolicy
     CodexFallbackProfile = $fallbackProfile
     PromptPath = $promptPath
     ResponsePath = $responsePath
@@ -256,6 +322,7 @@ Write-BridgeEvent ([ordered]@{
     Route = $route.Route
     Confidence = $route.Confidence
     Signals = $route.Signals
+    ProviderFallbackPolicy = $providerFallbackPolicy
     CodexFallbackProfile = $fallbackProfile
     PromptPath = $promptPath
     SessionPath = $sessionJsonPath
@@ -268,11 +335,13 @@ $result = [pscustomobject]@{
     Status = "prepared"
     Route = $route
     Project = $Project
+    Cwd = $Cwd
     PromptPath = $promptPath
     ResponsePath = $responsePath
     AssetOutDir = $assetOutDir
     SessionPath = $sessionJsonPath
     TaskKey = $taskKey
+    ProviderFallbackPolicy = $providerFallbackPolicy
     SavingsEstimate = $savingsEstimate
     OpenedChatGPT = (-not $NoOpen)
     RunnerSnippet = $runnerSnippet

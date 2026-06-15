@@ -464,7 +464,19 @@ async function readPrompt(fs, options) {
 
 async function appendJsonLine(fs, path, value) {
   await fs.mkdir(path.substring(0, path.lastIndexOf("/")), { recursive: true });
-  await fs.appendFile(path, `${JSON.stringify(value)}\n`, "utf8");
+  const line = `${JSON.stringify(value)}\n`;
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    try {
+      await fs.appendFile(path, line, "utf8");
+      return;
+    } catch (error) {
+      if (attempt === 5) {
+        console.warn(`Could not append bridge event after retries: ${path}: ${String(error?.message || error)}`);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+    }
+  }
 }
 
 async function writeSession(fs, sessionPath, patch) {
@@ -597,20 +609,24 @@ export async function runChatGptChromeBridge(options = {}) {
     await writeSession(fs, options.sessionPath, {
       Status: "waiting_for_composer",
       ComposerWaitStartedAt: new Date().toISOString(),
-      ResponsePath: responsePath,
-      AssetOutDir: outputDir,
-    });
-    const { textbox, count: textboxCount } = await findChatGptComposer(tab, Number(options.composerWaitMs || 45000));
-
-    await writeSession(fs, options.sessionPath, {
-      Status: "submitting",
-      SubmitStartedAt: new Date().toISOString(),
-      TextboxCount: textboxCount,
+      ProviderFirm: Boolean(options.providerFirm),
+      CodexFallbackAllowed: Boolean(options.fallbackAllowed),
+      ProviderReadyTimeoutSeconds: Number(options.providerReadyTimeoutSeconds || 0),
+      CodexFallbackCommand: options.codexFallbackCommand || "",
       ResponsePath: responsePath,
       AssetOutDir: outputDir,
     });
     let promptSubmitResult;
     try {
+      const { textbox, count: textboxCount } = await findChatGptComposer(tab, Number(options.composerWaitMs || 45000));
+
+      await writeSession(fs, options.sessionPath, {
+        Status: "submitting",
+        SubmitStartedAt: new Date().toISOString(),
+        TextboxCount: textboxCount,
+        ResponsePath: responsePath,
+        AssetOutDir: outputDir,
+      });
       promptSubmitResult = await submitPromptWorkflow(tab, textbox, prompt, project, {
         ...options,
         onProgress: async (patch) => {
@@ -623,31 +639,47 @@ export async function runChatGptChromeBridge(options = {}) {
         },
       });
     } catch (error) {
+      const fallbackAllowed = Boolean(options.fallbackAllowed);
+      const providerFirm = Boolean(options.providerFirm);
+      const providerReadyTimeoutSeconds = Number(options.providerReadyTimeoutSeconds || Math.round(Number(options.composerWaitMs || 45000) / 1000));
+      const codexFallbackCommand = String(options.codexFallbackCommand || "");
+      const status = fallbackAllowed ? "codex_fallback_available" : "submit_failed";
+      const nextAction = fallbackAllowed
+        ? `Continue in Codex with the fallback command instead of waiting on ChatGPT. ${codexFallbackCommand}`.trim()
+        : "Retry after ChatGPT composer is responsive, or use a non-browser provider/API path.";
       const failureText = [
-        "CHATGPT_BRIDGE_SUBMIT_FAILED",
+        fallbackAllowed ? "CHATGPT_BRIDGE_CODEX_FALLBACK_AVAILABLE" : "CHATGPT_BRIDGE_SUBMIT_FAILED",
         "",
         `Project: ${project}`,
         `Task: ${task || "unknown"}`,
         `Prompt path: ${options.promptPath || ""}`,
         `Response path: ${responsePath}`,
+        `Provider route: ${providerFirm ? "firm" : "soft"}`,
+        `Codex fallback allowed: ${fallbackAllowed ? "yes" : "no"}`,
+        `Provider readiness timeout seconds: ${providerReadyTimeoutSeconds}`,
         "",
         `Reason: ${String(error?.message || error)}`,
         "",
-        "Next action: retry after ChatGPT composer is responsive, or use a non-browser provider/API path.",
+        `Next action: ${nextAction}`,
         "",
       ].join("\n");
       await fs.writeFile(responsePath, failureText, "utf8");
       await fs.writeFile(handoffPath, failureText, "utf8");
       await writeSession(fs, options.sessionPath, {
-        Status: "submit_failed",
+        Status: status,
         FailedAt: new Date().toISOString(),
         FailureReason: String(error?.message || error).slice(0, 500),
         ResponsePath: responsePath,
         HandoffPath: handoffPath,
         HasPacket: false,
+        ProviderFirm: providerFirm,
+        CodexFallbackAllowed: fallbackAllowed,
+        ProviderReadyTimeoutSeconds: providerReadyTimeoutSeconds,
+        CodexFallbackCommand: codexFallbackCommand,
+        NextAction: nextAction,
       });
       return {
-        status: "submit_failed",
+        status,
         project,
         task,
         taskKey,
@@ -657,6 +689,10 @@ export async function runChatGptChromeBridge(options = {}) {
         outputDir,
         assets: [],
         hasPacket: false,
+        providerFirm,
+        codexFallbackAllowed: fallbackAllowed,
+        providerReadyTimeoutSeconds,
+        codexFallbackCommand,
         sessionPath: options.sessionPath || "",
       };
     }

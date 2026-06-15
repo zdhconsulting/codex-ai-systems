@@ -141,6 +141,8 @@ The provider gateway classifies work as `codex`, `chatgpt`, `deepseek`, or `hybr
 
 Force routes with `-ForceCodex`, `-ForceChatGPT`, or `-ForceDeepSeek`; inline tags `[codex]`, `[chatgpt]`, and `[deepseek]` work too.
 
+Provider routes are soft by default. If ChatGPT or DeepSeek is selected by the optimizer but the provider window/composer is not usable within about 30 seconds, Codex may continue the task locally using the generated Codex fallback command. Provider routes are firm only when Zev or a lane explicitly forces them with `-ForceChatGPT`, `-ForceDeepSeek`, `[chatgpt]`, `[deepseek]`, `[firm-provider]`, `[provider-required]`, `[no-provider-fallback]`, or `--firm-provider`; firm routes should report the bridge/provider problem instead of silently falling back.
+
 Use `C:\Users\zev\.codex\scripts\deepseek-route.cmd "TASK"` for a direct DeepSeek handoff. It copies a bounded prompt, opens DeepSeek unless `-NoOpen` is set, and requires a `CODEX_RETURN_PACKET`.
 
 Use `C:\Users\zev\.codex\scripts\codex-gateway-tally.cmd` to review ChatGPT and DeepSeek route decisions, dispatches, savings estimates, and the reason/signals behind each decision.
@@ -158,6 +160,8 @@ Dispatch through:
 The gateway classifies tasks as `chatgpt`, `codex`, or `hybrid`. It auto-bounces high-confidence detachable work to ChatGPT, keeps local/risky work in Codex, and marks mixed creative-plus-local work as ask-first so Codex can split the task without losing the local execution half.
 
 Force Codex with `-ForceCodex`, `[codex]`, or `--codex`. Force ChatGPT with `-ForceChatGPT`, `[chatgpt]`, or `--chatgpt`.
+
+Normal ChatGPT gateway selections are soft provider routes: if Chrome/ChatGPT is not ready within the configured readiness window, continue in Codex rather than blocking the work. Explicit ChatGPT overrides and `[firm-provider]` style tags make the provider route firm.
 
 The gateway also has conservative savings controls:
 
