@@ -32,33 +32,41 @@ $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $path = Join-Path $handoffDir "$stamp-$safeProject.txt"
 Set-Content -LiteralPath $path -Value $text -Encoding UTF8
 
-$hasPacket = $text -match "CODEX_RETURN_PACKET"
+$hasPacketMarker = $text -match "CODEX_RETURN_PACKET"
+$match = [regex]::Match($text, "(?s)CODEX_RETURN_PACKET\s*(.*?)\s*END_CODEX_RETURN_PACKET")
+$hasPacket = $match.Success
+$packetError = ""
+if ($hasPacketMarker -and -not $hasPacket) {
+    $packetError = "CODEX_RETURN_PACKET marker found, but END_CODEX_RETURN_PACKET is missing."
+}
 $packet = [ordered]@{}
 if ($hasPacket) {
-    $match = [regex]::Match($text, "(?s)CODEX_RETURN_PACKET\s*(.*?)\s*END_CODEX_RETURN_PACKET")
-    if ($match.Success) {
-        $packetText = $match.Groups[1].Value.Trim()
-        $fieldNames = @("Summary", "Decisions", "Deliverable", "Codex next action", "Files/assets needed", "Owner buttons needed", "Confidence", "Go back to Codex?")
-        for ($i = 0; $i -lt $fieldNames.Count; $i++) {
-            $name = $fieldNames[$i]
-            $nextName = if ($i -lt ($fieldNames.Count - 1)) { $fieldNames[$i + 1] } else { $null }
-            $pattern = if ($nextName) {
-                "(?s)(?:^|\r?\n)$([regex]::Escape($name)):\s*(.*?)(?=\r?\n$([regex]::Escape($nextName)):\s*)"
-            } else {
-                "(?s)(?:^|\r?\n)$([regex]::Escape($name)):\s*(.*)$"
-            }
-            $fieldMatch = [regex]::Match($packetText, $pattern)
-            if ($fieldMatch.Success) {
-                $packet[$name] = $fieldMatch.Groups[1].Value.Trim()
-            } else {
-                $packet[$name] = ""
-            }
+    $packetText = $match.Groups[1].Value.Trim()
+    $fieldNames = @("Summary", "Decisions", "Deliverable", "Codex next action", "Files/assets needed", "Owner buttons needed", "Confidence", "Go back to Codex?")
+    for ($i = 0; $i -lt $fieldNames.Count; $i++) {
+        $name = $fieldNames[$i]
+        $nextName = if ($i -lt ($fieldNames.Count - 1)) { $fieldNames[$i + 1] } else { $null }
+        $pattern = if ($nextName) {
+            "(?s)(?:^|\r?\n)$([regex]::Escape($name)):\s*(.*?)(?=\r?\n$([regex]::Escape($nextName)):\s*)"
+        } else {
+            "(?s)(?:^|\r?\n)$([regex]::Escape($name)):\s*(.*)$"
+        }
+        $fieldMatch = [regex]::Match($packetText, $pattern)
+        if ($fieldMatch.Success) {
+            $packet[$name] = $fieldMatch.Groups[1].Value.Trim()
+        } else {
+            $packet[$name] = ""
         }
     }
 }
 
 if ($RequirePacket -and -not $hasPacket) {
-    Write-Host "ChatGPT result imported but no CODEX_RETURN_PACKET was found."
+    if ($packetError) {
+        Write-Host "ChatGPT result imported but the CODEX_RETURN_PACKET block is malformed."
+        Write-Host $packetError
+    } else {
+        Write-Host "ChatGPT result imported but no complete CODEX_RETURN_PACKET block was found."
+    }
     Write-Host "Saved: $path"
     exit 2
 }
@@ -67,6 +75,7 @@ if ($Json) {
     [pscustomobject]@{
         Saved = $path
         HasPacket = $hasPacket
+        PacketError = $packetError
         Packet = $packet
         Text = if ($Print) { $text } else { "" }
     } | ConvertTo-Json -Depth 5

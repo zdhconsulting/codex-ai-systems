@@ -803,6 +803,24 @@ function Select-AiProviderRoute {
     $hasChatGptSignals = $chatGptSignals.Count -gt 0
     $hasSensitiveSignal = $codexSignals -contains "sensitive or production risk" -or
         $codexSignals -contains "connected apps or private account state"
+    $onlyMrSeoContextDeepSeekSignal = $hasDeepSeekSignals -and
+        $deepSeekSignals.Count -eq 1 -and
+        $deepSeekSignals.Contains("Mr.SEO DeepSeek lane")
+
+    if ($hasCodexSignals -and $onlyMrSeoContextDeepSeekSignal) {
+        return [pscustomobject]@{
+            Route = "codex"
+            Provider = "codex"
+            Dispatch = "codex-auto"
+            Reason = "Mr.SEO project context alone is not enough to move local code, test, git, or verification work to DeepSeek."
+            Confidence = "high"
+            AskFirst = $false
+            CodexSignals = $codexSignals
+            ChatGPTSignals = $chatGptSignals
+            DeepSeekSignals = $deepSeekSignals.ToArray()
+            NextAction = "Keep local Mr.SEO execution in Codex; use DeepSeek only for clearly detachable low-cost drafts or explicit DeepSeek tasks."
+        }
+    }
 
     if ($hasSensitiveSignal) {
         return [pscustomobject]@{

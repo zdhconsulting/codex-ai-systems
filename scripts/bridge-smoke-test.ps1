@@ -125,7 +125,7 @@ for ($i = 1; $i -le $Iterations; $i++) {
     $token = "CGPT-$stamp-$i"
     $task = "[chatgpt] Draft a tiny client update smoke packet $i. Return only CODEX_RETURN_PACKET. Include token $token in Deliverable."
     $jsonText = Invoke-Captured -Name "ChatGPT prep $i" -Script {
-        & (Join-Path $scriptDir "chatgpt-auto-route.cmd") -NoOpen -PacketOnly -Json -Project $Project -OutDir $bridgeOutDir -ProviderReadyTimeoutSeconds $ProviderReadyTimeoutSeconds $task
+        & (Join-Path $scriptDir "chatgpt-auto-route.cmd") -NoOpen -NoCopy -PacketOnly -Json -Project $Project -OutDir $bridgeOutDir -ProviderReadyTimeoutSeconds $ProviderReadyTimeoutSeconds $task
     }
     $obj = $null
     try { $obj = $jsonText.Output | ConvertFrom-Json } catch { $obj = $null }
@@ -143,7 +143,7 @@ for ($i = 1; $i -le $Iterations; $i++) {
     $deepToken = "DSEEK-$stamp-$i"
     $deepTask = "[deepseek] Make a short low-cost SEO outline smoke packet $i. Return CODEX_RETURN_PACKET only. Include token $deepToken."
     $deepOut = Invoke-Captured -Name "DeepSeek prep $i" -Script {
-        & (Join-Path $scriptDir "deepseek-route.cmd") -NoOpen -PacketOnly -Project $Project -ProviderReadyTimeoutSeconds $ProviderReadyTimeoutSeconds $deepTask
+        & (Join-Path $scriptDir "deepseek-route.cmd") -NoOpen -NoCopy -PacketOnly -Project $Project -ProviderReadyTimeoutSeconds $ProviderReadyTimeoutSeconds $deepTask
     }
     $sessionPath = ($deepOut.Output -split "\r?\n" | Where-Object { $_ -match "^Session:" } | Select-Object -First 1) -replace "^Session:\s*", ""
     $promptPath = ($deepOut.Output -split "\r?\n" | Where-Object { $_ -match "^Prompt:" } | Select-Object -First 1) -replace "^Prompt:\s*", ""

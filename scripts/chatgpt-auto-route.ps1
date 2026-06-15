@@ -12,6 +12,7 @@ param(
     [switch] $ForceCodex,
     [switch] $AllowProviderFallback,
     [switch] $FirmProvider,
+    [switch] $NoCopy,
     [switch] $RequirePacket,
     [switch] $Json,
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
@@ -282,6 +283,7 @@ $routeParams = @{
     OutFile = $promptPath
 }
 if ($PacketOnly) { $routeParams.PacketOnly = $true }
+if ($NoCopy) { $routeParams.NoCopy = $true }
 $routeOutput = (& $routeScript @routeParams $taskText 2>&1 | Out-String).Trim()
 
 if (-not $NoOpen) {

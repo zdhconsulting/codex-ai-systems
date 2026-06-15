@@ -3,6 +3,7 @@ param(
     [switch] $Print,
     [switch] $PacketOnly,
     [switch] $PromptOnly,
+    [switch] $NoCopy,
     [switch] $Quiet,
     [string] $OutFile = "",
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
@@ -85,11 +86,13 @@ function Open-UrlInChrome {
 }
 
 $copied = $false
-try {
-    Set-Clipboard -Value $prompt
-    $copied = $true
-} catch {
-    Write-Warning "Could not copy prompt to clipboard: $($_.Exception.Message)"
+if (-not $NoCopy) {
+    try {
+        Set-Clipboard -Value $prompt
+        $copied = $true
+    } catch {
+        Write-Warning "Could not copy prompt to clipboard: $($_.Exception.Message)"
+    }
 }
 
 if ($Print) {

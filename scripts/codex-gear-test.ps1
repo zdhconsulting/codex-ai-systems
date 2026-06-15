@@ -217,6 +217,7 @@ $providerRouteTests = @(
     [pscustomobject]@{ Prompt = "create bulk first-pass content drafts for Mr.SEO"; Route = "deepseek"; Provider = "deepseek"; AskFirst = $false },
     [pscustomobject]@{ Prompt = "fix failing tests"; Route = "codex"; Provider = "codex"; AskFirst = $false },
     [pscustomobject]@{ Prompt = "draft a low-cost SEO article and save it into src/app.ts"; Route = "hybrid"; Provider = "deepseek"; AskFirst = $true },
+    [pscustomobject]@{ Prompt = "run the Mr.SEO unit tests"; Route = "codex"; Provider = "codex"; AskFirst = $false },
     [pscustomobject]@{ Prompt = "[deepseek] write a cold email"; Route = "deepseek"; Provider = "deepseek"; AskFirst = $false },
     [pscustomobject]@{ Prompt = "[chatgpt] draft 10 low-cost SEO article first passes"; Route = "chatgpt"; Provider = "chatgpt"; AskFirst = $false },
     [pscustomobject]@{ Prompt = "[codex] draft 10 low-cost SEO article first passes"; Route = "codex"; Provider = "codex"; AskFirst = $false }
@@ -408,6 +409,15 @@ END_CODEX_RETURN_PACKET
 $returnJson = (& (Join-Path $scriptDir "chatgpt-return.ps1") -InputFile $packetFile -Project "gear-test" -Json 2>&1 6>&1 | Out-String)
 Assert-True ($returnJson -match '"HasPacket":\s*true') "ChatGPT return JSON detects packet"
 Assert-True ($returnJson -match '"Codex next action":\s*"none"') "ChatGPT return JSON parses next action"
+
+$malformedPacketFile = Join-Path $env:TEMP "chatgpt-return-malformed-$PID.txt"
+@"
+CODEX_RETURN_PACKET
+Summary: malformed
+"@ | Set-Content -LiteralPath $malformedPacketFile -Encoding UTF8
+$malformedOutput = (& (Join-Path $scriptDir "chatgpt-return.ps1") -InputFile $malformedPacketFile -Project "gear-test" -RequirePacket -Json 2>&1 6>&1 | Out-String)
+Assert-True ($LASTEXITCODE -eq 2) "ChatGPT return rejects malformed packet"
+Assert-True ($malformedOutput -match "malformed|missing") "ChatGPT return explains malformed packet"
 
 $bounceDryRun = (& (Join-Path $scriptDir "codex-auto.ps1") -DryRun -Bounce -Cwd $CodexHome "[xhigh] change auth permissions" 2>&1 6>&1 | Out-String)
 Assert-True ($bounceDryRun -match "Self-bounce: bounce-then-execute") "Bounce dry-run enables max preflight"

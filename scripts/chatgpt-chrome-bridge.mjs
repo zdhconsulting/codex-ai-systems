@@ -50,6 +50,14 @@ async function assistantMessageCount(tab) {
   }
 }
 
+async function stopButtonCount(tab) {
+  try {
+    return await tab.playwright.locator("button[aria-label*=\"Stop\"]").count();
+  } catch {
+    return 0;
+  }
+}
+
 async function waitForSettled(tab, maxWaitMs = 180000, minAssistantCount = 0) {
   const start = Date.now();
   let lastSnapshot = "";
@@ -58,11 +66,14 @@ async function waitForSettled(tab, maxWaitMs = 180000, minAssistantCount = 0) {
 
   while (Date.now() - start < maxWaitMs) {
     lastSnapshot = await tab.playwright.domSnapshot();
-    const busy = /Stop answering|Generating image|Creating image|Reading documents?|Reading files?|Pro thinking|Thinking|Analyzing|Working/i.test(lastSnapshot);
     const assistantCount = await assistantMessageCount(tab);
     const hasResult = /Response actions|Copy response|Generated image/i.test(lastSnapshot)
       || (minAssistantCount > 0 && assistantCount >= minAssistantCount)
       || (minAssistantCount <= 0 && assistantCount > 0);
+    const hardBusy = (await stopButtonCount(tab)) > 0
+      || /Stop answering|Generating image|Creating image|Reading documents?|Reading files?/i.test(lastSnapshot);
+    const softBusy = /Pro thinking|Thinking|Analyzing|Working/i.test(lastSnapshot) && !hasResult;
+    const busy = hardBusy || softBusy;
     lastBusy = busy;
 
     if (!busy && hasResult) {
