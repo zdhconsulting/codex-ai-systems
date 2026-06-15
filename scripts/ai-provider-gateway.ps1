@@ -3,7 +3,6 @@ param(
     [string] $OutDir = "",
     [string] $Cwd = (Get-Location).Path,
     [int] $Limit = 1,
-    [int] $ProviderReadyTimeoutSeconds = 30,
     [string] $BriefId = "",
     [string] $PromptPath = "",
     [switch] $DryRun,
@@ -11,8 +10,6 @@ param(
     [switch] $ForceChatGPT,
     [switch] $ForceDeepSeek,
     [switch] $ForceCodex,
-    [switch] $AllowProviderFallback,
-    [switch] $FirmProvider,
     [switch] $NoOpen,
     [switch] $NoCopy,
     [switch] $PacketOnly,
@@ -45,24 +42,10 @@ function ConvertTo-SignalText {
     return "none"
 }
 
-function ConvertTo-PowerShellSingleQuotedArgument {
-    param([string] $Value)
-    return "'" + ($Value -replace "'", "''") + "'"
-}
-
 function Write-GatewayEvent {
     param([object] $Event)
     New-Item -ItemType Directory -Path $eventsDir -Force | Out-Null
-    $line = $Event | ConvertTo-Json -Compress -Depth 10
-    for ($attempt = 1; $attempt -le 5; $attempt++) {
-        try {
-            $line | Add-Content -LiteralPath $eventsPath -Encoding UTF8
-            return
-        } catch [System.IO.IOException] {
-            Start-Sleep -Milliseconds (100 * $attempt)
-        }
-    }
-    Write-Warning "Could not append provider gateway event after retries: $eventsPath"
+    ($Event | ConvertTo-Json -Compress -Depth 10) | Add-Content -LiteralPath $eventsPath -Encoding UTF8
 }
 
 function Write-ProviderResult {
@@ -87,13 +70,6 @@ function Write-ProviderResult {
     Write-Host "ChatGPT signals: $(ConvertTo-SignalText $Result.ChatGPTSignals)"
     Write-Host "Codex signals: $(ConvertTo-SignalText $Result.CodexSignals)"
     Write-Host "Next action: $($Result.NextAction)"
-    if ($Result.ProviderFallbackPolicy) {
-        $policy = $Result.ProviderFallbackPolicy
-        $mode = if ($policy.Firm) { "firm" } else { "soft" }
-        $fallbackText = if ($policy.CodexFallbackAllowed) { "Codex fallback allowed after $($policy.ProviderReadyTimeoutSeconds)s readiness failure" } else { "no automatic Codex fallback" }
-        Write-Host "Provider route: $mode ($fallbackText)"
-        if ($policy.CodexFallbackCommand) { Write-Host "Fallback command: $($policy.CodexFallbackCommand)" }
-    }
     if ($Result.SavingsEstimate) {
         Write-Host "Savings estimate: $($Result.SavingsEstimate.EstimatedAvoidedCodexTokens) Codex tokens / $($Result.SavingsEstimate.AvoidedCodexTurns) turn(s) avoided ($($Result.SavingsEstimate.Basis))"
     }
@@ -125,46 +101,6 @@ $savingsEstimate = Get-ChatGatewaySavingsEstimate -Text $taskText -Route $route.
 $codexUsageBefore = Get-CodexLatestTokenSnapshot -CodexHome $codexHome
 $deepSeekProjectHook = $route.Route -eq "deepseek" -and (Test-MrSeoDeepSeekHook -Cwd $Cwd -Project $Project -Task $taskText)
 $displayDispatch = if ($deepSeekProjectHook) { "mrseo-deepseek-writer" } else { $route.Dispatch }
-$firmProviderTag = $taskText.ToLowerInvariant() -match "\[(firm-provider|provider-required|no-provider-fallback|strict-provider)\]" -or
-    $taskText.ToLowerInvariant() -match "\s--(firm-provider|provider-required|no-provider-fallback|strict-provider)\b"
-$forceChatGptTag = $taskText.ToLowerInvariant() -match "\[(chatgpt|gpt|force-chatgpt)\]" -or
-    $taskText.ToLowerInvariant() -match "\s--(chatgpt|gpt|force-chatgpt)\b"
-$forceDeepSeekTag = $taskText.ToLowerInvariant() -match "\[(deepseek|force-deepseek)\]" -or
-    $taskText.ToLowerInvariant() -match "\s--(deepseek|force-deepseek)\b"
-$providerReadyTimeoutSeconds = [Math]::Max(5, $ProviderReadyTimeoutSeconds)
-$providerFirm = [bool]($FirmProvider -or $firmProviderTag -or (($ForceChatGPT -or $ForceDeepSeek -or $forceChatGptTag -or $forceDeepSeekTag) -and -not $AllowProviderFallback))
-$codexFallbackAllowed = ($route.Route -eq "chatgpt" -or $route.Route -eq "deepseek") -and -not $providerFirm
-$codexFallbackCommand = if ($codexFallbackAllowed) {
-    "& $(ConvertTo-PowerShellSingleQuotedArgument $codexAuto) -ForceCodex -NoOptimizeCredits -Cwd $(ConvertTo-PowerShellSingleQuotedArgument $Cwd) $(ConvertTo-PowerShellSingleQuotedArgument $taskText)"
-} else {
-    ""
-}
-$fallbackReason = if ($route.Route -ne "chatgpt" -and $route.Route -ne "deepseek") {
-    "No external provider route selected."
-} elseif ($providerFirm) {
-    "Provider route is firm because the provider was explicitly forced or provider fallback was disabled."
-} else {
-    "Provider route is soft; if the provider is not ready quickly, continue in Codex."
-}
-$fallbackNextAction = if ($codexFallbackAllowed) {
-    "If the provider is unavailable after $providerReadyTimeoutSeconds seconds, run the fallback command and continue in Codex."
-} elseif ($route.Route -eq "chatgpt" -or $route.Route -eq "deepseek") {
-    "Fix or retry the provider bridge lane; do not continue in Codex silently."
-} else {
-    $route.NextAction
-}
-$providerFallbackPolicy = [ordered]@{
-    Provider = $route.Provider
-    Firm = $providerFirm
-    ProviderFirm = $providerFirm
-    CodexFallbackAllowed = $codexFallbackAllowed
-    ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
-    CodexFallbackCommand = $codexFallbackCommand
-    FallbackCommand = $codexFallbackCommand
-    Reason = $fallbackReason
-    FallbackReason = $fallbackReason
-    FallbackNextAction = $fallbackNextAction
-}
 
 $result = [ordered]@{
     Status = if ($DryRun) { "dry-run" } else { "classified" }
@@ -183,7 +119,6 @@ $result = [ordered]@{
     Cwd = $Cwd
     Task = $taskText
     TaskKey = $taskKey
-    ProviderFallbackPolicy = $providerFallbackPolicy
     SavingsEstimate = $savingsEstimate
     CodexUsageBefore = $codexUsageBefore
 }
@@ -206,7 +141,6 @@ Write-GatewayEvent ([ordered]@{
     chatgptSignals = $route.ChatGPTSignals
     codexSignals = $route.CodexSignals
     codexFallbackProfile = $fallbackProfile
-    providerFallbackPolicy = $providerFallbackPolicy
     savingsEstimate = $savingsEstimate
     codexUsageBefore = $codexUsageBefore
 })
@@ -238,9 +172,7 @@ if ($route.Route -eq "chatgpt") {
         Project = $Project
         ForceChatGPT = $true
         Cwd = $Cwd
-        ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
     }
-    if ($providerFirm) { $params.FirmProvider = $true } else { $params.AllowProviderFallback = $true }
     if ($OutDir) { $params.OutDir = $OutDir }
     if ($NoOpen) { $params.NoOpen = $true }
     if ($PacketOnly) { $params.PacketOnly = $true }
@@ -301,10 +233,7 @@ if ($route.Route -eq "deepseek") {
 
     $params = @{
         Project = $Project
-        Cwd = $Cwd
     }
-    if ($providerFirm) { $params.FirmProvider = $true } else { $params.AllowProviderFallback = $true }
-    $params.ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
     if ($NoOpen) { $params.NoOpen = $true }
     if ($NoCopy) { $params.NoCopy = $true }
     if ($PacketOnly) { $params.PacketOnly = $true }

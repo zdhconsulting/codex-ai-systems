@@ -3,13 +3,10 @@ param(
     [string] $OutDir = "",
     [string] $Cwd = (Get-Location).Path,
     [int] $CacheTtlDays = 14,
-    [int] $ProviderReadyTimeoutSeconds = 30,
     [switch] $DryRun,
     [switch] $Json,
     [switch] $ForceChatGPT,
     [switch] $ForceCodex,
-    [switch] $AllowProviderFallback,
-    [switch] $FirmProvider,
     [switch] $NoOpen,
     [switch] $PacketOnly,
     [switch] $NoCache,
@@ -45,11 +42,6 @@ function ConvertTo-SignalText {
     return "none"
 }
 
-function ConvertTo-PowerShellSingleQuotedArgument {
-    param([string] $Value)
-    return "'" + ($Value -replace "'", "''") + "'"
-}
-
 function New-CacheSummary {
     param([object] $Cache)
 
@@ -78,16 +70,7 @@ function New-CacheSummary {
 function Write-GatewayEvent {
     param([object] $Event)
     New-Item -ItemType Directory -Path $eventsDir -Force | Out-Null
-    $line = $Event | ConvertTo-Json -Compress -Depth 10
-    for ($attempt = 1; $attempt -le 5; $attempt++) {
-        try {
-            $line | Add-Content -LiteralPath $eventsPath -Encoding UTF8
-            return
-        } catch [System.IO.IOException] {
-            Start-Sleep -Milliseconds (100 * $attempt)
-        }
-    }
-    Write-Warning "Could not append gateway event after retries: $eventsPath"
+    ($Event | ConvertTo-Json -Compress -Depth 10) | Add-Content -LiteralPath $eventsPath -Encoding UTF8
 }
 
 function Write-GatewayResult {
@@ -113,13 +96,6 @@ function Write-GatewayResult {
     Write-Host "Next action: $($Result.NextAction)"
     if ($Result.CodexFallbackProfile) {
         Write-Host "Codex fallback: $($Result.CodexFallbackProfile)"
-    }
-    if ($Result.ProviderFallbackPolicy) {
-        $policy = $Result.ProviderFallbackPolicy
-        $mode = if ($policy.Firm) { "firm" } else { "soft" }
-        $fallbackText = if ($policy.CodexFallbackAllowed) { "Codex fallback allowed after $($policy.ProviderReadyTimeoutSeconds)s readiness failure" } else { "no automatic Codex fallback" }
-        Write-Host "Provider route: $mode ($fallbackText)"
-        if ($policy.CodexFallbackCommand) { Write-Host "Fallback command: $($policy.CodexFallbackCommand)" }
     }
     if ($Result.SavingsEstimate) {
         Write-Host "Savings estimate: $($Result.SavingsEstimate.EstimatedAvoidedCodexTokens) Codex tokens / $($Result.SavingsEstimate.AvoidedCodexTurns) turn(s) avoided ($($Result.SavingsEstimate.Basis))"
@@ -149,47 +125,7 @@ function Write-GatewayResult {
     }
 }
 
-$firmProviderTag = $taskText.ToLowerInvariant() -match "\[(firm-provider|provider-required|no-provider-fallback|strict-provider)\]" -or
-    $taskText.ToLowerInvariant() -match "\s--(firm-provider|provider-required|no-provider-fallback|strict-provider)\b"
-$forceChatGptTag = $taskText.ToLowerInvariant() -match "\[(chatgpt|gpt|force-chatgpt)\]" -or
-    $taskText.ToLowerInvariant() -match "\s--(chatgpt|gpt|force-chatgpt)\b"
 $gatewayRoute = Select-ChatGatewayRoute -Text $taskText -ForceChatGPT:$ForceChatGPT -ForceCodex:$ForceCodex
-$providerReadyTimeoutSeconds = [Math]::Max(5, $ProviderReadyTimeoutSeconds)
-$providerRouteSelected = $gatewayRoute.Route -eq "chatgpt" -or $gatewayRoute.Route -eq "hybrid"
-$providerFirm = [bool]($providerRouteSelected -and ($FirmProvider -or $firmProviderTag -or (($ForceChatGPT -or $forceChatGptTag) -and -not $AllowProviderFallback)))
-$codexFallbackAllowed = $providerRouteSelected -and -not $providerFirm
-$codexFallbackCommand = if ($codexFallbackAllowed) {
-    "& $(ConvertTo-PowerShellSingleQuotedArgument $codexAuto) -ForceCodex -NoOptimizeCredits -Cwd $(ConvertTo-PowerShellSingleQuotedArgument $Cwd) $(ConvertTo-PowerShellSingleQuotedArgument $taskText)"
-} else {
-    ""
-}
-$fallbackReason = if (-not $providerRouteSelected) {
-    "No external ChatGPT provider route selected."
-} elseif ($providerFirm) {
-    "Provider route is firm because ChatGPT was explicitly forced or provider fallback was disabled."
-} else {
-    "Provider route is soft; if ChatGPT is not ready quickly, continue in Codex."
-}
-$fallbackNextAction = if ($codexFallbackAllowed) {
-    "If ChatGPT is unavailable after $providerReadyTimeoutSeconds seconds, run the fallback command and continue in Codex."
-} elseif ($gatewayRoute.Route -eq "chatgpt" -or $gatewayRoute.Route -eq "hybrid") {
-    "Fix or retry the ChatGPT bridge/provider lane; do not continue in Codex silently."
-} else {
-    $gatewayRoute.NextAction
-}
-$providerFallbackPolicy = [ordered]@{
-    Provider = "chatgpt"
-    Firm = $providerFirm
-    ProviderFirm = $providerFirm
-    CodexFallbackAllowed = $codexFallbackAllowed
-    ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
-    CodexFallbackCommand = $codexFallbackCommand
-    FallbackCommand = $codexFallbackCommand
-    Reason = $fallbackReason
-    FallbackReason = $fallbackReason
-    FallbackNextAction = $fallbackNextAction
-}
-
 $fallbackProfile = Select-CodexGear -Text $taskText
 $taskKey = Get-ChatGatewayTaskKey -Text $taskText -Project $Project
 $cache = $null
@@ -240,7 +176,6 @@ $routeResult = [ordered]@{
     Cwd = $Cwd
     Task = $taskText
     TaskKey = $taskKey
-    ProviderFallbackPolicy = $providerFallbackPolicy
     Cache = $cacheSummary
     SavingsEstimate = $savingsEstimate
     CodexUsageBefore = $codexUsageBefore
@@ -264,7 +199,6 @@ Write-GatewayEvent ([ordered]@{
     chatgptSignals = $gatewayRoute.ChatGPTSignals
     codexSignals = $gatewayRoute.CodexSignals
     codexFallbackProfile = $fallbackProfile
-    providerFallbackPolicy = $providerFallbackPolicy
     cache = $cacheSummary
     savingsEstimate = $savingsEstimate
     codexUsageBefore = $codexUsageBefore
@@ -320,10 +254,7 @@ if ($gatewayRoute.Route -eq "hybrid") {
         Project = $Project
         ForceChatGPT = $true
         PacketOnly = $true
-        Cwd = $Cwd
-        ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
     }
-    if ($providerFirm) { $chatGptParams.FirmProvider = $true } else { $chatGptParams.AllowProviderFallback = $true }
     if ($OutDir) { $chatGptParams.OutDir = $OutDir }
     if ($NoOpen) { $chatGptParams.NoOpen = $true }
     if ($PacketOnly) { $chatGptParams.PacketOnly = $true }
@@ -355,10 +286,7 @@ if ($gatewayRoute.Route -eq "chatgpt") {
     $chatGptParams = @{
         Project = $Project
         ForceChatGPT = $true
-        Cwd = $Cwd
-        ProviderReadyTimeoutSeconds = $providerReadyTimeoutSeconds
     }
-    if ($providerFirm) { $chatGptParams.FirmProvider = $true } else { $chatGptParams.AllowProviderFallback = $true }
     if ($OutDir) { $chatGptParams.OutDir = $OutDir }
     if ($NoOpen) { $chatGptParams.NoOpen = $true }
     if ($PacketOnly) { $chatGptParams.PacketOnly = $true }
