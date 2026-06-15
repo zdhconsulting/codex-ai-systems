@@ -56,6 +56,13 @@ if (Test-Path -LiteralPath $threadContainerCmd) {
     Write-Log ($threadOutput.Trim())
 }
 
+$threadHygieneCmd = Join-Path $CodexHome "scripts\codex-thread-hygiene.cmd"
+if (Test-Path -LiteralPath $threadHygieneCmd) {
+    Write-Log "applying inactive/noisy thread hygiene"
+    $hygieneOutput = & $threadHygieneCmd 2>&1 | Out-String
+    Write-Log ($hygieneOutput.Trim())
+}
+
 if (-not $NoRelaunch) {
     Write-Log "relaunching Codex Desktop"
     Start-Process -FilePath "explorer.exe" -ArgumentList "shell:AppsFolder\OpenAI.Codex_2p2nqsd0c76g0!App"
