@@ -514,6 +514,9 @@ async function writeProviderFailureResult(fs, options, context) {
   const nextAction = fallbackAllowed
     ? `Continue in Codex with the fallback command instead of waiting on ChatGPT. ${codexFallbackCommand}`.trim()
     : "Retry after ChatGPT composer is responsive, or use a non-browser provider/API path.";
+  const fallbackReason = fallbackAllowed
+    ? "Provider route is soft; if ChatGPT is not ready quickly, continue in Codex."
+    : "Provider route is firm; do not continue in Codex silently.";
   const reason = String(error?.message || error);
   const failureText = [
     fallbackAllowed ? "CHATGPT_BRIDGE_CODEX_FALLBACK_AVAILABLE" : failureCode,
@@ -544,6 +547,9 @@ async function writeProviderFailureResult(fs, options, context) {
     CodexFallbackAllowed: fallbackAllowed,
     ProviderReadyTimeoutSeconds: providerReadyTimeoutSeconds,
     CodexFallbackCommand: codexFallbackCommand,
+    FallbackCommand: codexFallbackCommand,
+    FallbackReason: fallbackReason,
+    FallbackNextAction: nextAction,
     NextAction: nextAction,
   });
   await appendJsonLine(fs, eventsPath, {
@@ -575,6 +581,9 @@ async function writeProviderFailureResult(fs, options, context) {
     codexFallbackAllowed: fallbackAllowed,
     providerReadyTimeoutSeconds,
     codexFallbackCommand,
+    fallbackCommand: codexFallbackCommand,
+    fallbackReason,
+    fallbackNextAction: nextAction,
     sessionPath: options.sessionPath || "",
   };
 }
