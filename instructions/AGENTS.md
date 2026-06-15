@@ -76,6 +76,8 @@ Use the right lane for the problem:
 
 Bossman is the small-sprint dispatcher: he creates repeated safe, useful, verified pushes and receipts. AI Manager owns strategy, lane routing, repair loops, and final synthesis. Efficiency Man reviews whether the way the AI system is operating is efficient enough.
 
+Before starting a new lane, sub-agent, worker thread, or reporting thread, give it the operating standard: it is a functional lane, not a personality; it reports to AI Manager; it stays inside scope; it keeps Zev's main chat clean; it uses evidence; it does not invent authority; it does not over-escalate normal local work; it returns root cause, result, blockers, verification, next action, and system-hardening notes when relevant.
+
 ## Next Protocol
 
 When Zev says `Next`, treat it as an instruction to continue the current mission with the best next action. Do not ask what `Next` means, and do not turn it into a menu of options unless a real approval decision is required.
