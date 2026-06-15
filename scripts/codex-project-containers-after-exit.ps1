@@ -21,9 +21,9 @@ function Write-Log {
 }
 
 function Get-CodexDesktopProcess {
-    Get-Process -Name "Codex" -ErrorAction SilentlyContinue | Where-Object {
+    Get-Process -ErrorAction SilentlyContinue | Where-Object {
         try {
-            $_.Path -match "\\WindowsApps\\OpenAI\.Codex_.*\\app\\Codex\.exe$"
+            ($_.ProcessName -in @("Codex", "codex")) -and ($_.Path -match "\\WindowsApps\\OpenAI\.Codex_.*\\app\\")
         } catch {
             $false
         }
@@ -48,6 +48,13 @@ Start-Sleep -Seconds 2
 Write-Log "Codex Desktop exited; applying project containers"
 $output = & $containerCmd 2>&1 | Out-String
 Write-Log ($output.Trim())
+
+$threadContainerCmd = Join-Path $CodexHome "scripts\codex-project-thread-containers.cmd"
+if (Test-Path -LiteralPath $threadContainerCmd) {
+    Write-Log "applying high-confidence thread container re-home"
+    $threadOutput = & $threadContainerCmd 2>&1 | Out-String
+    Write-Log ($threadOutput.Trim())
+}
 
 if (-not $NoRelaunch) {
     Write-Log "relaunching Codex Desktop"
