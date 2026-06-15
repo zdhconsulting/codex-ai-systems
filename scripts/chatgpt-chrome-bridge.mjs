@@ -623,6 +623,39 @@ async function getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPa
   }
 }
 
+export async function probeChatGptChromeBridgeRuntime(options = {}) {
+  const browserClientPath = options.browserClientPath || DEFAULT_BROWSER_CLIENT;
+  const result = {
+    status: "unknown",
+    hasAgentGlobal: typeof globalThis.agent !== "undefined",
+    hasBrowsersApi: Boolean(globalThis.agent?.browsers),
+    browserClientPath,
+    canGetExtension: false,
+    error: "",
+    nextAction: "",
+  };
+
+  try {
+    const { setupBrowserRuntime } = await import(browserClientPath);
+    const browser = await getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPath);
+    result.canGetExtension = Boolean(browser);
+    result.hasAgentGlobal = typeof globalThis.agent !== "undefined";
+    result.hasBrowsersApi = Boolean(globalThis.agent?.browsers);
+    result.status = result.canGetExtension ? "ready" : "unavailable";
+    result.nextAction = result.canGetExtension
+      ? "ChatGPT browser bridge runtime is available; run a prepared RunnerSnippet for a live round trip."
+      : "Open/enable the Codex Chrome extension runtime, then retry the probe.";
+  } catch (error) {
+    result.status = "unavailable";
+    result.error = String(error?.message || error);
+    result.hasAgentGlobal = typeof globalThis.agent !== "undefined";
+    result.hasBrowsersApi = Boolean(globalThis.agent?.browsers);
+    result.nextAction = "Run this probe from Codex Desktop with the Chrome/Browser extension runtime available, or fall back to manual provider paste/import.";
+  }
+
+  return result;
+}
+
 export async function runChatGptChromeBridge(options = {}) {
   const fs = await import("node:fs/promises");
   const path = await import("node:path");

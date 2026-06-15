@@ -78,6 +78,8 @@ $requiredScripts = @(
     "ai-credits-optimizer.ps1",
     "ai-provider-gateway.cmd",
     "ai-provider-gateway.ps1",
+    "bridge-smoke-test.cmd",
+    "bridge-smoke-test.ps1",
     "chatgpt-auto-route.cmd",
     "chatgpt-auto-route.ps1",
     "chatgpt-chrome-bridge.mjs",
