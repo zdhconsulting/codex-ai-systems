@@ -1,31 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-
-const SCRIPT_PATH = fileURLToPath(import.meta.url);
-const CODEX_HOME = path.dirname(path.dirname(SCRIPT_PATH)).replace(/\\/g, "/");
-
-function findBrowserClientUrl() {
-  const chromeRoot = path.join(CODEX_HOME, "plugins", "cache", "openai-bundled", "chrome");
-  try {
-    const versions = fs.readdirSync(chromeRoot, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-      .sort()
-      .reverse();
-    for (const version of versions) {
-      const candidate = path.join(chromeRoot, version, "scripts", "browser-client.mjs");
-      if (fs.existsSync(candidate)) {
-        return pathToFileURL(candidate).href;
-      }
-    }
-  } catch {
-    // Fall through to the legacy default below.
-  }
-  return "file:///C:/Users/zev/.codex/plugins/cache/openai-bundled/chrome/26.608.12217/scripts/browser-client.mjs";
-}
-
-const DEFAULT_BROWSER_CLIENT = findBrowserClientUrl();
+const DEFAULT_BROWSER_CLIENT = "file:///C:/Users/zev/.codex/plugins/cache/openai-bundled/chrome/26.608.12217/scripts/browser-client.mjs";
 
 function nowStamp() {
   return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
@@ -107,6 +80,20 @@ async function waitForSettled(tab, maxWaitMs = 180000, minAssistantCount = 0) {
 
 async function waitForNewAssistant(tab, previousCount, maxWaitMs = 60000) {
   return await waitForSettled(tab, maxWaitMs, previousCount + 1);
+}
+
+async function withTimeout(promise, ms, label) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function submitChatGptPrompt(tab, textbox) {
@@ -208,12 +195,39 @@ function splitPromptChunks(prompt, maxChars = 6200) {
 }
 
 async function submitTextMessage(tab, textbox, text, project, { allowAttachmentInstruction = true } = {}) {
-  await textbox.fill(text, { timeoutMs: 15000 });
+  let fillError = "";
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      await withTimeout(textbox.fill(text, { timeoutMs: 9000 }), 10000, "ChatGPT composer fill");
+      fillError = "";
+      break;
+    } catch (error) {
+      fillError = String(error?.message || error);
+      await tab.playwright.waitForTimeout(1500);
+    }
+  }
+  if (fillError) {
+    throw new Error(`ChatGPT composer fill failed after retries: ${fillError}`);
+  }
   let promptMode = "direct_text";
   let attachmentInstruction = "";
 
   if (allowAttachmentInstruction) {
-    const attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
+    let attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
+    if (attachmentResult.mode === "empty_textbox") {
+      try {
+        await withTimeout(tab.clipboard.writeText(text), 5000, "clipboard write");
+        await withTimeout(textbox.click({ timeoutMs: 8000 }), 9000, "composer click");
+        await withTimeout(tab.cua.keypress({ keys: ["CTRL", "V"] }), 9000, "composer paste");
+        await tab.playwright.waitForTimeout(1000);
+        attachmentResult = await ensureAttachedPromptHasInstruction(tab, textbox, project);
+      } catch {
+        // The explicit empty-composer check below turns this into a useful failure.
+      }
+    }
+    if (attachmentResult.mode === "empty_textbox") {
+      throw new Error("ChatGPT composer stayed empty after fill and clipboard-paste fallback.");
+    }
     promptMode = attachmentResult.mode;
     attachmentInstruction = attachmentResult.instruction;
   } else {
@@ -485,59 +499,19 @@ async function openChromeProfileWindow(browserClientPath) {
   });
 }
 
-async function getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPath, options = {}) {
-  const allowLaunchBrowser = options.allowLaunchBrowser === true;
-  const retryCount = Number(options.extensionRetryCount || 3);
-  const retryDelayMs = Number(options.extensionRetryDelayMs || 1500);
-
-  for (let attempt = 0; attempt < retryCount; attempt += 1) {
-    await setupBrowserRuntime({ globals: globalThis });
-    try {
-      return await agent.browsers.get("extension");
-    } catch (error) {
-      const message = String(error?.message || error);
-      if (!/not available|extension/i.test(message)) {
-        throw error;
-      }
-      if (attempt < retryCount - 1) {
-        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-        continue;
-      }
-      if (!allowLaunchBrowser) {
-        throw new Error(
-          `ChatGPT bridge could not claim the existing Chrome extension session after ${retryCount} attempts. ${message}`,
-        );
-      }
-    }
-  }
-
-  await openChromeProfileWindow(browserClientPath);
-  await new Promise((resolve) => setTimeout(resolve, 2500));
+async function getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPath) {
   await setupBrowserRuntime({ globals: globalThis });
-  return await agent.browsers.get("extension");
-}
-
-function looksLikeChatGptTab(candidate) {
-  return /chatgpt\.com/i.test(`${candidate?.url || ""} ${candidate?.title || ""}`);
-}
-
-function findPreferredChatGptTab(openTabs, session = {}) {
-  const preferredId = String(session.BridgeTabId || session.TabId || "").trim();
-  if (preferredId) {
-    const exact = openTabs.find((candidate) => String(candidate.id || "") === preferredId);
-    if (exact) return exact;
+  try {
+    return await agent.browsers.get("extension");
+  } catch (firstError) {
+    if (!/not available|extension/i.test(String(firstError?.message || firstError))) {
+      throw firstError;
+    }
+    await openChromeProfileWindow(browserClientPath);
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    await setupBrowserRuntime({ globals: globalThis });
+    return await agent.browsers.get("extension");
   }
-
-  const submittedUrl = String(session.SubmittedUrl || "").trim();
-  if (submittedUrl) {
-    const sameUrl = openTabs.find((candidate) => String(candidate.url || "").trim() === submittedUrl);
-    if (sameUrl) return sameUrl;
-  }
-
-  const grouped = openTabs.find((candidate) => candidate.tabGroup === "chatgpt-bridge" && looksLikeChatGptTab(candidate));
-  if (grouped) return grouped;
-
-  return openTabs.find(looksLikeChatGptTab) || null;
 }
 
 export async function runChatGptChromeBridge(options = {}) {
@@ -548,7 +522,7 @@ export async function runChatGptChromeBridge(options = {}) {
 
   const project = options.project || "General";
   const sessionId = options.sessionId || nowStamp();
-  const codexHome = options.codexHome || CODEX_HOME;
+  const codexHome = "C:/Users/zev/.codex";
   const outputDir = options.outputDir || `${codexHome}/generated_assets/chatgpt-bridge/${safeName(project)}`;
   const responsePath = options.responsePath || `${codexHome}/logs/chatgpt-bridge/${sessionId}-${safeName(project)}/response.txt`;
   const handoffDir = `${codexHome}/handoffs/chatgpt`;
@@ -573,20 +547,23 @@ export async function runChatGptChromeBridge(options = {}) {
     AssetOutDir: outputDir,
   });
 
-  const browser = await getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPath, options);
+  const browser = await getExtensionBrowserWithRetry(setupBrowserRuntime, browserClientPath);
   await browser.nameSession?.("chatgpt-bridge");
 
   let tab;
-  let claimedTabMeta = null;
-  const useFreshTab = shouldSubmit && (options.newChat === true || options.freshTab === true);
+  const useFreshTab = shouldSubmit && options.newChat !== false && options.freshTab !== false;
   if (useFreshTab) {
     tab = await browser.tabs.new();
     await gotoChatGpt(tab, fs, options.sessionPath, responsePath, outputDir);
   } else {
     const openTabs = await browser.user.openTabs();
-    const chatgptTab = findPreferredChatGptTab(openTabs, startingSession);
+    const chatgptTabs = openTabs.filter((candidate) => /chatgpt\.com/i.test(candidate.url || candidate.title || ""));
+    const preferredChatUrl = String(startingSession.WaitingUrl || startingSession.ChatUrl || startingSession.SubmittedUrl || "");
+    const exactChatTab = preferredChatUrl && /chatgpt\.com\/c\//i.test(preferredChatUrl)
+      ? chatgptTabs.find((candidate) => candidate.url === preferredChatUrl)
+      : null;
+    const chatgptTab = exactChatTab || (chatgptTabs.length > 0 ? chatgptTabs[chatgptTabs.length - 1] : null);
     if (chatgptTab) {
-      claimedTabMeta = chatgptTab;
       tab = await browser.user.claimTab(chatgptTab);
     } else {
       tab = await browser.tabs.new();
@@ -595,12 +572,6 @@ export async function runChatGptChromeBridge(options = {}) {
   }
 
   const currentUrl = await tab.url();
-  const currentTabId = String(claimedTabMeta?.id || "");
-  await writeSession(fs, options.sessionPath, {
-    BridgeTabId: currentTabId,
-    ClaimedTabUrl: currentUrl || "",
-    ReusedExistingTab: Boolean(claimedTabMeta),
-  });
   if (!/chatgpt\.com/i.test(currentUrl || "")) {
     await gotoChatGpt(tab, fs, options.sessionPath, responsePath, outputDir);
   }
@@ -638,17 +609,57 @@ export async function runChatGptChromeBridge(options = {}) {
       ResponsePath: responsePath,
       AssetOutDir: outputDir,
     });
-    const promptSubmitResult = await submitPromptWorkflow(tab, textbox, prompt, project, {
-      ...options,
-      onProgress: async (patch) => {
-        await writeSession(fs, options.sessionPath, {
-          ...patch,
-          UpdatedAt: new Date().toISOString(),
-          ResponsePath: responsePath,
-          AssetOutDir: outputDir,
-        });
-      },
-    });
+    let promptSubmitResult;
+    try {
+      promptSubmitResult = await submitPromptWorkflow(tab, textbox, prompt, project, {
+        ...options,
+        onProgress: async (patch) => {
+          await writeSession(fs, options.sessionPath, {
+            ...patch,
+            UpdatedAt: new Date().toISOString(),
+            ResponsePath: responsePath,
+            AssetOutDir: outputDir,
+          });
+        },
+      });
+    } catch (error) {
+      const failureText = [
+        "CHATGPT_BRIDGE_SUBMIT_FAILED",
+        "",
+        `Project: ${project}`,
+        `Task: ${task || "unknown"}`,
+        `Prompt path: ${options.promptPath || ""}`,
+        `Response path: ${responsePath}`,
+        "",
+        `Reason: ${String(error?.message || error)}`,
+        "",
+        "Next action: retry after ChatGPT composer is responsive, or use a non-browser provider/API path.",
+        "",
+      ].join("\n");
+      await fs.writeFile(responsePath, failureText, "utf8");
+      await fs.writeFile(handoffPath, failureText, "utf8");
+      await writeSession(fs, options.sessionPath, {
+        Status: "submit_failed",
+        FailedAt: new Date().toISOString(),
+        FailureReason: String(error?.message || error).slice(0, 500),
+        ResponsePath: responsePath,
+        HandoffPath: handoffPath,
+        HasPacket: false,
+      });
+      return {
+        status: "submit_failed",
+        project,
+        task,
+        taskKey,
+        promptPath: options.promptPath || "",
+        responsePath,
+        handoffPath,
+        outputDir,
+        assets: [],
+        hasPacket: false,
+        sessionPath: options.sessionPath || "",
+      };
+    }
     const submittedUrl = await tab.url();
     await writeSession(fs, options.sessionPath, {
       Status: "submitted",
@@ -673,6 +684,7 @@ export async function runChatGptChromeBridge(options = {}) {
   );
   snapshot = waitResult.snapshot;
   if (waitResult.timedOut && waitResult.busy) {
+    const waitingUrl = await tab.url();
     const waitingResult = {
       status: "waiting",
       project,
@@ -688,6 +700,8 @@ export async function runChatGptChromeBridge(options = {}) {
     await writeSession(fs, options.sessionPath, {
       Status: "waiting",
       WaitingAt: new Date().toISOString(),
+      WaitingUrl: waitingUrl,
+      ChatUrl: /chatgpt\.com\/c\//i.test(waitingUrl || "") ? waitingUrl : startingSession.ChatUrl || "",
       ResumeHint: "Run chatgpt-chrome-bridge.mjs again with submitPrompt:false and newChat:false.",
     });
     await appendJsonLine(fs, eventsPath, {
@@ -869,6 +883,7 @@ END_CODEX_RETURN_PACKET`;
     ResponsePath: responsePath,
     HandoffPath: handoffPath,
     Assets: copiedAssets,
+    ChatUrl: await tab.url(),
     HasPacket: result.hasPacket,
   });
 
