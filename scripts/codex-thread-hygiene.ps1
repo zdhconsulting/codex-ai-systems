@@ -1,8 +1,8 @@
 param(
     [string] $CodexHome = "",
     [string] $DbPath = "",
-    [int] $KeepMrSeoAutomation = 1,
-    [int] $KeepBossmanAutomation = 2,
+    [int] $KeepMrSeoAutomation = 0,
+    [int] $KeepBossmanAutomation = 1,
     [int] $KeepOtherAutomation = 2,
     [int] $ArchiveWorktreeOlderThanHours = 72,
     [switch] $DryRun,
