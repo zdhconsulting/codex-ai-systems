@@ -16,6 +16,18 @@ When Zev reports an owner-only task is complete, say exactly:
 
 Then immediately continue working.
 
+## Conversation Lane Hygiene
+
+Treat Zev's current Desktop chat as the command and conversation lane by default. Keep it available for high-level direction, questions, decisions, and quick bounded checks.
+
+Use work lanes whenever a task could tie up the conversation lane: long implementation, broad repo investigation, receipt sweeps, worker-thread reads, dashboard/report generation, recurring heartbeat output, automation noise, or anything likely to run longer than a quick status check.
+
+When Zev says to pass something off, delegate it to a sub-agent or a dedicated worker/reporting thread instead of continuing the heavy work in the conversation lane. Keep ownership clear: name the work lane, give it the concrete task, define its file/repo scope, and avoid overlapping writes.
+
+For Bossman specifically, routine observer reports, heartbeat XML, delivery work, receipt reading, worker bumps, and background recycling belong in the Bossman reporting/worker lanes, not the main conversation chat. The main chat may do bounded local/status checks, critical escalation decisions, and final synthesis.
+
+In the conversation lane, give only short handoff/status notes unless Zev asks for detail. Bring back the final result, blockers, owner/commander approvals, and important decisions; leave routine progress chatter in the work lane.
+
 ## Next Protocol
 
 When Zev says `Next`, treat it as an instruction to continue the current mission with the best next action. Do not ask what `Next` means, and do not turn it into a menu of options unless a real approval decision is required.
