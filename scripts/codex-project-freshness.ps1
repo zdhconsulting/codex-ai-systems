@@ -378,18 +378,18 @@ function Get-FreshnessBand {
     param([timespan] $Age)
 
     if ($Age.TotalHours -le 12) {
-        return [pscustomobject]@{ Name = "fresh"; Label = "FRESH"; Ansi = "32"; Icon = [char]::ConvertFromUtf32(0x1F7E2) }
+        return [pscustomobject]@{ Name = "fresh"; Label = "LIVE"; Ansi = "32"; Icon = [char]::ConvertFromUtf32(0x1F7E2) }
     }
     if ($Age.TotalHours -le 24) {
-        return [pscustomobject]@{ Name = "warm"; Label = "WARM"; Ansi = "33"; Icon = [char]::ConvertFromUtf32(0x1F7E1) }
+        return [pscustomobject]@{ Name = "warm"; Label = "DUE"; Ansi = "33"; Icon = [char]::ConvertFromUtf32(0x1F7E1) }
     }
     if ($Age.TotalHours -le 36) {
-        return [pscustomobject]@{ Name = "aging"; Label = "AGING"; Ansi = "38;5;208"; Icon = [char]::ConvertFromUtf32(0x1F7E0) }
+        return [pscustomobject]@{ Name = "aging"; Label = "SOON"; Ansi = "38;5;208"; Icon = [char]::ConvertFromUtf32(0x1F7E0) }
     }
     if ($Age.TotalHours -le 48) {
-        return [pscustomobject]@{ Name = "stale"; Label = "STALE"; Ansi = "31"; Icon = [char]::ConvertFromUtf32(0x1F534) }
+        return [pscustomobject]@{ Name = "stale"; Label = "HOT"; Ansi = "31"; Icon = [char]::ConvertFromUtf32(0x1F534) }
     }
-    return [pscustomobject]@{ Name = "dormant"; Label = "DORMANT"; Ansi = "90"; Icon = [char]::ConvertFromUtf32(0x26AB) }
+    return [pscustomobject]@{ Name = "dormant"; Label = "COLD"; Ansi = "90"; Icon = [char]::ConvertFromUtf32(0x26AB) }
 }
 
 function Get-CodexAppearanceColor {
@@ -401,6 +401,22 @@ function Get-CodexAppearanceColor {
         "aging" { return "orange" }
         "stale" { return "red" }
         default { return "black" }
+    }
+}
+
+function Get-CockpitProjectOverride {
+    param([string] $Path)
+
+    $normalized = (Normalize-ProjectPath $Path).ToLowerInvariant()
+    switch ($normalized) {
+        "c:\users\zev\onedrive\documents\new project 2" { return [pscustomobject]@{ Badge = "OPS"; Color = "blue" } }
+        "c:\repos\bossman" { return [pscustomobject]@{ Badge = "SYS"; Color = "blue" } }
+        "c:\repos\codex-ai-systems" { return [pscustomobject]@{ Badge = "SYS"; Color = "blue" } }
+        "c:\repos\mr.seo" { return [pscustomobject]@{ Badge = "SYS"; Color = "blue" } }
+        "c:\repos\englishcomedytlv" { return [pscustomobject]@{ Badge = "QA"; Color = "black" } }
+        "c:\repos\book" { return [pscustomobject]@{ Badge = "HOLD"; Color = "black" } }
+        "c:\users\zev\onedrive\documents\new project" { return [pscustomobject]@{ Badge = "PARK"; Color = "black" } }
+        default { return $null }
     }
 }
 
@@ -419,7 +435,7 @@ function Strip-FreshnessPrefix {
             return $Label.Substring($icon.Length + 1)
         }
     }
-    return ($Label -replace '^\[(FRESH|WARM|AGING|STALE|DORMANT)\]\s+', '')
+    return ($Label -replace '^\[(FRESH|WARM|AGING|STALE|DORMANT|OPS|SYS|LIVE|DUE|SOON|HOT|COLD|HOLD|QA|PARK)\]\s+', '')
 }
 
 $state = Get-StateObject
@@ -431,6 +447,9 @@ $results = foreach ($root in $roots) {
     $age = $now - $write.LastModified
     $band = Get-FreshnessBand -Age $age
     $canonicalRoot = if ($canonicalProjectPaths.ContainsKey($root.ToLowerInvariant())) { $canonicalProjectPaths[$root.ToLowerInvariant()] } else { $root }
+    $cockpitOverride = Get-CockpitProjectOverride -Path $canonicalRoot
+    $displayLabel = if ($cockpitOverride) { $cockpitOverride.Badge } else { $band.Label }
+    $appearanceColor = if ($cockpitOverride) { $cockpitOverride.Color } else { Get-CodexAppearanceColor -Status $band.Name }
     [pscustomobject]@{
         Path = $canonicalRoot
         Name = Split-Path -Leaf $root
@@ -438,10 +457,10 @@ $results = foreach ($root in $roots) {
         AgeHours = [math]::Round($age.TotalHours, 1)
         AgeDays = [math]::Round($age.TotalDays, 2)
         Status = $band.Name
-        Label = $band.Label
+        Label = $displayLabel
         Icon = $band.Icon
         Ansi = $band.Ansi
-        CodexAppearanceColor = Get-CodexAppearanceColor -Status $band.Name
+        CodexAppearanceColor = $appearanceColor
         FilesScanned = $write.FilesScanned
         HitLimit = $write.HitLimit
     }
@@ -498,7 +517,7 @@ if ($PatchLabels -and -not $NoUpdateLabels -and (Test-Path -LiteralPath $StatePa
                 $cache.originalLabels | Add-Member -NotePropertyName $path -NotePropertyValue $base -Force
                 $original = $base
             }
-            $newLabel = "$($project.Icon) $original"
+            $newLabel = "[$($project.Label)] $original"
             $labelMap[$path] = $newLabel
         }
 
