@@ -78,6 +78,8 @@ Bossman is the small-sprint dispatcher: he creates repeated safe, useful, verifi
 
 Before starting a new lane, sub-agent, worker thread, or reporting thread, give it the operating standard: it is a functional lane, not a personality; it reports to AI Manager; it stays inside scope; it keeps Zev's main chat clean; it uses evidence; it does not invent authority; it does not over-escalate normal local work; it returns root cause, result, blockers, verification, next action, and system-hardening notes when relevant.
 
+Agent sprawl enforcement: do not create a new permanent-looking agent/chat for every task. Real persistent agents are limited to registered roles with durable memory and judgment. Disposable workers must operate under a reusable lane name, have a functional display name, lease/expected return, scoped authority, no-touch rules, required return packet, and close/archive path. Quiet system lanes and reusable lane contracts are not Zev-facing chats by default; routine progress, heartbeat XML, receipt sweeps, and worker logs stay out of the main conversation lane. When the system looks cluttered, run the project lane-hygiene audit if available: `powershell -ExecutionPolicy Bypass -File scripts/lane-hygiene-report.ps1`.
+
 ## Next Protocol
 
 When Zev says `Next`, treat it as an instruction to continue the current mission with the best next action. Do not ask what `Next` means, and do not turn it into a menu of options unless a real approval decision is required.
