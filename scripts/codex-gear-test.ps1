@@ -66,7 +66,7 @@ if (-not (Test-Path -LiteralPath $modulePath)) {
 Import-Module $modulePath -Force
 
 $expected = @(
-    [pscustomobject]@{ Profile = "fast"; Gear = "low"; Model = "gpt-5.3-codex-spark"; Effort = "low"; ServiceTier = ""; Command = "exec" },
+    [pscustomobject]@{ Profile = "fast"; Gear = "low"; Model = "gpt-5.4-mini"; Effort = "low"; ServiceTier = ""; Command = "exec" },
     [pscustomobject]@{ Profile = "balanced"; Gear = "medium"; Model = "gpt-5.4"; Effort = "medium"; ServiceTier = "fast"; Command = "exec" },
     [pscustomobject]@{ Profile = "deep"; Gear = "high"; Model = "gpt-5.5"; Effort = "high"; ServiceTier = "fast"; Command = "exec" },
     [pscustomobject]@{ Profile = "max"; Gear = "xhigh"; Model = "gpt-5.5"; Effort = "xhigh"; ServiceTier = "fast"; Command = "exec" },
@@ -146,6 +146,16 @@ foreach ($item in $expected) {
         Assert-True ($profileText -match "model_reasoning_effort\s*=\s*`"$([regex]::Escape($item.Effort))`"") "$($item.Profile) profile effort line"
         Assert-True ($profileText -match "service_tier\s*=\s*`"$([regex]::Escape($item.ServiceTier))`"") "$($item.Profile) profile service tier line"
     }
+}
+
+$defaultModels = @($expected | Where-Object { $_.Command -eq "exec" } | ForEach-Object { $_.Model })
+Assert-True (-not ($defaultModels -contains "gpt-5.3-codex-spark")) "Default exec profiles do not use Spark"
+
+$automationDir = Join-Path $CodexHome "automations"
+if (Test-Path -LiteralPath $automationDir) {
+    $sparkAutomationMatches = @(Get-ChildItem -LiteralPath $automationDir -Recurse -Filter "automation.toml" -File |
+        Select-String -Pattern 'model\s*=\s*"gpt-5\.3-codex-spark"')
+    Assert-True ($sparkAutomationMatches.Count -eq 0) "Automations do not default to Spark"
 }
 
 $routeTests = @(

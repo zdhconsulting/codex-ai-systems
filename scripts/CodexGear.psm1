@@ -3,11 +3,11 @@ function Get-CodexGearMatrix {
         fast = [pscustomobject]@{
             Profile = "fast"
             Gear = "low"
-            Model = "gpt-5.3-codex-spark"
+            Model = "gpt-5.4-mini"
             Effort = "low"
             ServiceTier = ""
             Command = "exec"
-            Purpose = "Ultra-fast simple coding, status checks, typos, copy, links, and obvious one-file fixes."
+            Purpose = "Fast simple coding, status checks, typos, copy, links, and obvious one-file fixes without concentrating all low-gear traffic on Spark."
         }
         balanced = [pscustomobject]@{
             Profile = "balanced"

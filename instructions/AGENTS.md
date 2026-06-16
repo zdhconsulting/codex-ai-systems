@@ -278,7 +278,7 @@ Force a specific route:
 
 The actual model/profile plan is:
 
-- `low` / `fast`: `gpt-5.3-codex-spark`, low reasoning, for ultra-fast simple coding and mechanical tasks.
+- `low` / `fast`: `gpt-5.4-mini`, low reasoning, for fast simple coding and mechanical tasks without concentrating routine traffic on Spark.
 - `medium` / `balanced`: `gpt-5.4`, medium reasoning, for normal implementation work.
 - `high` / `deep`: `gpt-5.5`, high reasoning, for debugging, CI, regressions, multi-file work, deploy issues, and verification-heavy tasks.
 - `xhigh` / `max`: `gpt-5.5`, xhigh reasoning, for architecture, auth, security, billing, database, permissions, and production-risk work.
@@ -312,7 +312,7 @@ Council vs swarm routing:
 
 Available but not the default:
 
-- `gpt-5.4-mini`: keep as a future low/medium fallback if `gpt-5.3-codex-spark` is too shallow or unavailable.
+- `gpt-5.3-codex-spark`: use only as an explicit temporary override when Spark capacity is healthy and the task truly benefits from ultra-fast low-gear execution. Do not make it the default low gear because it has a separate usage pool that can be exhausted by routine work.
 
 In an already-open Desktop chat, Codex cannot guarantee changing the current session's model just by printing a gear label. The label still controls working behavior. Actual model switching happens when the task is launched through `codex-auto.cmd` or a Codex profile.
 

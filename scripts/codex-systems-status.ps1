@@ -91,6 +91,27 @@ if (Test-Path -LiteralPath $gearModule) {
         Select-Object Profile, Gear, Model, Effort, @{Name="ServiceTier";Expression={if ($_.ServiceTier) {$_.ServiceTier} else {"(default/none)"}}}, Command |
         Format-Table -AutoSize
 
+    $sparkDefaults = @($matrix.Values | Where-Object { $_.Command -eq "exec" -and $_.Model -eq "gpt-5.3-codex-spark" })
+    if ($sparkDefaults.Count -gt 0) {
+        Write-Host "Usage guard: WARNING - Spark is still a default exec profile: $((@($sparkDefaults | ForEach-Object { $_.Profile })) -join ', ')"
+    } else {
+        Write-Host "Usage guard: OK - no default exec profile uses Spark."
+    }
+
+    $automationDir = Join-Path $CodexHome "automations"
+    if (Test-Path -LiteralPath $automationDir) {
+        $sparkAutomationMatches = @(Get-ChildItem -LiteralPath $automationDir -Recurse -Filter "automation.toml" -File |
+            Select-String -Pattern 'model\s*=\s*"gpt-5\.3-codex-spark"')
+        if ($sparkAutomationMatches.Count -gt 0) {
+            Write-Host "Usage guard: WARNING - automations still default to Spark:"
+            foreach ($match in $sparkAutomationMatches) {
+                Write-Host "  $($match.Path)"
+            }
+        } else {
+            Write-Host "Usage guard: OK - no automation defaults to Spark."
+        }
+    }
+
     if ($Task) {
         $workRoute = Select-AiWorkRoute -Text $Task
         $gatewayRoute = Select-ChatGatewayRoute -Text $Task
