@@ -377,16 +377,16 @@ function Get-LatestProjectWrite {
 function Get-FreshnessBand {
     param([timespan] $Age)
 
-    if ($Age.TotalHours -le 24) {
+    if ($Age.TotalHours -le 12) {
         return [pscustomobject]@{ Name = "fresh"; Label = "FRESH"; Ansi = "32"; Icon = [char]::ConvertFromUtf32(0x1F7E2) }
     }
-    if ($Age.TotalDays -le 3) {
+    if ($Age.TotalHours -le 24) {
         return [pscustomobject]@{ Name = "warm"; Label = "WARM"; Ansi = "33"; Icon = [char]::ConvertFromUtf32(0x1F7E1) }
     }
-    if ($Age.TotalDays -le 7) {
+    if ($Age.TotalHours -le 36) {
         return [pscustomobject]@{ Name = "aging"; Label = "AGING"; Ansi = "38;5;208"; Icon = [char]::ConvertFromUtf32(0x1F7E0) }
     }
-    if ($Age.TotalDays -le 14) {
+    if ($Age.TotalHours -le 48) {
         return [pscustomobject]@{ Name = "stale"; Label = "STALE"; Ansi = "31"; Icon = [char]::ConvertFromUtf32(0x1F534) }
     }
     return [pscustomobject]@{ Name = "dormant"; Label = "DORMANT"; Ansi = "90"; Icon = [char]::ConvertFromUtf32(0x26AB) }
@@ -435,6 +435,7 @@ $results = foreach ($root in $roots) {
         Path = $canonicalRoot
         Name = Split-Path -Leaf $root
         LastModified = $write.LastModified.ToString("s")
+        AgeHours = [math]::Round($age.TotalHours, 1)
         AgeDays = [math]::Round($age.TotalDays, 2)
         Status = $band.Name
         Label = $band.Label
@@ -520,7 +521,7 @@ if ($Json) {
 if (-not $Quiet) {
     $esc = [char]27
     foreach ($project in ($results | Sort-Object AgeDays)) {
-        $ageText = if ($project.AgeDays -eq 0) { "<1d" } else { "$($project.AgeDays)d" }
+        $ageText = if ($project.AgeHours -lt 1) { "<1h" } elseif ($project.AgeHours -lt 48) { "$($project.AgeHours)h" } else { "$($project.AgeDays)d" }
         Write-Host "$esc[$($project.Ansi)m[$($project.Label)]$esc[0m $ageText $($project.Path)"
     }
 }
