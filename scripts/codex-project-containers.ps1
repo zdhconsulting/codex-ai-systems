@@ -53,22 +53,23 @@ if (-not (Test-Path -LiteralPath $StatePath)) {
 }
 
 $desired = @(
-    @{ Path = "C:\Users\zev\OneDrive\Documents\New project 2"; Label = "ZDH Command Center"; Color = "green" },
-    @{ Path = "C:\repos\bossman"; Label = "Bossman"; Color = "yellow" },
-    @{ Path = "C:\repos\Mr.SEO"; Label = "Mr.SEO"; Color = "yellow" },
-    @{ Path = "C:\repos\codex-ai-systems"; Label = "Codex AI Systems"; Color = "yellow" },
-    @{ Path = "C:\repos\zdhconsultingsite"; Label = "ZDH Consulting Site"; Color = "green" },
-    @{ Path = "C:\repos\zdhsales"; Label = "ZDH Sales"; Color = "green" },
-    @{ Path = "C:\Users\zev\Documents\Codex\2026-06-05\botox-marketplace"; Label = "Botox Marketplace"; Color = "green" },
-    @{ Path = "C:\repos\Botox-Israel"; Label = "Botox Israel / THEA"; Color = "green" },
-    @{ Path = "C:\repos\explainmybusiness"; Label = "ExplainMyBusiness"; Color = "green" },
-    @{ Path = "C:\repos\IsraelDigitalArmy.com"; Label = "Israel Digital Army"; Color = "green" },
-    @{ Path = "C:\Users\zev\OneDrive\Documents\IsraelOffshore"; Label = "Israel Offshore"; Color = "green" },
-    @{ Path = "C:\repos\webdesignisrael"; Label = "Web Design Israel"; Color = "green" },
-    @{ Path = "C:\repos\book"; Label = "zdhbook"; Color = "green" },
-    @{ Path = "C:\repos\EnglishComedyTLV"; Label = "EnglishComedyTLV"; Color = "yellow" },
-    @{ Path = "C:\Users\zev\OneDrive\Documents\New project"; Label = "Comedy website project"; Color = "green" },
-    @{ Path = "C:\Users\zev\OneDrive\Documents\zevhecht.com"; Label = "Zev Hecht"; Color = "green" }
+    @{ Path = "C:\Users\zev\Documents\Codex\00-agent-chats"; Label = "00 AGENTS / Named Agent Chats"; Color = "blue" },
+    @{ Path = "C:\Users\zev\OneDrive\Documents\New project 2"; Label = "01 COMMAND / ZDH Center"; Color = "blue" },
+    @{ Path = "C:\repos\bossman"; Label = "02 SYSTEM / Bossman Dispatch"; Color = "blue" },
+    @{ Path = "C:\repos\codex-ai-systems"; Label = "03 SYSTEM / Codex OS"; Color = "blue" },
+    @{ Path = "C:\repos\Mr.SEO"; Label = "04 SYSTEM / Mr.SEO"; Color = "blue" },
+    @{ Path = "C:\repos\zdhsales"; Label = "10 Project  / ZDH Sales"; Color = "green" },
+    @{ Path = "C:\repos\zdhconsultingsite"; Label = "11 Project / ZDH Consulting"; Color = "green" },
+    @{ Path = "C:\repos\webdesignisrael"; Label = "12 Project / WebDesignIsrael"; Color = "green" },
+    @{ Path = "C:\repos\explainmybusiness"; Label = "13 Project / ExplainMyBusiness"; Color = "green" },
+    @{ Path = "C:\Users\zev\Documents\Codex\2026-06-05\botox-marketplace"; Label = "14 Project / Botox Marketplace"; Color = "green" },
+    @{ Path = "C:\repos\Botox-Israel"; Label = "15 Project / Botox Tel Aviv | THEA"; Color = "yellow" },
+    @{ Path = "C:\Users\zev\OneDrive\Documents\IsraelOffshore"; Label = "16 Project / Israel Offshore"; Color = "green" },
+    @{ Path = "C:\repos\IsraelDigitalArmy.com"; Label = "17 MOVEMENT / Israel Digital Army"; Color = "yellow" },
+    @{ Path = "C:\Users\zev\OneDrive\Documents\zevhecht.com"; Label = "40 Project / ZevHecht.com"; Color = "green" },
+    @{ Path = "C:\repos\EnglishComedyTLV"; Label = "70 QA / EnglishComedyTLV"; Color = "black" },
+    @{ Path = "C:\repos\book"; Label = "80 HOLD / zdhbook"; Color = "black" },
+    @{ Path = "C:\Users\zev\OneDrive\Documents\New project"; Label = "90 PARK / Comedy Site"; Color = "black" }
 )
 
 $threadAssignments = @(
@@ -117,11 +118,6 @@ foreach ($item in $existing) {
     $appearances | Add-Member -NotePropertyName $item.Path -NotePropertyValue $value
 }
 $state.'project-appearances' = $appearances
-$state.'pinned-thread-ids' = @(
-    "019ec3de-d9cd-70e1-a8b6-6f71f1da16d4",
-    "019ed672-8f06-7ce1-809b-288a3ae9ddeb"
-)
-
 $atom = $state.PSObject.Properties["electron-persisted-atom-state"].Value
 if ($atom) {
     foreach ($name in @(
@@ -129,8 +125,7 @@ if ($atom) {
         "project-order",
         "active-workspace-roots",
         "electron-workspace-root-labels",
-        "project-appearances",
-        "pinned-thread-ids"
+        "project-appearances"
     )) {
         Remove-PropertyIfPresent -Object $atom -Name $name
     }
