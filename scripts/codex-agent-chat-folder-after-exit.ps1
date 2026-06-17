@@ -13,11 +13,20 @@ $statePath = Join-Path $CodexHome ".codex-global-state.json"
 $DbPath = if ($DbPath) { $DbPath } else { Join-Path $CodexHome "sqlite\state_5.sqlite" }
 $folder = "C:\Users\zev\Documents\Codex\00-agent-chats"
 $label = "00 AGENTS / Named Agent Chats"
+$bossmanFolder = "C:\Repos\bossman"
+$mrSeoFolder = "C:\repos\Mr.SEO"
+$bossmanThreadIds = @(
+    "019eb3c9-11e5-7ad2-863d-4f46ef91abef",
+    "019ecca6-95a1-7a40-b321-a8451863b677",
+    "019ea0a7-1056-7c00-84f1-12fa689e503c"
+)
+$mrSeoThreadIds = @(
+    "019eaaf1-a97f-7172-ab4d-25a7d433d659"
+)
 $threadIds = @(
     "019ec3de-d9cd-70e1-a8b6-6f71f1da16d4",
     "019ecd45-a8ca-7a02-b722-215f9aafdb29",
     "019ecdd5-ba02-79b1-bda0-660f32c769bf",
-    "019ea0a7-1056-7c00-84f1-12fa689e503c",
     "019ece0c-9a8d-7081-b8ec-c9dd4cccc845",
     "019ece22-a91f-7cb2-9458-1ff3b8c22ca1",
     "019ecd4e-c4cd-78e1-97b2-8a79a1fdf3c2",
@@ -114,6 +123,17 @@ Ensure-ObjectProperty -Object $state -Name "thread-workspace-root-hints"
 foreach ($threadId in $threadIds) {
     $state.'thread-workspace-root-hints' | Add-Member -NotePropertyName $threadId -NotePropertyValue $folder -Force
 }
+foreach ($threadId in $bossmanThreadIds) {
+    $state.'thread-workspace-root-hints' | Add-Member -NotePropertyName $threadId -NotePropertyValue $bossmanFolder -Force
+}
+foreach ($threadId in $mrSeoThreadIds) {
+    $state.'thread-workspace-root-hints' | Add-Member -NotePropertyName $threadId -NotePropertyValue $mrSeoFolder -Force
+}
+
+if ($state.PSObject.Properties["projectless-thread-ids"]) {
+    $removeIds = @($threadIds + $bossmanThreadIds + $mrSeoThreadIds)
+    $state.'projectless-thread-ids' = @($state.'projectless-thread-ids' | Where-Object { $removeIds -notcontains $_ })
+}
 
 $state | Add-Member -NotePropertyName "agent-registrar-named-agent-folder" -NotePropertyValue ([pscustomobject]@{
     folder = $folder
@@ -137,19 +157,29 @@ if (Test-Path -LiteralPath $DbPath) {
     }
 
     $tmpPy = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), ".py")
-    $idsJson = $threadIds | ConvertTo-Json -Compress
+    $idsJson = "[" + (($threadIds | ForEach-Object { $_ | ConvertTo-Json -Compress }) -join ",") + "]"
+    $bossmanIdsJson = "[" + (($bossmanThreadIds | ForEach-Object { $_ | ConvertTo-Json -Compress }) -join ",") + "]"
+    $mrSeoIdsJson = "[" + (($mrSeoThreadIds | ForEach-Object { $_ | ConvertTo-Json -Compress }) -join ",") + "]"
     $python = @"
 import json
 import sqlite3
 
 db_path = r'''$DbPath'''
-folder = r'''\\?\$folder'''
+agent_folder = r'''\\?\$folder'''
+bossman_folder = r'''\\?\$bossmanFolder'''
+mr_seo_folder = r'''\\?\$mrSeoFolder'''
 thread_ids = json.loads(r'''$idsJson''')
+bossman_thread_ids = json.loads(r'''$bossmanIdsJson''')
+mr_seo_thread_ids = json.loads(r'''$mrSeoIdsJson''')
 
 con = sqlite3.connect(db_path)
 with con:
     for thread_id in thread_ids:
-        con.execute("update threads set cwd = ? where id = ?", (folder, thread_id))
+        con.execute("update threads set cwd = ? where id = ?", (agent_folder, thread_id))
+    for thread_id in bossman_thread_ids:
+        con.execute("update threads set cwd = ? where id = ?", (bossman_folder, thread_id))
+    for thread_id in mr_seo_thread_ids:
+        con.execute("update threads set cwd = ? where id = ?", (mr_seo_folder, thread_id))
 con.close()
 "@
     [System.IO.File]::WriteAllText($tmpPy, $python, [System.Text.UTF8Encoding]::new($false))
