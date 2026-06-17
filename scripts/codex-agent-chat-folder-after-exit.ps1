@@ -1,5 +1,6 @@
 param(
     [string] $CodexHome = "",
+    [string] $DbPath = "",
     [int] $TimeoutSeconds = 900,
     [switch] $NoRelaunch
 )
@@ -9,6 +10,7 @@ $CodexHome = if ($CodexHome) { $CodexHome } else { Split-Path -Parent $PSScriptR
 $logDir = Join-Path $CodexHome "logs"
 $logPath = Join-Path $logDir "agent-chat-folder-after-exit.log"
 $statePath = Join-Path $CodexHome ".codex-global-state.json"
+$DbPath = if ($DbPath) { $DbPath } else { Join-Path $CodexHome "sqlite\state_5.sqlite" }
 $folder = "C:\Users\zev\Documents\Codex\00-agent-chats"
 $label = "00 AGENTS / Named Agent Chats"
 $threadIds = @(
@@ -124,6 +126,54 @@ $state | Add-Member -NotePropertyName "agent-registrar-named-agent-folder" -Note
 $json = $state | ConvertTo-Json -Depth 100 -Compress
 [System.IO.File]::WriteAllText($statePath, $json, [System.Text.UTF8Encoding]::new($false))
 Write-Log "applied named agent folder; backup: $backup"
+
+if (Test-Path -LiteralPath $DbPath) {
+    $stamp = Get-Date -Format "yyyyMMddHHmmss"
+    foreach ($suffix in @("", "-wal", "-shm")) {
+        $candidate = "$DbPath$suffix"
+        if (Test-Path -LiteralPath $candidate) {
+            Copy-Item -LiteralPath $candidate -Destination "$candidate.bak-agent-chat-folder-$stamp" -Force
+        }
+    }
+
+    $tmpPy = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), ".py")
+    $idsJson = $threadIds | ConvertTo-Json -Compress
+    $python = @"
+import json
+import sqlite3
+
+db_path = r'''$DbPath'''
+folder = r'''\\?\$folder'''
+thread_ids = json.loads(r'''$idsJson''')
+
+con = sqlite3.connect(db_path)
+with con:
+    for thread_id in thread_ids:
+        con.execute("update threads set cwd = ? where id = ?", (folder, thread_id))
+con.close()
+"@
+    [System.IO.File]::WriteAllText($tmpPy, $python, [System.Text.UTF8Encoding]::new($false))
+    $pyCandidates = @(
+        (Join-Path $CodexHome "..\..\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"),
+        "C:\Users\zev\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe",
+        "python"
+    )
+    $pythonExe = $null
+    foreach ($candidate in $pyCandidates) {
+        if ($candidate -eq "python" -or (Test-Path -LiteralPath $candidate)) {
+            $pythonExe = $candidate
+            break
+        }
+    }
+    & $pythonExe $tmpPy
+    if ($LASTEXITCODE -ne 0) {
+        throw "SQLite thread cwd update failed with exit code $LASTEXITCODE"
+    }
+    Remove-Item -LiteralPath $tmpPy -Force -ErrorAction SilentlyContinue
+    Write-Log "updated named agent thread cwd in SQLite: $DbPath"
+} else {
+    Write-Log "SQLite db not found; skipped thread cwd update: $DbPath"
+}
 
 if (-not $NoRelaunch) {
     Write-Log "relaunching Codex Desktop"
