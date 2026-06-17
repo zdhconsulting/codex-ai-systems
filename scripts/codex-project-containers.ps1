@@ -72,7 +72,7 @@ $desired = @(
 )
 
 $threadAssignments = @(
-    @{ Id = "019ea0a7-1056-7c00-84f1-12fa689e503c"; Path = "C:\repos\bossman"; Label = "Bossman" },
+    @{ Id = "019ed672-8f06-7ce1-809b-288a3ae9ddeb"; Path = "C:\repos\bossman"; Label = "Bossman" },
     @{ Id = "019eaaf1-a97f-7172-ab4d-25a7d433d659"; Path = "C:\repos\Mr.SEO"; Label = "Mr.SEO" },
     @{ Id = "019e9f8f-7f6d-7691-8761-9b0519c35585"; Path = "C:\repos\zdhsales"; Label = "ZDH Sales" },
     @{ Id = "019e9f90-0538-7562-b162-ae6a9b802239"; Path = "C:\repos\webdesignisrael"; Label = "Web Design Israel" },
@@ -119,7 +119,7 @@ foreach ($item in $existing) {
 $state.'project-appearances' = $appearances
 $state.'pinned-thread-ids' = @(
     "019ec3de-d9cd-70e1-a8b6-6f71f1da16d4",
-    "019ea0a7-1056-7c00-84f1-12fa689e503c"
+    "019ed672-8f06-7ce1-809b-288a3ae9ddeb"
 )
 
 $atom = $state.PSObject.Properties["electron-persisted-atom-state"].Value
