@@ -64,7 +64,7 @@ foreach ($stateDb in $stateDbCandidates) {
 
 if (Test-Path -LiteralPath $sidebarReconciler) {
     Write-Log "applying sidebar reconciler while Codex Desktop is closed"
-    $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $sidebarReconciler -Apply -SortByRecent -Json 2>&1 | Out-String
+    $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $sidebarReconciler -Apply -SortByRecent -RecentPins -Json 2>&1 | Out-String
     Write-Log ($output.Trim())
 } else {
     Write-Log "sidebar reconciler not found; skipping sidebar state reconcile"
