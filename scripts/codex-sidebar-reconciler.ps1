@@ -222,7 +222,26 @@ for db_path in db_paths:
     con = sqlite3.connect(str(db_path))
     con.row_factory = sqlite3.Row
     root_norms = {norm_path(root): root for root in desired_roots}
-    for row in con.execute("select cwd, max(coalesce(updated_at_ms, updated_at * 1000, 0)) as latest from threads where archived=0 group by cwd"):
+    # Recency should reflect real user/project activity, not automation noise.
+    # The sidebar was getting polluted because old Bossman/Mr.SEO heartbeat threads
+    # were touched by automations and made stale project folders look "recent".
+    recent_project_query = """
+        select cwd, max(coalesce(updated_at_ms, updated_at * 1000, 0)) as latest
+        from threads
+        where archived=0
+          and coalesce(cwd,'') != ''
+          and coalesce(title,'') not like 'Automation:%'
+          and coalesce(title,'') not like 'Bossman delivery lane%'
+          and coalesce(title,'') not like 'Bossman planner + public report%'
+          and coalesce(title,'') not like 'Bosswoman%'
+          and coalesce(title,'') not like 'Mr.SEO Owner-Clear%'
+          and coalesce(title,'') not like '<heartbeat>%'
+          and coalesce(title,'') not like '<codex_delegation>%'
+          and coalesce(title,'') not like 'RECENT - Active Now%'
+          and coalesce(title,'') not like 'Verify sidebar project state%'
+        group by cwd
+    """
+    for row in con.execute(recent_project_query):
         cwd_key = norm_path(row["cwd"])
         if cwd_key in root_norms:
             root = root_norms[cwd_key]
@@ -368,6 +387,17 @@ report = {
     "sort_mode": sort_mode,
     "recent_by_root": recent_by_root,
     "recent_pin_ids": recent_pin_ids,
+    "recency_noise_exclusions": [
+        "Automation:%",
+        "Bossman delivery lane%",
+        "Bossman planner + public report%",
+        "Bosswoman%",
+        "Mr.SEO Owner-Clear%",
+        "<heartbeat>%",
+        "<codex_delegation>%",
+        "RECENT - Active Now%",
+        "Verify sidebar project state%",
+    ],
     "needs_after_exit_cleanup": any(item.get("visible_noise_count_sampled", 0) > 0 for item in db_reports),
     "changed": bool(changes["pinned_ids"] or changes["roots"]),
 }
