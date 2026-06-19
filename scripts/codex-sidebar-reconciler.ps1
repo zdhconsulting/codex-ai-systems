@@ -4,6 +4,7 @@ param(
     [switch] $Apply,
     [switch] $ArmAfterExitCleanup,
     [switch] $SortByRecent,
+    [switch] $RecentPins,
     [switch] $Json
 )
 
@@ -82,6 +83,7 @@ parser.add_argument("--project-registry", required=True)
 parser.add_argument("--report", required=True)
 parser.add_argument("--apply", action="store_true")
 parser.add_argument("--sort-by-recent", action="store_true")
+parser.add_argument("--recent-pins", action="store_true")
 args = parser.parse_args()
 
 codex_home = Path(args.codex_home)
@@ -116,7 +118,6 @@ missing_pins = [tid for tid in expected_pin_ids if tid not in current_pin_ids]
 extra_pins = [tid for tid in current_pin_ids if tid not in expected_pin_ids]
 
 curated_roots = [
-    ("C:\\Users\\zev\\Documents\\Codex\\00-active-now", "00 RECENT / Active Now"),
     ("C:\\Users\\zev\\Documents\\Codex\\00-agent-chats", "00 AGENTS / Named Agent Chats"),
     ("C:\\Users\\zev\\OneDrive\\Documents\\New project 2", "01 COMMAND / ZDH Center"),
     ("C:\\repos\\bossman", "02 SYSTEM / Bossman Dispatch"),
@@ -213,6 +214,7 @@ db_paths = [
 
 db_reports = []
 recent_by_root = {}
+recent_pin_ids = []
 for db_path in db_paths:
     if not db_path.exists():
         db_reports.append({"path": str(db_path), "exists": False})
@@ -273,6 +275,25 @@ for db_path in db_paths:
         "visible_noise_sample": visible_noise[:12],
     })
 
+primary_db = codex_home / "state_5.sqlite"
+if primary_db.exists():
+    con = sqlite3.connect(str(primary_db))
+    con.row_factory = sqlite3.Row
+    for row in con.execute("""
+        select id,title,cwd,updated_at_ms from threads
+        where archived=0
+          and coalesce(title,'') not like 'Automation:%'
+          and coalesce(title,'') not like 'Mr.SEO Owner-Clear%'
+          and coalesce(title,'') not like 'Bossman delivery lane%'
+          and coalesce(title,'') not like 'Bossman planner + public report%'
+          and coalesce(title,'') not like 'RECENT - Active Now%'
+          and coalesce(title,'') not like 'Verify sidebar project state%'
+        order by updated_at_ms desc
+        limit 12
+    """):
+        recent_pin_ids.append(row["id"])
+    con.close()
+
 changes = {
     "pinned_ids": missing_pins or extra_pins,
     "roots": missing_roots or extra_roots or label_mismatches,
@@ -291,10 +312,13 @@ if args.apply:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     backup_path = global_state_path.with_suffix(global_state_path.suffix + f".bak-sidebar-reconciler-{timestamp}")
     backup_path.write_text(json.dumps(original_state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    reconciled_pins = list(current_pin_ids)
-    for tid in expected_pin_ids:
-        if tid not in reconciled_pins:
-            reconciled_pins.append(tid)
+    if args.recent_pins and recent_pin_ids:
+        reconciled_pins = list(recent_pin_ids)
+    else:
+        reconciled_pins = list(current_pin_ids)
+        for tid in expected_pin_ids:
+            if tid not in reconciled_pins:
+                reconciled_pins.append(tid)
     global_state["pinned-thread-ids"] = reconciled_pins
     global_state["electron-saved-workspace-roots"] = desired_roots
     global_state[label_key] = labels
@@ -343,6 +367,7 @@ report = {
     "db_reports": db_reports,
     "sort_mode": sort_mode,
     "recent_by_root": recent_by_root,
+    "recent_pin_ids": recent_pin_ids,
     "needs_after_exit_cleanup": any(item.get("visible_noise_count_sampled", 0) > 0 for item in db_reports),
     "changed": bool(changes["pinned_ids"] or changes["roots"]),
 }
@@ -361,6 +386,7 @@ $argsList = @(
 )
 if ($Apply) { $argsList += "--apply" }
 if ($SortByRecent) { $argsList += "--sort-by-recent" }
+if ($RecentPins) { $argsList += "--recent-pins" }
 & python $tmpPy @argsList
 if ($LASTEXITCODE -ne 0) {
     throw "Sidebar reconciler failed with exit code $LASTEXITCODE"
@@ -391,6 +417,7 @@ $summary = [pscustomobject]@{
     extraRoots = @($report.extra_roots).Count
     labelMismatches = @($report.label_mismatches).Count
     sortMode = $report.sort_mode
+    recentPins = @($report.recent_pin_ids).Count
     needsAfterExitCleanup = [bool] $report.needs_after_exit_cleanup
     afterExitCleanupArmed = $armed
     codexDesktopRunning = $runningCodex.Count -gt 0
@@ -405,6 +432,7 @@ if ($Json) {
     "Pins: expected=$($summary.expectedPins), missing=$($summary.missingPins), extra=$($summary.extraPins)"
     "Projects: desired roots=$($summary.desiredRoots), missing=$($summary.missingRoots), extra=$($summary.extraRoots), label mismatches=$($summary.labelMismatches)"
     "Sort mode: $($summary.sortMode)"
+    "Recent pins available: $($summary.recentPins)"
     "Thread cleanup needed after exit: $($summary.needsAfterExitCleanup)"
     "After-exit cleanup armed: $($summary.afterExitCleanupArmed)"
 }
