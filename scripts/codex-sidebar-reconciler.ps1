@@ -116,6 +116,7 @@ missing_pins = [tid for tid in expected_pin_ids if tid not in current_pin_ids]
 extra_pins = [tid for tid in current_pin_ids if tid not in expected_pin_ids]
 
 curated_roots = [
+    ("C:\\Users\\zev\\Documents\\Codex\\00-active-now", "00 RECENT / Active Now"),
     ("C:\\Users\\zev\\Documents\\Codex\\00-agent-chats", "00 AGENTS / Named Agent Chats"),
     ("C:\\Users\\zev\\OneDrive\\Documents\\New project 2", "01 COMMAND / ZDH Center"),
     ("C:\\repos\\bossman", "02 SYSTEM / Bossman Dispatch"),
