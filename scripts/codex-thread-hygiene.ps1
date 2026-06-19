@@ -207,6 +207,7 @@ if args.apply and archive_list:
             "update threads set archived = 1, archived_at = ? where id = ?",
             [(now_ms, item["id"]) for item in archive_list],
         )
+    con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
 remaining_counts = []
 for row in con.execute("select cwd, count(*) as n from threads where archived=0 group by cwd order by n desc"):

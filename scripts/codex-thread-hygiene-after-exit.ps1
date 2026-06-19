@@ -9,6 +9,7 @@ $CodexHome = if ($CodexHome) { $CodexHome } else { Split-Path -Parent $PSScriptR
 $logDir = Join-Path $CodexHome "logs"
 $logPath = Join-Path $logDir "thread-hygiene-after-exit.log"
 $hygieneCmd = Join-Path $CodexHome "scripts\codex-thread-hygiene.cmd"
+$sidebarReconciler = Join-Path $CodexHome "scripts\codex-sidebar-reconciler.ps1"
 $stateDbCandidates = @(
     (Join-Path $CodexHome "sqlite\state_5.sqlite"),
     (Join-Path $CodexHome "state_5.sqlite")
@@ -59,6 +60,14 @@ foreach ($stateDb in $stateDbCandidates) {
     Write-Log "applying thread hygiene to $stateDb"
     $output = & $hygieneCmd -DbPath $stateDb 2>&1 | Out-String
     Write-Log ($output.Trim())
+}
+
+if (Test-Path -LiteralPath $sidebarReconciler) {
+    Write-Log "applying sidebar reconciler while Codex Desktop is closed"
+    $output = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $sidebarReconciler -Apply -SortByRecent -Json 2>&1 | Out-String
+    Write-Log ($output.Trim())
+} else {
+    Write-Log "sidebar reconciler not found; skipping sidebar state reconcile"
 }
 
 if (-not $NoRelaunch) {
