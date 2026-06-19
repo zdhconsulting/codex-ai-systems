@@ -3,6 +3,7 @@ param(
     [string] $CommandCenterRoot = "C:\Users\zev\OneDrive\Documents\New project 2",
     [switch] $Apply,
     [switch] $ArmAfterExitCleanup,
+    [switch] $SortByRecent,
     [switch] $Json
 )
 
@@ -80,6 +81,7 @@ parser.add_argument("--agent-registry", required=True)
 parser.add_argument("--project-registry", required=True)
 parser.add_argument("--report", required=True)
 parser.add_argument("--apply", action="store_true")
+parser.add_argument("--sort-by-recent", action="store_true")
 args = parser.parse_args()
 
 codex_home = Path(args.codex_home)
@@ -209,12 +211,19 @@ db_paths = [
 ]
 
 db_reports = []
+recent_by_root = {}
 for db_path in db_paths:
     if not db_path.exists():
         db_reports.append({"path": str(db_path), "exists": False})
         continue
     con = sqlite3.connect(str(db_path))
     con.row_factory = sqlite3.Row
+    root_norms = {norm_path(root): root for root in desired_roots}
+    for row in con.execute("select cwd, max(coalesce(updated_at_ms, updated_at * 1000, 0)) as latest from threads where archived=0 group by cwd"):
+        cwd_key = norm_path(row["cwd"])
+        if cwd_key in root_norms:
+            root = root_norms[cwd_key]
+            recent_by_root[root] = max(int(row["latest"] or 0), int(recent_by_root.get(root, 0) or 0))
     thread_ids = expected_pin_ids
     placeholders = ",".join("?" for _ in thread_ids) or "''"
     registered_rows = []
@@ -267,6 +276,15 @@ changes = {
     "pinned_ids": missing_pins or extra_pins,
     "roots": missing_roots or extra_roots or label_mismatches,
 }
+
+sort_mode = "registry_order"
+if args.sort_by_recent:
+    sort_mode = "recent_first"
+    desired_roots = sorted(
+        desired_roots,
+        key=lambda root: (int(recent_by_root.get(root, 0) or 0), labels.get(root, "")),
+        reverse=True,
+    )
 
 if args.apply:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -322,6 +340,8 @@ report = {
     "retired_roots_removed": retired_removed,
     "label_mismatches": label_mismatches,
     "db_reports": db_reports,
+    "sort_mode": sort_mode,
+    "recent_by_root": recent_by_root,
     "needs_after_exit_cleanup": any(item.get("visible_noise_count_sampled", 0) > 0 for item in db_reports),
     "changed": bool(changes["pinned_ids"] or changes["roots"]),
 }
@@ -339,6 +359,7 @@ $argsList = @(
     "--report", $tmpReport
 )
 if ($Apply) { $argsList += "--apply" }
+if ($SortByRecent) { $argsList += "--sort-by-recent" }
 & python $tmpPy @argsList
 if ($LASTEXITCODE -ne 0) {
     throw "Sidebar reconciler failed with exit code $LASTEXITCODE"
@@ -368,6 +389,7 @@ $summary = [pscustomobject]@{
     missingRoots = @($report.missing_roots).Count
     extraRoots = @($report.extra_roots).Count
     labelMismatches = @($report.label_mismatches).Count
+    sortMode = $report.sort_mode
     needsAfterExitCleanup = [bool] $report.needs_after_exit_cleanup
     afterExitCleanupArmed = $armed
     codexDesktopRunning = $runningCodex.Count -gt 0
@@ -381,6 +403,7 @@ if ($Json) {
     "Report: $($summary.reportPath)"
     "Pins: expected=$($summary.expectedPins), missing=$($summary.missingPins), extra=$($summary.extraPins)"
     "Projects: desired roots=$($summary.desiredRoots), missing=$($summary.missingRoots), extra=$($summary.extraRoots), label mismatches=$($summary.labelMismatches)"
+    "Sort mode: $($summary.sortMode)"
     "Thread cleanup needed after exit: $($summary.needsAfterExitCleanup)"
     "After-exit cleanup armed: $($summary.afterExitCleanupArmed)"
 }
