@@ -9,6 +9,10 @@ $CodexHome = if ($CodexHome) { $CodexHome } else { Split-Path -Parent $PSScriptR
 $logDir = Join-Path $CodexHome "logs"
 $logPath = Join-Path $logDir "thread-hygiene-after-exit.log"
 $hygieneCmd = Join-Path $CodexHome "scripts\codex-thread-hygiene.cmd"
+$stateDbCandidates = @(
+    (Join-Path $CodexHome "sqlite\state_5.sqlite"),
+    (Join-Path $CodexHome "state_5.sqlite")
+)
 
 if (-not (Test-Path -LiteralPath $logDir)) {
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
@@ -46,8 +50,16 @@ if ($remaining.Count -gt 0) {
 
 Start-Sleep -Seconds 2
 Write-Log "Codex Desktop exited; applying thread hygiene"
-$output = & $hygieneCmd 2>&1 | Out-String
-Write-Log ($output.Trim())
+foreach ($stateDb in $stateDbCandidates) {
+    if (-not (Test-Path -LiteralPath $stateDb)) {
+        Write-Log "skipping missing state db: $stateDb"
+        continue
+    }
+
+    Write-Log "applying thread hygiene to $stateDb"
+    $output = & $hygieneCmd -DbPath $stateDb 2>&1 | Out-String
+    Write-Log ($output.Trim())
+}
 
 if (-not $NoRelaunch) {
     Write-Log "relaunching Codex Desktop"
