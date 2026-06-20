@@ -42,7 +42,7 @@ When Zev says `Next`, continue the current mission with the best next action. Do
 
 ## Reasoning Gear
 
-Start substantial tasks with `Gear: low|medium|high|xhigh - brief reason`. Use low for simple mechanical work, medium for normal implementation, high for debugging/verification-heavy work, and xhigh for architecture, auth, billing, security, database, permissions, or production-risk work.
+Start substantial tasks with `Gear: low|high|xhigh|extra - brief reason`. Use `gpt-5.5` with high reasoning by default for Codex work. Low is a scope label for simple mechanical work, not a model downgrade; medium/balanced is a compatibility alias to high. Use xhigh/extra for architecture, auth, billing, security, database, permissions, or production-risk work.
 
 ## AI Provider Gateway
 

@@ -99,24 +99,24 @@ Interpret `Next` by this priority order:
 
 For visible execution, start substantial `Next` turns with:
 
-`Next = SPECIFIC_ACTION. Gear: low|medium|high|xhigh - brief reason.`
+`Next = SPECIFIC_ACTION. Gear: low|high|xhigh|extra - brief reason.`
 
 Then execute. Stop only for `Owner button needed`, `Commander approval needed`, or a genuine lack of recoverable context after checking local state.
 
 ## Reasoning Gear
 
-Default to the lightest reasoning level that can do the job safely:
+Default to `gpt-5.5` with high reasoning for Codex work unless Zev explicitly overrides it. The gear label is now mostly a scope/risk label, not permission to downgrade the model.
 
-- `low`: mechanical edits, copy changes, simple links, quick git/status tasks, small CSS tweaks, and obvious one-file fixes.
-- `medium`: normal feature work, ordinary bug fixes, pages/components/forms, and routine responsive work.
-- `high`: debugging, failing tests/CI, code review, regressions, broad refactors, deployment problems, performance work, or multi-file changes.
+- `low`: low-scope mechanical edits, copy changes, simple links, quick git/status tasks, small CSS tweaks, and obvious one-file fixes. Still use `gpt-5.5` with high reasoning for new Codex sessions.
+- `high`: normal implementation, debugging, failing tests/CI, code review, regressions, broad refactors, deployment problems, performance work, or multi-file changes.
 - `xhigh`: architecture, security, auth, billing/payments, database migrations, permissions, production-risk decisions, or ambiguous complex failures.
+- `extra`: xhigh plus council/bounce, extra verification, and tighter rollback/risk controls for the hairiest work.
 
 When a task is simple, stay concise and move fast. When a task has hidden risk, take the deeper gear and say why briefly. If the user asks to change gears, follow that override.
 
 For visibility, begin substantial tasks with one short line:
 
-`Gear: low|medium|high|xhigh - brief reason.`
+`Gear: low|high|xhigh|extra - brief reason.`
 
 Skip the gear line only for tiny conversational replies where it would add clutter. In Desktop sessions this is a visible working-mode label; the actual model reasoning setting may still be controlled by the current session/profile.
 
@@ -282,11 +282,12 @@ Force a specific route:
 
 The actual model/profile plan is:
 
-- `low` / `fast`: `gpt-5.4-mini`, low reasoning, for fast simple coding and mechanical tasks without concentrating routine traffic on Spark.
-- `medium` / `balanced`: `gpt-5.4`, medium reasoning, for normal implementation work.
-- `high` / `deep`: `gpt-5.5`, high reasoning, for debugging, CI, regressions, multi-file work, deploy issues, and verification-heavy tasks.
+- `low` / `fast`: `gpt-5.5`, high reasoning. Low is a scope label only.
+- `medium` / `balanced`: compatibility alias to `gpt-5.5`, high reasoning. Do not use 5.4 for this.
+- `high` / `deep`: `gpt-5.5`, high reasoning, for implementation, debugging, CI, regressions, multi-file work, deploy issues, and verification-heavy tasks.
 - `xhigh` / `max`: `gpt-5.5`, xhigh reasoning, for architecture, auth, security, billing, database, permissions, and production-risk work.
-- `review`: `codex-auto-review`, medium reasoning, for explicit code review, PR review, diff review, or commit review.
+- `extra`: use `codex-xhigh-bounce.cmd` or council mode on `gpt-5.5` for xhigh work that needs extra preflight, critique, or verification.
+- `review`: `gpt-5.5`, high reasoning, for explicit code review, PR review, diff review, or commit review.
 
 Highest-gear self-bounce:
 
@@ -314,9 +315,9 @@ Council vs swarm routing:
 - When swarm is enabled, Codex remains coordinator: define lanes, assign disjoint write scopes, run local critical-path work, integrate results, verify, and close agents when done.
 - If both apply, use council for high-risk strategy/preflight and swarm only for clearly separable implementation, research, or verification lanes after the strategy is clear.
 
-Available but not the default:
+No automatic downgrades:
 
-- `gpt-5.3-codex-spark`: use only as an explicit temporary override when Spark capacity is healthy and the task truly benefits from ultra-fast low-gear execution. Do not make it the default low gear because it has a separate usage pool that can be exhausted by routine work.
+- Do not route new Codex work to `gpt-5.4`, `gpt-5.4-mini`, or `gpt-5.3-codex-spark` unless Zev explicitly asks for that specific downgrade.
 
 In an already-open Desktop chat, Codex cannot guarantee changing the current session's model just by printing a gear label. The label still controls working behavior. Actual model switching happens when the task is launched through `codex-auto.cmd` or a Codex profile.
 
@@ -337,7 +338,7 @@ Use `low` for quick, obvious work:
 - Check whether a file, branch, or remote exists.
 - Answer a narrow question from visible local context.
 
-Use `medium` for normal build work:
+Use `high` for normal build work:
 
 - Add a small page, component, form, dashboard panel, or route.
 - Implement a straightforward feature with tests.
@@ -378,7 +379,7 @@ Use `xhigh` for high-stakes or ambiguous decisions:
 
 ## Design Work Rules
 
-Use `low` for tiny visual tweaks, `medium` for normal page/component polish, `high` for multi-screen UX/accessibility/responsive verification, and `xhigh` for brand systems, design architecture, checkout/signup/auth, revenue, trust, or production-risk design.
+Use `low` only as a tiny visual-tweak scope label, `high` for normal page/component polish and multi-screen UX/accessibility/responsive verification, and `xhigh`/`extra` for brand systems, design architecture, checkout/signup/auth, revenue, trust, or production-risk design.
 
 For all websites, the primary navigation should hide when the user scrolls down and reappear when the user scrolls up. Keep it visible at the top of the page, when focused, and when any mobile menu is open; use a readable solid/glass treatment once it floats over body content.
 

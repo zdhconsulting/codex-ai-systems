@@ -66,11 +66,11 @@ if (-not (Test-Path -LiteralPath $modulePath)) {
 Import-Module $modulePath -Force
 
 $expected = @(
-    [pscustomobject]@{ Profile = "fast"; Gear = "low"; Model = "gpt-5.4-mini"; Effort = "low"; ServiceTier = ""; Command = "exec" },
-    [pscustomobject]@{ Profile = "balanced"; Gear = "medium"; Model = "gpt-5.4"; Effort = "medium"; ServiceTier = "fast"; Command = "exec" },
+    [pscustomobject]@{ Profile = "fast"; Gear = "low"; Model = "gpt-5.5"; Effort = "high"; ServiceTier = "fast"; Command = "exec" },
+    [pscustomobject]@{ Profile = "balanced"; Gear = "high"; Model = "gpt-5.5"; Effort = "high"; ServiceTier = "fast"; Command = "exec" },
     [pscustomobject]@{ Profile = "deep"; Gear = "high"; Model = "gpt-5.5"; Effort = "high"; ServiceTier = "fast"; Command = "exec" },
     [pscustomobject]@{ Profile = "max"; Gear = "xhigh"; Model = "gpt-5.5"; Effort = "xhigh"; ServiceTier = "fast"; Command = "exec" },
-    [pscustomobject]@{ Profile = "review"; Gear = "review"; Model = "codex-auto-review"; Effort = "medium"; ServiceTier = ""; Command = "review" }
+    [pscustomobject]@{ Profile = "review"; Gear = "review"; Model = "gpt-5.5"; Effort = "high"; ServiceTier = "fast"; Command = "exec" }
 )
 
 $requiredScripts = @(
@@ -160,7 +160,7 @@ if (Test-Path -LiteralPath $automationDir) {
 
 $routeTests = @(
     [pscustomobject]@{ Prompt = "fix typo in README"; Profile = "fast" },
-    [pscustomobject]@{ Prompt = "add dashboard panel"; Profile = "balanced" },
+    [pscustomobject]@{ Prompt = "add dashboard panel"; Profile = "deep" },
     [pscustomobject]@{ Prompt = "debug failing tests"; Profile = "deep" },
     [pscustomobject]@{ Prompt = "change auth billing database permissions"; Profile = "max" },
     [pscustomobject]@{ Prompt = "[review] code review current diff"; Profile = "review" },

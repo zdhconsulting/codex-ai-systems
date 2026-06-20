@@ -3,20 +3,20 @@ function Get-CodexGearMatrix {
         fast = [pscustomobject]@{
             Profile = "fast"
             Gear = "low"
-            Model = "gpt-5.4-mini"
-            Effort = "low"
-            ServiceTier = ""
+            Model = "gpt-5.5"
+            Effort = "high"
+            ServiceTier = "fast"
             Command = "exec"
-            Purpose = "Fast simple coding, status checks, typos, copy, links, and obvious one-file fixes without concentrating all low-gear traffic on Spark."
+            Purpose = "Low-scope work label only: simple coding, status checks, typos, copy, links, and obvious one-file fixes still run on gpt-5.5 with high reasoning."
         }
         balanced = [pscustomobject]@{
             Profile = "balanced"
-            Gear = "medium"
-            Model = "gpt-5.4"
-            Effort = "medium"
+            Gear = "high"
+            Model = "gpt-5.5"
+            Effort = "high"
             ServiceTier = "fast"
             Command = "exec"
-            Purpose = "Normal implementation work: components, pages, forms, docs, and ordinary bug fixes."
+            Purpose = "Compatibility alias for high gear. Normal implementation work now runs on gpt-5.5 with high reasoning."
         }
         deep = [pscustomobject]@{
             Profile = "deep"
@@ -39,11 +39,11 @@ function Get-CodexGearMatrix {
         review = [pscustomobject]@{
             Profile = "review"
             Gear = "review"
-            Model = "codex-auto-review"
-            Effort = "medium"
-            ServiceTier = ""
-            Command = "review"
-            Purpose = "Explicit code review, PR review, diff review, or commit review."
+            Model = "gpt-5.5"
+            Effort = "high"
+            ServiceTier = "fast"
+            Command = "exec"
+            Purpose = "Explicit code review, PR review, diff review, or commit review on gpt-5.5 with high reasoning."
         }
     }
     return $matrix
@@ -447,7 +447,7 @@ function Select-CodexGear {
     if ($maxHits -gt 0) { return "max" }
     if ($highHits -gt 0) { return "deep" }
     if ($score -le 0) { return "fast" }
-    if ($score -le 4) { return "balanced" }
+    if ($score -le 4) { return "deep" }
     return "deep"
 }
 
