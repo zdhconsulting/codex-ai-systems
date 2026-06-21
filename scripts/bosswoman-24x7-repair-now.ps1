@@ -87,14 +87,24 @@ function Publish-RepairReceipt {
         [string]$Message
     )
 
-    $replyScript = Join-Path $repoRoot "scripts\send-bosswoman-reply.ps1"
-    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $replyScript `
-        -Message $Message `
-        -Status $Status `
-        -Severity $Severity `
-        -ProjectScope "controller,Mr.SEO,ZDH Consulting,ZDH Sales" `
-        -ReplyTo $PacketId `
-        -IdempotencyKey "bosswoman-$PacketId-24x7-repair-now" | Out-Null
+    $timestamp = [DateTimeOffset]::UtcNow
+    $packet = [ordered]@{
+        packet_id = "bosswoman-repair-{0}-{1}" -f $timestamp.ToUnixTimeMilliseconds(), ([Guid]::NewGuid().ToString("N").Substring(0, 8))
+        created_at = $timestamp.ToString("o")
+        from = "Bosswoman MAYHASAPC repair"
+        to = "AI Manager"
+        type = "return_packet"
+        severity = $Severity
+        project_scope = @("controller", "Mr.SEO", "ZDH Consulting", "ZDH Sales")
+        requested_action = "ai_manager_review"
+        status = $Status
+        message = $Message
+        reply_to = $PacketId
+        idempotency_key = "bosswoman-$PacketId-24x7-repair-now-$($timestamp.ToUnixTimeMilliseconds())"
+    }
+
+    $json = $packet | ConvertTo-Json -Depth 10 -Compress
+    Add-Content -LiteralPath $outboxPath -Value $json -Encoding utf8
 
     git -C $repoRoot add "controller-mailbox/outbox/bosswoman-to-ai-manager.jsonl"
     $dirty = git -C $repoRoot status --short -- "controller-mailbox/outbox/bosswoman-to-ai-manager.jsonl"
@@ -179,3 +189,8 @@ System Hardening Note: This bypasses the watcher claim path and directly publish
 
 Publish-RepairReceipt -Status $status -Severity $severity -Message $message
 Write-Host "BOSSWOMAN_24X7_REPAIR_PUBLISHED status=$status native_exit=$nativeExit"
+if ($nativeOutput) {
+    Write-Host "BOSSWOMAN_24X7_NATIVE_OUTPUT_BEGIN"
+    Write-Host $nativeOutput
+    Write-Host "BOSSWOMAN_24X7_NATIVE_OUTPUT_END"
+}
