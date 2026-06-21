@@ -2,7 +2,9 @@
 param(
     [int]$MaxPackets = 1,
     [switch]$LaunchCodex,
-    [string]$BossmanRepo = "C:\Repos\bossman"
+    [string]$BossmanRepo = "C:\Repos\bossman",
+    [string]$RequiredHost = "mayhasapc",
+    [switch]$AllowAnyHost
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,6 +30,13 @@ function Write-TickLog {
     param([string]$Message)
     $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     "[$stamp] $Message" | Add-Content -LiteralPath $logPath -Encoding utf8
+}
+
+$currentHost = (hostname).Trim()
+if ((-not $AllowAnyHost) -and $RequiredHost -and ($currentHost.ToLowerInvariant() -ne $RequiredHost.ToLowerInvariant())) {
+    Write-TickLog "Host mismatch: expected $RequiredHost but running on $currentHost; exiting without claiming packets."
+    Write-Host "BOSSWOMAN_MAILBOX_SKIP host_mismatch expected=$RequiredHost actual=$currentHost"
+    exit 0
 }
 
 function Add-OutboxPacket {
