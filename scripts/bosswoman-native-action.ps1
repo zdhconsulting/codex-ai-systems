@@ -410,6 +410,9 @@ function Invoke-24x7Babysitter {
 
     $replyTo = [string]$Packet.packet_id
     $taskName = "ZDH Bosswoman 24x7 Babysitter"
+    $babysitterDir = Join-Path $env:LOCALAPPDATA "ZDH\BosswomanMailbox\babysitter"
+    New-Item -ItemType Directory -Force -Path $babysitterDir | Out-Null
+    $taskRunner = Join-Path $babysitterDir "run24x7.cmd"
     $taskArgs = @(
         "-NoProfile",
         "-NonInteractive",
@@ -422,7 +425,12 @@ function Invoke-24x7Babysitter {
         "-StatusMinutes", "30",
         "-MaxStartsPerTick", "3"
     )
-    $taskCommand = "powershell.exe " + ($taskArgs -join " ")
+    $taskRunnerBody = @(
+        "@echo off",
+        "powershell.exe " + ($taskArgs -join " ")
+    )
+    $taskRunnerBody | Set-Content -LiteralPath $taskRunner -Encoding ascii
+    $taskCommand = $taskRunner
     & schtasks.exe /Create /TN $taskName /TR $taskCommand /SC MINUTE /MO 5 /F | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "schtasks.exe failed to create $taskName with exit code $LASTEXITCODE"
@@ -440,8 +448,8 @@ function Invoke-24x7Babysitter {
         $taskHardening = "warning: created task but could not harden task settings: $($_.Exception.Message)"
     }
 
-    $firstOut = Join-Path $env:LOCALAPPDATA "ZDH\BosswomanMailbox\babysitter\first-tick.stdout.log"
-    $firstErr = Join-Path $env:LOCALAPPDATA "ZDH\BosswomanMailbox\babysitter\first-tick.stderr.log"
+    $firstOut = Join-Path $babysitterDir "first-tick.stdout.log"
+    $firstErr = Join-Path $babysitterDir "first-tick.stderr.log"
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $firstOut) | Out-Null
     $firstArgs = @(
         "-NoProfile",
@@ -471,7 +479,7 @@ Runtime State: Installed hidden scheduled task $taskName every 5 minutes and sta
 Projects: Mr.SEO, ZDH Consulting, ZDH Sales.
 Quality Bar: No one-minute proof-of-life pushes. No label-only, metadata-only, duplicate-tag, or tiny cosmetic commits unless bundled into a meaningful M1 improvement. Each worker must do 20-60 minutes of real project movement or return a blocker.
 Actions Taken: Registered recurring babysitter task and launched first hidden tick.
-Verification: Task created through schtasks.exe; task hidden; MultipleInstances=IgnoreNew; ExecutionTimeLimit=PT45M.
+Verification: Task created through schtasks.exe using short wrapper $taskRunner; task hidden; MultipleInstances=IgnoreNew; ExecutionTimeLimit=PT45M.
 Task Hardening: $taskHardening
 Result: Bosswoman is now expected to sit awake and babysit the three projects through recurring native ticks.
 Blockers: None at launcher level.
