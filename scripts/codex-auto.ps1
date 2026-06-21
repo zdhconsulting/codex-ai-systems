@@ -217,11 +217,12 @@ Rules:
 
 $codex = Get-CodexExecutable
 $execArgs = @("exec", "-C", $Cwd)
-if ($Sandbox) {
+if ($Sandbox -eq "danger-full-access" -and $ApprovalPolicy -eq "never") {
+    $execArgs += "--dangerously-bypass-approvals-and-sandbox"
+} elseif ($Sandbox) {
     $execArgs += @("--sandbox", $Sandbox)
-}
-if ($ApprovalPolicy) {
-    $execArgs += @("--ask-for-approval", $ApprovalPolicy)
+} elseif ($ApprovalPolicy -eq "never") {
+    $execArgs += "--dangerously-bypass-approvals-and-sandbox"
 }
 $execArgs += @("-p", $profile)
 if ($gear.Command -eq "review") {
