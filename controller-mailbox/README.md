@@ -49,6 +49,33 @@ git pull --ff-only
 .\scripts\bosswoman-mailbox-watch.ps1 -Once
 ```
 
+## Bosswoman Auto-Notice Watcher
+
+The durable setup is a hidden scheduled watcher on `MAYHASAPC`.
+
+Install it once:
+
+```powershell
+cd C:\Repos\codex-ai-systems
+git pull --ff-only
+powershell -ExecutionPolicy Bypass -File scripts\install-bosswoman-mailbox-watcher.ps1 -LaunchCodex
+```
+
+What it does:
+
+- pulls this repo every minute,
+- detects new AI Manager packets for Bosswoman,
+- writes an `in_progress` acknowledgement to the Bosswoman outbox,
+- starts at most one hidden Bosswoman Codex controller run per tick,
+- keeps a local dedupe/lock/log under `%LOCALAPPDATA%\ZDH\BosswomanMailbox`,
+- avoids visible PowerShell windows.
+
+Run one manual tick without Codex launch:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\bosswoman-mailbox-tick.ps1
+```
+
 ## Bosswoman Reply
 
 On `MAYHASAPC`, from `C:\Repos\codex-ai-systems`:
