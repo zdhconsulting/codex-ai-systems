@@ -209,7 +209,8 @@ function New-WorkerPrompt {
         [string]$Project,
         [string]$RepoPath,
         [string]$M1,
-        [string]$Verification
+        [string]$Verification,
+        [string]$ReplyTo
     )
 
 @"
@@ -233,6 +234,9 @@ Rules:
 
 Return through:
 C:\Repos\codex-ai-systems\scripts\send-bosswoman-reply.ps1 -Commit
+
+Use:
+-ReplyTo "$ReplyTo" -ProjectScope "$Project"
 
 Required project receipt fields:
 project:
@@ -316,9 +320,41 @@ function Invoke-OvernightRun {
     New-Item -ItemType Directory -Force -Path $runDir | Out-Null
 
     $workers = @()
-    $workers += Start-CodexWorker -RunDir $runDir -Slug "mr-seo" -Project "Mr.SEO" -RepoPath "C:\Repos\Mr.SEO" -Prompt (New-WorkerPrompt -Project "Mr.SEO" -RepoPath "C:\Repos\Mr.SEO" -M1 "Run one bounded ops/control pass, classify dirty generated outputs, run python scripts/run_ops_loop.py --ci, validate generated JSON/backlog/report outputs, and push only safe generated results or clear receipts." -Verification "python scripts/run_ops_loop.py --ci; then validate changed JSON files load with Python json.load.")
-    $workers += Start-CodexWorker -RunDir $runDir -Slug "zdh-consulting" -Project "ZDH Consulting" -RepoPath "C:\Repos\zdhconsultingsite" -Prompt (New-WorkerPrompt -Project "ZDH Consulting" -RepoPath "C:\Repos\zdhconsultingsite" -M1 "Review the homepage like a buyer and fix the highest-impact service/proof/contact/SEO/responsive issue." -Verification "npm test.")
-    $workers += Start-CodexWorker -RunDir $runDir -Slug "zdh-sales" -Project "ZDH Sales" -RepoPath "C:\Repos\zdhsales" -Prompt (New-WorkerPrompt -Project "ZDH Sales" -RepoPath "C:\Repos\zdhsales" -M1 "Rewrite the top homepage message so the buyer understands what is sold, who it is for, and what to do next." -Verification "Run the README static JS/JSON-LD parse command for index.html, thank-you.html, and 404.html.")
+    $replyTo = [string]$Packet.packet_id
+    $workers += Start-CodexWorker -RunDir $runDir -Slug "mr-seo" -Project "Mr.SEO" -RepoPath "C:\Repos\Mr.SEO" -Prompt (New-WorkerPrompt -Project "Mr.SEO" -RepoPath "C:\Repos\Mr.SEO" -M1 "Run one bounded ops/control pass, classify dirty generated outputs, run python scripts/run_ops_loop.py --ci, validate generated JSON/backlog/report outputs, and push only safe generated results or clear receipts." -Verification "python scripts/run_ops_loop.py --ci; then validate changed JSON files load with Python json.load." -ReplyTo $replyTo)
+    $workers += Start-CodexWorker -RunDir $runDir -Slug "zdh-consulting" -Project "ZDH Consulting" -RepoPath "C:\Repos\zdhconsultingsite" -Prompt (New-WorkerPrompt -Project "ZDH Consulting" -RepoPath "C:\Repos\zdhconsultingsite" -M1 "Review the homepage like a buyer and fix the highest-impact service/proof/contact/SEO/responsive issue." -Verification "npm test." -ReplyTo $replyTo)
+    $workers += Start-CodexWorker -RunDir $runDir -Slug "zdh-sales" -Project "ZDH Sales" -RepoPath "C:\Repos\zdhsales" -Prompt (New-WorkerPrompt -Project "ZDH Sales" -RepoPath "C:\Repos\zdhsales" -M1 "Rewrite the top homepage message so the buyer understands what is sold, who it is for, and what to do next." -Verification "Run the README static JS/JSON-LD parse command for index.html, thank-you.html, and 404.html." -ReplyTo $replyTo)
+
+    $runState = [ordered]@{
+        run_id = $timestamp
+        reply_to = $replyTo
+        started_at = [DateTimeOffset]::Now.ToString("o")
+        duration_hours = 6
+        max_workers_initial = 3
+        max_workers_after_stability = 4
+        workers = $workers
+    }
+    $runState | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $runDir "run-state.json") -Encoding utf8
+
+    $monitorScript = Join-Path $RepoRoot "scripts\bosswoman-overnight-monitor.ps1"
+    $monitorOut = Join-Path $runDir "monitor.stdout.log"
+    $monitorErr = Join-Path $runDir "monitor.stderr.log"
+    $monitorArgs = @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", $monitorScript,
+        "-RunDir", $runDir,
+        "-ReplyTo", $replyTo,
+        "-DurationHours", "6",
+        "-StatusMinutes", "30",
+        "-NoProgressMinutes", "90"
+    )
+    $monitorProcess = Start-Process -FilePath "powershell.exe" `
+        -ArgumentList $monitorArgs `
+        -WindowStyle Hidden `
+        -PassThru `
+        -RedirectStandardOutput $monitorOut `
+        -RedirectStandardError $monitorErr
 
     $workerText = (($workers | ForEach-Object {
         "$($_.Project): started=$($_.Started); pid=$($_.Pid); $($_.Reason)"
@@ -334,13 +370,13 @@ Projects Checked:
 $workerText
 Repos Verified: Project workers are required to verify path/remotes before edits and before commit/push.
 Actions Taken: Created run directory $runDir and launched one hidden worker per project.
-Verification: Native launcher verified machine/user and process start. Each project worker owns project-level verification.
+Verification: Native launcher verified machine/user and process start. Each project worker owns project-level verification. Monitor pid=$($monitorProcess.Id).
 Result: Overnight work started.
 Blockers: $(if (@($workers | Where-Object { -not $_.Started }).Count -gt 0) { "One or more workers failed to start; see Projects Checked." } else { "None at launcher level." })
 Owner Button Needed: None.
 Commander Approval Needed: None. This packet is the explicit overnight enable.
 Critical Escalation: None.
-Next Best Action: Wait for project receipt packets. If no project lands progress within 90 minutes, classify as no_delivery_progress.
+Next Best Action: Wait for project receipt packets and 30-minute monitor packets. If no project lands progress within 90 minutes, monitor will classify as no_delivery_progress.
 System Hardening Note: Launcher uses native mailbox control for start/status and hidden project workers only; it does not use send_message_to_thread, WinRM, deploys, or broad Bossman dispatch.
 "@
 
