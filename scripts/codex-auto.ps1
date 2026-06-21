@@ -11,64 +11,11 @@ param(
     [switch] $Print,
     [switch] $PacketOnly,
     [string] $Cwd = (Get-Location).Path,
-    [string] $Sandbox = "",
-    [string] $ApprovalPolicy = "",
     [Parameter(Position = 0, ValueFromRemainingArguments = $true)]
     [string[]] $PromptParts
 )
 
 $prompt = ($PromptParts -join " ").Trim()
-
-function Consume-LeadingOption {
-    param(
-        [string] $Text,
-        [string] $OptionName
-    )
-
-    $pattern = "^\s*-$([regex]::Escape($OptionName))\s+(`"[^`"]+`"|'[^']+'|\S+)\s*(.*)$"
-    $match = [regex]::Match($Text, $pattern, [System.Text.RegularExpressions.RegexOptions]::Singleline)
-    if (-not $match.Success) {
-        return [pscustomobject]@{
-            Matched = $false
-            Value = ""
-            Rest = $Text
-        }
-    }
-
-    $value = $match.Groups[1].Value.Trim()
-    if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
-        $value = $value.Substring(1, $value.Length - 2)
-    }
-
-    return [pscustomobject]@{
-        Matched = $true
-        Value = $value
-        Rest = $match.Groups[2].Value.Trim()
-    }
-}
-
-for ($i = 0; $i -lt 6; $i++) {
-    $changed = $false
-
-    $sandboxToken = Consume-LeadingOption -Text $prompt -OptionName "Sandbox"
-    if ($sandboxToken.Matched) {
-        $Sandbox = $sandboxToken.Value
-        $prompt = $sandboxToken.Rest
-        $changed = $true
-    }
-
-    $approvalToken = Consume-LeadingOption -Text $prompt -OptionName "ApprovalPolicy"
-    if ($approvalToken.Matched) {
-        $ApprovalPolicy = $approvalToken.Value
-        $prompt = $approvalToken.Rest
-        $changed = $true
-    }
-
-    if (-not $changed) {
-        break
-    }
-}
-
 $tagForceCodex = $false
 $tagForceChatGPT = $false
 $tagBounce = $false
@@ -101,7 +48,7 @@ if ($tagForceCodex) { $ForceCodex = $true }
 if ($tagForceChatGPT) { $ForceChatGPT = $true }
 if ($BounceOnly) { $Bounce = $true }
 if (-not $prompt) {
-    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Council] [-NoCouncil] [-ForceCodex] [-ForceChatGPT] [-NoOptimizeCredits] [-NoOpen] [-Print] [-PacketOnly] [-Cwd PATH] [-Sandbox MODE] [-ApprovalPolicy POLICY] <task prompt>"
+    Write-Error "Usage: codex-auto.ps1 [-DryRun] [-Bounce] [-BounceOnly] [-Council] [-NoCouncil] [-ForceCodex] [-ForceChatGPT] [-NoOptimizeCredits] [-NoOpen] [-Print] [-PacketOnly] [-Cwd PATH] <task prompt>"
     exit 2
 }
 
@@ -155,13 +102,9 @@ Write-Host "Codex auto gear: $($gear.Profile) ($($gear.Gear))"
 Write-Host "Model: $($gear.Model)"
 Write-Host "Reasoning effort: $($gear.Effort)"
 $tier = if ($gear.ServiceTier) { $gear.ServiceTier } else { "(default/none)" }
-$bypassApprovalsAndSandbox = ($Sandbox -eq "danger-full-access" -and $ApprovalPolicy -eq "never")
 Write-Host "Service tier: $tier"
 Write-Host "Workspace: $Cwd"
 Write-Host "Command: codex $($gear.Command)"
-if ($Sandbox) { Write-Host "Sandbox: $Sandbox" }
-if ($ApprovalPolicy) { Write-Host "Approval policy: $ApprovalPolicy" }
-if ($bypassApprovalsAndSandbox) { Write-Host "Codex bypass flag: enabled" }
 $autoCouncil = (-not $NoCouncil) -and (-not $Council) -and (-not $BounceOnly) -and (-not $Bounce) -and $gear.Profile -eq "max" -and $gear.Command -eq "exec"
 if ($autoCouncil) { $Council = $true }
 if ($Council) { $Bounce = $true }
@@ -176,7 +119,7 @@ $logDir = Join-Path $codexHome "logs"
 $logPath = Join-Path $logDir "reasoning-gear.log"
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-"[$timestamp] $($gear.Profile)/$($gear.Gear) | model=$($gear.Model) | effort=$($gear.Effort) | tier=$tier | sandbox=$Sandbox | approval=$ApprovalPolicy | bypass=$bypassApprovalsAndSandbox | bounce=$bounceMode | council=$Council | autoCouncil=$autoCouncil | noCouncil=$NoCouncil | $Cwd | $prompt" | Add-Content -Path $logPath
+"[$timestamp] $($gear.Profile)/$($gear.Gear) | model=$($gear.Model) | effort=$($gear.Effort) | tier=$tier | bounce=$bounceMode | council=$Council | autoCouncil=$autoCouncil | noCouncil=$NoCouncil | $Cwd | $prompt" | Add-Content -Path $logPath
 
 if ($DryRun) {
     Write-Host "Dry run only. Prompt: $prompt"
@@ -269,17 +212,6 @@ Rules:
 }
 
 $codex = Get-CodexExecutable
-$execArgs = @("exec", "-C", $Cwd)
-if ($bypassApprovalsAndSandbox) {
-    $execArgs += "--dangerously-bypass-approvals-and-sandbox"
-} elseif ($Sandbox) {
-    $execArgs += @("--sandbox", $Sandbox)
-}
-if ($ApprovalPolicy -and -not $bypassApprovalsAndSandbox) {
-    Write-Warning "This Codex CLI does not support a separate approval-policy flag; continuing without one."
-}
-$execArgs += @("-p", $profile)
-
 if ($gear.Command -eq "review") {
     $configArgs = New-CodexConfigArgs -Gear $gear
     Push-Location -LiteralPath $Cwd
@@ -333,8 +265,8 @@ $($bounceResult.Text)
 Now execute the task. Use the preflight as planning input, but validate it against the repository before changing files.
 "@
         }
-        $promptWithBounce | & $codex @execArgs "--" "-"
+        $promptWithBounce | & $codex exec -C $Cwd -p $profile "-"
     } else {
-        & $codex @execArgs "--" $prompt
+        & $codex exec -C $Cwd -p $profile $prompt
     }
 }
