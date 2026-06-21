@@ -76,7 +76,7 @@ if (-not (Test-Path -LiteralPath $codexAuto)) {
     throw "codex-auto.ps1 not found at $codexAuto"
 }
 
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $codexAuto -ForceCodex -NoOptimizeCredits -Cwd $BossmanRepo $prompt *>> $logPath
+& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File $codexAuto -ForceCodex -NoOptimizeCredits -Cwd $BossmanRepo $prompt *>> $logPath
 $exitCode = $LASTEXITCODE
 Write-RunLog "Codex finished for packet $packetId with exit code $exitCode"
 exit $exitCode

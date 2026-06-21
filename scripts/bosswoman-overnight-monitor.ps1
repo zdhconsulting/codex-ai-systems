@@ -35,7 +35,7 @@ function Send-MonitorReply {
         [string]$IdempotencySuffix = "monitor"
     )
 
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $replyScript `
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File $replyScript `
         -Message $Message `
         -Status $Status `
         -Severity $Severity `

@@ -115,7 +115,7 @@ try {
 
         $nativeAction = Join-Path $repoRoot "scripts\bosswoman-native-action.ps1"
         if (Test-Path -LiteralPath $nativeAction) {
-            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $nativeAction -PacketFile $packetFile -RepoRoot $repoRoot -BossmanRepo $BossmanRepo *>> $logPath
+            & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File $nativeAction -PacketFile $packetFile -RepoRoot $repoRoot -BossmanRepo $BossmanRepo *>> $logPath
             $nativeExitCode = $LASTEXITCODE
             if ($nativeExitCode -eq 0) {
                 Write-TickLog "Native action handled packet $packetId"
@@ -132,7 +132,9 @@ try {
             $runner = Join-Path $repoRoot "scripts\bosswoman-run-packet.ps1"
             $args = @(
                 "-NoProfile",
+                "-NonInteractive",
                 "-ExecutionPolicy", "Bypass",
+                "-WindowStyle", "Hidden",
                 "-File", $runner,
                 "-PacketFile", $packetFile,
                 "-BossmanRepo", $BossmanRepo

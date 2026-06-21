@@ -18,6 +18,7 @@ if (-not (Test-Path -LiteralPath $tickScript)) {
 
 $args = @(
     "-NoProfile",
+    "-NonInteractive",
     "-ExecutionPolicy", "Bypass",
     "-WindowStyle", "Hidden",
     "-File", "`"$tickScript`"",
@@ -34,6 +35,12 @@ $taskCommand = "powershell.exe " + ($args -join " ")
 if ($LASTEXITCODE -ne 0) {
     throw "schtasks.exe failed to create $TaskName with exit code $LASTEXITCODE"
 }
+
+$task = Get-ScheduledTask -TaskName $TaskName
+$task.Settings.Hidden = $true
+$task.Settings.MultipleInstances = "IgnoreNew"
+$task.Settings.ExecutionTimeLimit = "PT15M"
+$task | Set-ScheduledTask | Out-Null
 
 [pscustomobject]@{
     task_name = $TaskName

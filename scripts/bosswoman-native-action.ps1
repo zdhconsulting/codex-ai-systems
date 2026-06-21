@@ -112,7 +112,7 @@ function Send-BosswomanReply {
     )
 
     $replyScript = Join-Path $RepoRoot "scripts\send-bosswoman-reply.ps1"
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $replyScript `
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File $replyScript `
         -Message $Message `
         -Status $Status `
         -Severity $Severity `
@@ -285,7 +285,9 @@ function Start-CodexWorker {
 
     $args = @(
         "-NoProfile",
+        "-NonInteractive",
         "-ExecutionPolicy", "Bypass",
+        "-WindowStyle", "Hidden",
         "-File", $codexAuto,
         "-ForceCodex",
         "-NoOptimizeCredits",
@@ -345,7 +347,9 @@ function Invoke-OvernightRun {
     $monitorErr = Join-Path $runDir "monitor.stderr.log"
     $monitorArgs = @(
         "-NoProfile",
+        "-NonInteractive",
         "-ExecutionPolicy", "Bypass",
+        "-WindowStyle", "Hidden",
         "-File", $monitorScript,
         "-RunDir", $runDir,
         "-ReplyTo", $replyTo,
