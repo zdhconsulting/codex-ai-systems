@@ -1,6 +1,6 @@
 param(
     [string] $CodexHome = "",
-    [string] $OutputDir = "C:\Users\zev\Documents\Codex\00-active-now",
+    [string] $OutputDir = (Join-Path $env:USERPROFILE "Documents\Codex\00-active-now"),
     [int] $Limit = 30,
     [switch] $Json
 )

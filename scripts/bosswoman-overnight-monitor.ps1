@@ -50,10 +50,29 @@ function Get-ReceiptCount {
         return 0
     }
 
-    $lines = @(Get-Content -LiteralPath $outboxPath | Where-Object {
-        $_ -and $_ -match [regex]::Escape($ReplyTo) -and $_ -match "project|Project|Mr\.SEO|ZDH Consulting|ZDH Sales"
-    })
-    return $lines.Count
+    $count = 0
+    foreach ($line in (Get-Content -LiteralPath $outboxPath)) {
+        if (-not $line) {
+            continue
+        }
+
+        try {
+            $packet = $line | ConvertFrom-Json
+        } catch {
+            continue
+        }
+
+        if ([string]$packet.reply_to -ne $ReplyTo) {
+            continue
+        }
+
+        $message = [string]$packet.message
+        if ($message -match "(?im)^project\s*:" -and $message -match "(?im)^repo_path\s*:") {
+            $count++
+        }
+    }
+
+    return $count
 }
 
 function Get-WorkerSummary {
