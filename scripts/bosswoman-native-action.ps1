@@ -178,7 +178,7 @@ function Invoke-ReadinessProbe {
         $hostName -ieq "mayhasapc" -and
         $who -ieq "mayhasapc\meira" -and
         $missingFiles.Count -eq 0 -and
-        ($repos | Where-Object { -not $_.Exists -or -not $_.ExpectedRemotePresent }).Count -eq 0
+        @($repos | Where-Object { -not $_.Exists -or -not $_.ExpectedRemotePresent }).Count -eq 0
     )
 
     $message = @"
@@ -336,7 +336,7 @@ Repos Verified: Project workers are required to verify path/remotes before edits
 Actions Taken: Created run directory $runDir and launched one hidden worker per project.
 Verification: Native launcher verified machine/user and process start. Each project worker owns project-level verification.
 Result: Overnight work started.
-Blockers: $(if (($workers | Where-Object { -not $_.Started }).Count -gt 0) { "One or more workers failed to start; see Projects Checked." } else { "None at launcher level." })
+Blockers: $(if (@($workers | Where-Object { -not $_.Started }).Count -gt 0) { "One or more workers failed to start; see Projects Checked." } else { "None at launcher level." })
 Owner Button Needed: None.
 Commander Approval Needed: None. This packet is the explicit overnight enable.
 Critical Escalation: None.
