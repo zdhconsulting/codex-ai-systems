@@ -165,11 +165,10 @@ function Invoke-ReadinessProbe {
         $taskInfo = "missing_or_unreadable: $($_.Exception.Message)"
     }
 
-    $repos = @(
-        Get-RepoSummary -Name "Mr.SEO" -Path "C:\Repos\Mr.SEO" -ExpectedRemote "https://github.com/zdhconsulting/Mr.SEO.git",
-        Get-RepoSummary -Name "ZDH Consulting" -Path "C:\Repos\zdhconsultingsite" -ExpectedRemote "https://github.com/zdhconsulting/zdhconsultingsite.git",
-        Get-RepoSummary -Name "ZDH Sales" -Path "C:\Repos\zdhsales" -ExpectedRemote "https://github.com/zdhconsulting/zdhsales.git"
-    )
+    $repos = @()
+    $repos += Get-RepoSummary -Name "Mr.SEO" -Path "C:\Repos\Mr.SEO" -ExpectedRemote "https://github.com/zdhconsulting/Mr.SEO.git"
+    $repos += Get-RepoSummary -Name "ZDH Consulting" -Path "C:\Repos\zdhconsultingsite" -ExpectedRemote "https://github.com/zdhconsulting/zdhconsultingsite.git"
+    $repos += Get-RepoSummary -Name "ZDH Sales" -Path "C:\Repos\zdhsales" -ExpectedRemote "https://github.com/zdhconsulting/zdhsales.git"
 
     $repoText = (($repos | ForEach-Object {
         "$($_.Name): path=$($_.Path); exists=$($_.Exists); branch=$($_.Branch); expected_remote=$($_.ExpectedRemotePresent); dirty_count=$($_.DirtyCount); dirty_preview=$($_.DirtyPreview)"
@@ -316,11 +315,10 @@ function Invoke-OvernightRun {
     $runDir = Join-Path $env:LOCALAPPDATA "ZDH\BosswomanMailbox\overnight\$timestamp"
     New-Item -ItemType Directory -Force -Path $runDir | Out-Null
 
-    $workers = @(
-        Start-CodexWorker -RunDir $runDir -Slug "mr-seo" -Project "Mr.SEO" -RepoPath "C:\Repos\Mr.SEO" -Prompt (New-WorkerPrompt -Project "Mr.SEO" -RepoPath "C:\Repos\Mr.SEO" -M1 "Run one bounded ops/control pass, classify dirty generated outputs, run python scripts/run_ops_loop.py --ci, validate generated JSON/backlog/report outputs, and push only safe generated results or clear receipts." -Verification "python scripts/run_ops_loop.py --ci; then validate changed JSON files load with Python json.load."),
-        Start-CodexWorker -RunDir $runDir -Slug "zdh-consulting" -Project "ZDH Consulting" -RepoPath "C:\Repos\zdhconsultingsite" -Prompt (New-WorkerPrompt -Project "ZDH Consulting" -RepoPath "C:\Repos\zdhconsultingsite" -M1 "Review the homepage like a buyer and fix the highest-impact service/proof/contact/SEO/responsive issue." -Verification "npm test."),
-        Start-CodexWorker -RunDir $runDir -Slug "zdh-sales" -Project "ZDH Sales" -RepoPath "C:\Repos\zdhsales" -Prompt (New-WorkerPrompt -Project "ZDH Sales" -RepoPath "C:\Repos\zdhsales" -M1 "Rewrite the top homepage message so the buyer understands what is sold, who it is for, and what to do next." -Verification "Run the README static JS/JSON-LD parse command for index.html, thank-you.html, and 404.html.")
-    )
+    $workers = @()
+    $workers += Start-CodexWorker -RunDir $runDir -Slug "mr-seo" -Project "Mr.SEO" -RepoPath "C:\Repos\Mr.SEO" -Prompt (New-WorkerPrompt -Project "Mr.SEO" -RepoPath "C:\Repos\Mr.SEO" -M1 "Run one bounded ops/control pass, classify dirty generated outputs, run python scripts/run_ops_loop.py --ci, validate generated JSON/backlog/report outputs, and push only safe generated results or clear receipts." -Verification "python scripts/run_ops_loop.py --ci; then validate changed JSON files load with Python json.load.")
+    $workers += Start-CodexWorker -RunDir $runDir -Slug "zdh-consulting" -Project "ZDH Consulting" -RepoPath "C:\Repos\zdhconsultingsite" -Prompt (New-WorkerPrompt -Project "ZDH Consulting" -RepoPath "C:\Repos\zdhconsultingsite" -M1 "Review the homepage like a buyer and fix the highest-impact service/proof/contact/SEO/responsive issue." -Verification "npm test.")
+    $workers += Start-CodexWorker -RunDir $runDir -Slug "zdh-sales" -Project "ZDH Sales" -RepoPath "C:\Repos\zdhsales" -Prompt (New-WorkerPrompt -Project "ZDH Sales" -RepoPath "C:\Repos\zdhsales" -M1 "Rewrite the top homepage message so the buyer understands what is sold, who it is for, and what to do next." -Verification "Run the README static JS/JSON-LD parse command for index.html, thank-you.html, and 404.html.")
 
     $workerText = (($workers | ForEach-Object {
         "$($_.Project): started=$($_.Started); pid=$($_.Pid); $($_.Reason)"
