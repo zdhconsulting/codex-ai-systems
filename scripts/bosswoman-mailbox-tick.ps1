@@ -4,7 +4,8 @@ param(
     [switch]$LaunchCodex,
     [string]$BossmanRepo = "C:\Repos\bossman",
     [string]$RequiredHost = "mayhasapc",
-    [switch]$AllowAnyHost
+    [switch]$AllowAnyHost,
+    [string]$ReplayPacketId
 )
 
 $ErrorActionPreference = "Stop"
@@ -76,7 +77,7 @@ try {
 }
 
 try {
-    Write-TickLog "Tick start. LaunchCodex=$LaunchCodex"
+    Write-TickLog "Tick start. LaunchCodex=$LaunchCodex ReplayPacketId=$ReplayPacketId"
     git -C $repoRoot pull --ff-only | Out-Null
 
     if (-not (Test-Path -LiteralPath $inboxPath)) {
@@ -86,6 +87,7 @@ try {
 
     $seen = @(Get-Content -LiteralPath $seenPath | Where-Object { $_.Trim() })
     $newPackets = New-Object System.Collections.Generic.List[object]
+    $isReplay = -not [string]::IsNullOrWhiteSpace($ReplayPacketId)
 
     foreach ($line in (Get-Content -LiteralPath $inboxPath)) {
         if (-not $line.Trim()) {
@@ -93,12 +95,22 @@ try {
         }
 
         $packet = $line | ConvertFrom-Json
+        $packetId = [string]$packet.packet_id
+
+        if ($isReplay -and $packetId -ne $ReplayPacketId) {
+            continue
+        }
+
         if ($packet.to -and ([string]$packet.to) -notmatch "Bosswoman") {
             continue
         }
 
-        if ($seen -contains $packet.packet_id) {
+        if ((-not $isReplay) -and ($seen -contains $packetId)) {
             continue
+        }
+
+        if ($isReplay -and ($seen -contains $packetId)) {
+            Write-TickLog "Replaying previously seen packet $packetId."
         }
 
         $newPackets.Add($packet)
@@ -108,7 +120,13 @@ try {
     }
 
     if ($newPackets.Count -eq 0) {
-        Write-TickLog "No new Bosswoman packets."
+        if ($isReplay) {
+            Write-TickLog "Replay packet not found or not addressed to Bosswoman: $ReplayPacketId"
+            Write-Host "BOSSWOMAN_MAILBOX_NO_MATCH replay_packet_id=$ReplayPacketId"
+        } else {
+            Write-TickLog "No new Bosswoman packets."
+            Write-Host "BOSSWOMAN_MAILBOX_NO_NEW_PACKETS"
+        }
         exit 0
     }
 
@@ -119,8 +137,11 @@ try {
         $packet | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $packetFile -Encoding utf8
 
         Add-OutboxPacket -InboxPacket $packet -Status "in_progress" -Message "Bosswoman watcher claimed packet $packetId. LaunchCodex=$LaunchCodex."
-        Add-Content -LiteralPath $seenPath -Value $packetId -Encoding utf8
+        if ($seen -notcontains $packetId) {
+            Add-Content -LiteralPath $seenPath -Value $packetId -Encoding utf8
+        }
         Write-TickLog "Claimed packet $packetId"
+        Write-Host "BOSSWOMAN_MAILBOX_CLAIMED packet_id=$packetId"
 
         $nativeAction = Join-Path $repoRoot "scripts\bosswoman-native-action.ps1"
         if (Test-Path -LiteralPath $nativeAction) {
@@ -128,11 +149,13 @@ try {
             $nativeExitCode = $LASTEXITCODE
             if ($nativeExitCode -eq 0) {
                 Write-TickLog "Native action handled packet $packetId"
+                Write-Host "BOSSWOMAN_MAILBOX_NATIVE_HANDLED packet_id=$packetId"
                 continue
             }
             if ($nativeExitCode -ne 2) {
                 Add-OutboxPacket -InboxPacket $packet -Status "blocked" -Severity "blocker" -Message "Bosswoman native action failed for packet $packetId with exit code $nativeExitCode."
                 Write-TickLog "Native action failed for packet $packetId with exit code $nativeExitCode"
+                Write-Host "BOSSWOMAN_MAILBOX_NATIVE_FAILED packet_id=$packetId exit_code=$nativeExitCode"
                 continue
             }
         }
@@ -150,6 +173,7 @@ try {
             )
             Start-Process -FilePath "powershell.exe" -ArgumentList $args -WindowStyle Hidden | Out-Null
             Write-TickLog "Started hidden Codex runner for packet $packetId"
+            Write-Host "BOSSWOMAN_MAILBOX_CODEX_STARTED packet_id=$packetId"
         }
     }
 
