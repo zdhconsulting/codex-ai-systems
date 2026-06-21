@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "controller_id": "bosswoman-mayhasapc",
+  "display_name": "Bosswoman",
+  "role": "standalone Bossman controller",
+  "host": {
+    "hostname": "MAYHASAPC",
+    "windows_user": "mayhasapc\\meira",
+    "profile": "C:\\Users\\meira"
+  },
+  "source_of_truth": {
+    "bossman_runtime_contract": "C:\\Repos\\bossman\\BOSSWOMAN_CONTROLLER.md",
+    "bossman_runtime_profile": "C:\\Repos\\bossman\\data\\controller-profiles\\bosswoman.mayhasapc.json",
+    "mailbox_contract": "C:\\Repos\\codex-ai-systems\\controller-mailbox\\README.md"
+  },
+  "mailbox": {
+    "repo_path": "C:\\Repos\\codex-ai-systems",
+    "ai_manager_to_bosswoman": "controller-mailbox/inbox/ai-manager-to-bosswoman.jsonl",
+    "bosswoman_to_ai_manager": "controller-mailbox/outbox/bosswoman-to-ai-manager.jsonl"
+  },
+  "initial_projects": [
+    {
+      "project_id": "mr-seo",
+      "title": "Mr.SEO",
+      "repo_path": "C:\\Repos\\Mr.SEO",
+      "remote": "https://github.com/zdhconsulting/Mr.SEO.git"
+    },
+    {
+      "project_id": "zdh-consulting",
+      "title": "ZDH Consulting",
+      "repo_path": "C:\\Repos\\zdhconsultingsite",
+      "remote": "https://github.com/zdhconsulting/zdhconsultingsite.git"
+    },
+    {
+      "project_id": "zdh-sales",
+      "title": "ZDH Sales",
+      "repo_path": "C:\\Repos\\zdhsales",
+      "remote": "https://github.com/zdhconsulting/zdhsales.git"
+    }
+  ],
+  "startup_status": "registered_not_enabled",
+  "enable_rule": "Bosswoman may inventory and report now. Always-on dispatch requires an AI Manager enable packet."
+}
+

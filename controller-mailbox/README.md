@@ -8,6 +8,12 @@ It exists because Codex thread messaging can hang and local desktop worker launc
 
 - AI Manager to Bosswoman: `controller-mailbox/inbox/ai-manager-to-bosswoman.jsonl`
 - Bosswoman to AI Manager: `controller-mailbox/outbox/bosswoman-to-ai-manager.jsonl`
+- Bosswoman controller profile: `controller-mailbox/bosswoman-controller.json`
+
+Bosswoman's Bossman runtime contract lives in:
+
+- `C:\Repos\bossman\BOSSWOMAN_CONTROLLER.md`
+- `C:\Repos\bossman\data\controller-profiles\bosswoman.mayhasapc.json`
 
 Each line is one JSON packet. Packets are append-only and idempotent by `packet_id`.
 
@@ -62,4 +68,3 @@ From `C:\Repos\codex-ai-systems`:
 ## Safety Contract
 
 Bosswoman may inspect and prepare controller work for `Mr SEO`, `ZDH Consulting`, and `ZDH Sales`, but should not enable always-on runtime, deploy, change billing/security/DNS/secrets/permissions, or start broad worker fanout until AI Manager explicitly sends an approval packet.
-

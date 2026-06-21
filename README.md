@@ -31,6 +31,7 @@ This repo is intentionally separate from project-specific repos. It stores reusa
 - `scripts/codex-systems-status.cmd`: shows current repo, owner buttons, gear routes, and systems backup state.
 - `scripts/codex-low.cmd`, `codex-medium.cmd`, `codex-high.cmd`, `codex-xhigh.cmd`, `codex-xhigh-bounce.cmd`, `codex-xhigh-raw.cmd`, `codex-council.cmd`, `codex-review.cmd`: force a specific model/profile route.
 - `scripts/codex-handoff.cmd`: creates a portable handoff note for another Codex or computer.
+- `controller-mailbox/`: Git-backed mailbox and controller profile for Bosswoman on `MAYHASAPC`.
 - `scripts/owner-button.cmd`: lists/adds/completes owner-only blockers.
 - `scripts/git-guard.cmd`: checks repo, branch, remote, dirty files before git/deploy actions.
 - `profiles/*.config.toml`: Codex reasoning profiles.
