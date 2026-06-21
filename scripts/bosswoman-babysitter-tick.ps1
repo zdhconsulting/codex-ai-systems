@@ -425,11 +425,19 @@ try {
             $shouldStart = $true
             $reason = "no prior worker"
         } elseif ($latestReceipt -and $latestReceipt -gt $lastStarted) {
-            $shouldStart = $true
-            $reason = "last worker returned receipt"
+            $ageMinutes = ($now - $lastStarted).TotalMinutes
+            if ($ageMinutes -ge $MinRestartMinutes) {
+                $shouldStart = $true
+                $reason = "last worker returned receipt; cadence elapsed $([math]::Round($ageMinutes, 1))m"
+            } else {
+                $reason = "receipt returned; cooldown $([math]::Round($ageMinutes, 1))m"
+            }
         } else {
             $ageMinutes = ($now - $lastStarted).TotalMinutes
-            if ($ageMinutes -ge $NoReceiptMinutes) {
+            if ($ageMinutes -ge $MinRestartMinutes) {
+                $shouldStart = $true
+                $reason = "inactive/no receipt for $([math]::Round($ageMinutes, 1))m"
+            } elseif ($ageMinutes -ge $NoReceiptMinutes) {
                 $shouldStart = $true
                 $reason = "stale/no receipt for $([math]::Round($ageMinutes, 1))m"
             } elseif ($ageMinutes -lt $MinRestartMinutes) {
