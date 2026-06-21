@@ -3,6 +3,7 @@ param(
     [string]$ReplyTo = "bosswoman-24x7",
     [int]$MinRestartMinutes = 45,
     [int]$NoReceiptMinutes = 90,
+    [int]$MaxWorkerMinutes = 75,
     [int]$StatusMinutes = 30,
     [int]$MaxStartsPerTick = 3,
     [string]$ProjectScope = "controller,Mr.SEO,ZDH Consulting,ZDH Sales"
@@ -255,23 +256,97 @@ function Start-ProjectWorker {
         -RedirectStandardError $stderrPath
 }
 
+function Get-ChildProcessIds {
+    param([int]$ParentProcessId)
+
+    $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $ParentProcessId" -ErrorAction SilentlyContinue)
+    foreach ($child in $children) {
+        $childId = [int]$child.ProcessId
+        $childId
+        Get-ChildProcessIds -ParentProcessId $childId
+    }
+}
+
+function Stop-WorkerProcessTree {
+    param([int]$RootProcessId)
+
+    $ids = @((Get-ChildProcessIds -ParentProcessId $RootProcessId) + $RootProcessId) |
+        Where-Object { $_ -gt 0 } |
+        Select-Object -Unique
+
+    $failures = @()
+    foreach ($id in $ids) {
+        try {
+            Stop-Process -Id $id -Force -ErrorAction Stop
+        } catch {
+            $failures += "${id}: $($_.Exception.Message)"
+        }
+    }
+
+    if ($failures.Count -gt 0) {
+        return "recycle attempted; failures=$($failures -join '; ')"
+    }
+    return "recycled process tree pids=$($ids -join ',')"
+}
+
 function Test-WorkerProcessActive {
     param(
         [string]$PidText,
-        [object]$Spec
+        [object]$Spec,
+        [int]$MaxWorkerMinutes = 75
     )
 
     if (-not $PidText) {
-        return $false
+        return [pscustomobject]@{
+            Active = $false
+            Stale = $false
+            Reason = "no pid"
+            AgeMinutes = $null
+        }
     }
 
     $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $([int]$PidText)" -ErrorAction SilentlyContinue
     if (-not $proc) {
-        return $false
+        return [pscustomobject]@{
+            Active = $false
+            Stale = $false
+            Reason = "pid not running"
+            AgeMinutes = $null
+        }
     }
 
     $commandLine = [string]$proc.CommandLine
-    return ($commandLine -match "codex-auto\.ps1" -and $commandLine -like "*$($Spec.RepoPath)*")
+    if (-not ($commandLine -match "codex-auto\.ps1" -and $commandLine -like "*$($Spec.RepoPath)*")) {
+        return [pscustomobject]@{
+            Active = $false
+            Stale = $false
+            Reason = "pid no longer matches worker"
+            AgeMinutes = $null
+        }
+    }
+
+    $created = if ($proc.CreationDate -is [datetime]) {
+        [DateTimeOffset]$proc.CreationDate
+    } else {
+        [DateTimeOffset]([System.Management.ManagementDateTimeConverter]::ToDateTime([string]$proc.CreationDate))
+    }
+    $ageMinutes = ([DateTimeOffset]::Now - $created).TotalMinutes
+    if ($MaxWorkerMinutes -gt 0 -and $ageMinutes -ge $MaxWorkerMinutes) {
+        $stopText = Stop-WorkerProcessTree -RootProcessId ([int]$PidText)
+        return [pscustomobject]@{
+            Active = $false
+            Stale = $true
+            Reason = "stale worker pid=$PidText age=$([math]::Round($ageMinutes, 1))m $stopText"
+            AgeMinutes = $ageMinutes
+        }
+    }
+
+    return [pscustomobject]@{
+        Active = $true
+        Stale = $false
+        Reason = "active pid=$PidText age=$([math]::Round($ageMinutes, 1))m"
+        AgeMinutes = $ageMinutes
+    }
 }
 
 $lockStream = $null
@@ -307,7 +382,8 @@ try {
 
         $projectState = $state["projects"][$spec.Slug]
         $pidText = [string]$projectState["pid"]
-        $active = Test-WorkerProcessActive -PidText $pidText -Spec $spec
+        $workerState = Test-WorkerProcessActive -PidText $pidText -Spec $spec -MaxWorkerMinutes $MaxWorkerMinutes
+        $active = [bool]$workerState.Active
 
         $latestReceipt = Get-LatestProjectReceipt -Project $spec.Project
         if ($latestReceipt) {
@@ -319,7 +395,10 @@ try {
         $reason = ""
 
         if ($active) {
-            $reason = "active pid=$pidText"
+            $reason = [string]$workerState.Reason
+        } elseif ($workerState.Stale) {
+            $shouldStart = $true
+            $reason = [string]$workerState.Reason
         } elseif (-not $lastStarted) {
             $shouldStart = $true
             $reason = "no prior worker"
@@ -365,7 +444,7 @@ try {
         $message = @"
 Agent: Bosswoman MAYHASAPC 24x7 babysitter
 Status: in_progress
-Runtime State: 24x7 babysitter tick complete; starts_this_tick=$($starts.Count); max_starts_per_tick=$MaxStartsPerTick; min_restart_minutes=$MinRestartMinutes; no_receipt_minutes=$NoReceiptMinutes.
+Runtime State: 24x7 babysitter tick complete; starts_this_tick=$($starts.Count); max_starts_per_tick=$MaxStartsPerTick; min_restart_minutes=$MinRestartMinutes; no_receipt_minutes=$NoReceiptMinutes; max_worker_minutes=$MaxWorkerMinutes.
 Projects:
 $($statusLines -join "`n")
 Actions Taken:
