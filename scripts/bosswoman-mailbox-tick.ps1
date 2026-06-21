@@ -113,6 +113,21 @@ try {
         Add-Content -LiteralPath $seenPath -Value $packetId -Encoding utf8
         Write-TickLog "Claimed packet $packetId"
 
+        $nativeAction = Join-Path $repoRoot "scripts\bosswoman-native-action.ps1"
+        if (Test-Path -LiteralPath $nativeAction) {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $nativeAction -PacketFile $packetFile -RepoRoot $repoRoot -BossmanRepo $BossmanRepo *>> $logPath
+            $nativeExitCode = $LASTEXITCODE
+            if ($nativeExitCode -eq 0) {
+                Write-TickLog "Native action handled packet $packetId"
+                continue
+            }
+            if ($nativeExitCode -ne 2) {
+                Add-OutboxPacket -InboxPacket $packet -Status "blocked" -Severity "blocker" -Message "Bosswoman native action failed for packet $packetId with exit code $nativeExitCode."
+                Write-TickLog "Native action failed for packet $packetId with exit code $nativeExitCode"
+                continue
+            }
+        }
+
         if ($LaunchCodex) {
             $runner = Join-Path $repoRoot "scripts\bosswoman-run-packet.ps1"
             $args = @(
@@ -139,4 +154,3 @@ try {
         $lockStream.Dispose()
     }
 }
-
