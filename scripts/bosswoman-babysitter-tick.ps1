@@ -255,6 +255,25 @@ function Start-ProjectWorker {
         -RedirectStandardError $stderrPath
 }
 
+function Test-WorkerProcessActive {
+    param(
+        [string]$PidText,
+        [object]$Spec
+    )
+
+    if (-not $PidText) {
+        return $false
+    }
+
+    $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $([int]$PidText)" -ErrorAction SilentlyContinue
+    if (-not $proc) {
+        return $false
+    }
+
+    $commandLine = [string]$proc.CommandLine
+    return ($commandLine -match "codex-auto\.ps1" -and $commandLine -like "*$($Spec.RepoPath)*")
+}
+
 $lockStream = $null
 try {
     $lockStream = [System.IO.File]::Open($lockPath, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
@@ -288,10 +307,7 @@ try {
 
         $projectState = $state["projects"][$spec.Slug]
         $pidText = [string]$projectState["pid"]
-        $active = $false
-        if ($pidText) {
-            $active = [bool](Get-Process -Id ([int]$pidText) -ErrorAction SilentlyContinue)
-        }
+        $active = Test-WorkerProcessActive -PidText $pidText -Spec $spec
 
         $latestReceipt = Get-LatestProjectReceipt -Project $spec.Project
         if ($latestReceipt) {

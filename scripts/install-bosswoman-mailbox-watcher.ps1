@@ -41,6 +41,7 @@ $task.Settings.Hidden = $true
 $task.Settings.MultipleInstances = "IgnoreNew"
 $task.Settings.ExecutionTimeLimit = "PT15M"
 $task | Set-ScheduledTask | Out-Null
+Enable-ScheduledTask -TaskName $TaskName | Out-Null
 
 [pscustomobject]@{
     task_name = $TaskName
