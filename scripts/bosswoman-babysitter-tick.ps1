@@ -164,6 +164,7 @@ function New-WorkerPrompt {
     $gitGuardPath = Join-Path $env:USERPROFILE ".codex\scripts\git-guard.cmd"
 
 @"
+[high]
 You are Bosswoman's 24x7 Project Push Worker for $($Spec.Project) on MAYHASAPC.
 
 Mission:
@@ -242,6 +243,7 @@ function Start-ProjectWorker {
         "-File", $codexAuto,
         "-ForceCodex",
         "-NoOptimizeCredits",
+        "-NoCouncil",
         "-Sandbox", "danger-full-access",
         "-ApprovalPolicy", "never",
         "-Cwd", $Spec.RepoPath,
