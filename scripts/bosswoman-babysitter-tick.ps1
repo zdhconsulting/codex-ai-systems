@@ -31,6 +31,26 @@ function Write-BabysitterLog {
     "[$stamp] $Message" | Add-Content -LiteralPath $logPath -Encoding utf8
 }
 
+function Limit-MinimumInt {
+    param(
+        [string]$Name,
+        [int]$Value,
+        [int]$Minimum
+    )
+
+    if ($Value -lt $Minimum) {
+        Write-BabysitterLog "$Name=$Value is below safe minimum $Minimum; clamping to $Minimum."
+        return $Minimum
+    }
+    return $Value
+}
+
+$MinRestartMinutes = Limit-MinimumInt -Name "MinRestartMinutes" -Value $MinRestartMinutes -Minimum 15
+$NoReceiptMinutes = Limit-MinimumInt -Name "NoReceiptMinutes" -Value $NoReceiptMinutes -Minimum 30
+$MaxWorkerMinutes = Limit-MinimumInt -Name "MaxWorkerMinutes" -Value $MaxWorkerMinutes -Minimum 20
+$StatusMinutes = Limit-MinimumInt -Name "StatusMinutes" -Value $StatusMinutes -Minimum 10
+$MaxStartsPerTick = [math]::Max(1, $MaxStartsPerTick)
+
 function Send-BabysitterReply {
     param(
         [string]$Message,
