@@ -76,6 +76,17 @@ Use the right lane for the problem:
 
 Bossman is the small-sprint dispatcher: he creates repeated safe, useful, verified pushes and receipts. AI Manager owns strategy, lane routing, repair loops, and final synthesis. Efficiency Man reviews whether the way the AI system is operating is efficient enough.
 
+## Bossman Supervisor Naming
+
+Use `Bossman Supervisor` for the quiet watchdog/supervisor lane that audits Bossman, verifies real movement, repairs stale local-owned coverage, and keeps routine heartbeat/reporting noise out of Zev's main chat. Do not call this lane `Bosswoman` on this PC; that name became ambiguous.
+
+Keep Bossman and Bossman Supervisor separate:
+
+- `Bossman`: dispatcher and small-sprint queue owner.
+- `Bossman Supervisor`: liveness, receipt quality, stale-route recovery, no-popup enforcement, and escalation judgment.
+
+Each PC should have its own Bossman Supervisor for the projects owned by that PC. This PC's Bossman Supervisor owns supervision for local THEA / dryuvalsinger.com and Botox Marketplace / botoxtelaviv.com work, with zdhbook and Web Design Israel as secondary local coverage. MAYHASAPC should run its own Bossman Supervisor for Mr.SEO, ZDH Consulting, and ZDH Sales. This PC verifies MAYHASAPC mailbox proof only and must not local-bump those projects unless Zev reassigns ownership.
+
 Before starting a new lane, sub-agent, worker thread, or reporting thread, give it the operating standard: it is a functional lane, not a personality; it reports to AI Manager; it stays inside scope; it keeps Zev's main chat clean; it uses evidence; it does not invent authority; it does not over-escalate normal local work; it returns root cause, result, blockers, verification, next action, and system-hardening notes when relevant.
 
 Agent sprawl enforcement: do not create a new permanent-looking agent/chat for every task. Real persistent agents are limited to registered roles with durable memory and judgment. Disposable workers must operate under a reusable lane name, have a functional display name, lease/expected return, scoped authority, no-touch rules, required return packet, and close/archive path. Quiet system lanes and reusable lane contracts are not Zev-facing chats by default; routine progress, heartbeat XML, receipt sweeps, and worker logs stay out of the main conversation lane. Use named/registered agents, managers, lanes, and reusable workers by default. If a non-named or one-off agent/worker is needed, first explain why no named lane fits, record the exception for Zev review in `C:\Users\zev\.codex\logs\agent-registrar\unnamed-agent-exceptions.csv`, give it a functional temporary display name, set scope/authority/no-touch rules, require a return packet, and define the close/archive path. When the system looks cluttered, run the project lane-hygiene audit if available: `powershell -ExecutionPolicy Bypass -File scripts/lane-hygiene-report.ps1`.
