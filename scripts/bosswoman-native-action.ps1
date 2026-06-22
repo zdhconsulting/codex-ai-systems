@@ -357,8 +357,8 @@ function Invoke-OvernightRun {
         "-RunDir", $runDir,
         "-ReplyTo", $replyTo,
         "-DurationHours", "6",
-        "-StatusMinutes", "30",
-        "-NoProgressMinutes", "90"
+        "-StatusMinutes", "10",
+        "-NoProgressMinutes", "45"
     )
     $monitorProcess = Start-Process -FilePath "powershell.exe" `
         -ArgumentList $monitorArgs `
@@ -419,9 +419,9 @@ function Invoke-24x7Babysitter {
         "-WindowStyle", "Hidden",
         "-File", "`"$babysitterScript`"",
         "-ReplyTo", "`"$replyTo`"",
-        "-MinRestartMinutes", "45",
-        "-NoReceiptMinutes", "90",
-        "-StatusMinutes", "30",
+        "-MinRestartMinutes", "20",
+        "-NoReceiptMinutes", "45",
+        "-StatusMinutes", "10",
         "-MaxStartsPerTick", "3"
     )
     $taskCommand = "powershell.exe " + ($taskArgs -join " ")
@@ -453,9 +453,9 @@ function Invoke-24x7Babysitter {
         "-WindowStyle", "Hidden",
         "-File", $babysitterScript,
         "-ReplyTo", $replyTo,
-        "-MinRestartMinutes", "45",
-        "-NoReceiptMinutes", "90",
-        "-StatusMinutes", "30",
+        "-MinRestartMinutes", "20",
+        "-NoReceiptMinutes", "45",
+        "-StatusMinutes", "10",
         "-MaxStartsPerTick", "3"
     )
     $firstProcess = Start-Process -FilePath "powershell.exe" `

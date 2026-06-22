@@ -1,10 +1,10 @@
 [CmdletBinding()]
 param(
     [string]$ReplyTo = "bosswoman-24x7",
-    [int]$MinRestartMinutes = 45,
-    [int]$NoReceiptMinutes = 90,
+    [int]$MinRestartMinutes = 20,
+    [int]$NoReceiptMinutes = 45,
     [int]$MaxWorkerMinutes = 75,
-    [int]$StatusMinutes = 30,
+    [int]$StatusMinutes = 10,
     [int]$MaxStartsPerTick = 3,
     [string]$ProjectScope = "controller,Mr.SEO,ZDH Consulting,ZDH Sales"
 )
