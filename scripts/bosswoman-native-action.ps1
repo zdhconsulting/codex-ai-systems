@@ -404,8 +404,12 @@ function Invoke-24x7Babysitter {
     }
 
     $babysitterScript = Join-Path $RepoRoot "scripts\bosswoman-babysitter-tick.ps1"
+    $hiddenLauncher = Join-Path $RepoRoot "scripts\run-hidden-powershell.vbs"
     if (-not (Test-Path -LiteralPath $babysitterScript)) {
         throw "Missing babysitter script: $babysitterScript"
+    }
+    if (-not (Test-Path -LiteralPath $hiddenLauncher)) {
+        throw "Missing hidden launcher: $hiddenLauncher"
     }
 
     $replyTo = [string]$Packet.packet_id
@@ -413,18 +417,15 @@ function Invoke-24x7Babysitter {
     $babysitterDir = Join-Path $env:LOCALAPPDATA "ZDH\BosswomanMailbox\babysitter"
     New-Item -ItemType Directory -Force -Path $babysitterDir | Out-Null
     $taskArgs = @(
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy", "Bypass",
-        "-WindowStyle", "Hidden",
-        "-File", "`"$babysitterScript`"",
+        "`"$hiddenLauncher`"",
+        "`"$babysitterScript`"",
         "-ReplyTo", "`"$replyTo`"",
         "-MinRestartMinutes", "20",
         "-NoReceiptMinutes", "45",
         "-StatusMinutes", "10",
         "-MaxStartsPerTick", "3"
     )
-    $taskCommand = "powershell.exe " + ($taskArgs -join " ")
+    $taskCommand = "wscript.exe " + ($taskArgs -join " ")
     & schtasks.exe /Create /TN $taskName /TR $taskCommand /SC MINUTE /MO 5 /F | Out-Null
     if ($LASTEXITCODE -ne 0) {
         throw "schtasks.exe failed to create $taskName with exit code $LASTEXITCODE"
@@ -473,8 +474,8 @@ User: $who
 Runtime State: Installed hidden scheduled task $taskName every 5 minutes and started first babysitter tick pid=$($firstProcess.Id).
 Projects: Mr.SEO, ZDH Consulting, ZDH Sales.
 Quality Bar: No one-minute proof-of-life pushes. No label-only, metadata-only, duplicate-tag, or tiny cosmetic commits unless bundled into a meaningful M1 improvement. Each worker must do 20-60 minutes of real project movement or return a blocker.
-Actions Taken: Registered recurring babysitter task with direct hidden PowerShell action and launched first hidden tick.
-Verification: Task created through schtasks.exe using direct hidden PowerShell action; task hidden; MultipleInstances=IgnoreNew; ExecutionTimeLimit=PT45M.
+Actions Taken: Registered recurring babysitter task through the no-console wscript hidden launcher and launched first hidden tick.
+Verification: Task created through schtasks.exe using run-hidden-powershell.vbs; task hidden; MultipleInstances=IgnoreNew; ExecutionTimeLimit=PT45M.
 Task Hardening: $taskHardening
 Result: Bosswoman is now expected to sit awake and babysit the three projects through recurring native ticks.
 Blockers: None at launcher level.
