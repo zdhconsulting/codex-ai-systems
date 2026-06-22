@@ -243,18 +243,23 @@ C:\Repos\codex-ai-systems\scripts\send-bosswoman-reply.ps1 -Commit
 Use:
 -ReplyTo "$ReplyTo" -ProjectScope "$Project"
 
-Required project receipt fields:
+Reply format:
+- Use exactly this compact receipt shape.
+- Do not write paragraphs or narrative after the receipt.
+- Keep each value to one line.
+
+PROJECT RECEIPT
 project:
 repo_path:
 branch:
+status: shipped|blocked|working
 commit_sha:
-pushed:
+pushed: true|false
+value:
+files_touched:
 verification:
-result:
 blockers:
 next_action:
-
-Also include:
 Owner Button Needed:
 Commander Approval Needed:
 Critical Escalation:
