@@ -173,7 +173,28 @@ while ($true) {
     } catch {
         $message = $_.Exception.Message
         Write-Log "heal failed: $message"
-        Update-State -Status "error" -Detail $message -CodexRunning $false
+        $runningAfterFailure = @(Get-CodexDesktopProcess)
+        if ($runningAfterFailure.Count -eq 0) {
+            try {
+                Write-Log "heal bundle failed; launching Codex Desktop fallback"
+                Start-CodexDesktop
+                Start-Sleep -Seconds 2
+                $runningAfterFallback = (@(Get-CodexDesktopProcess).Count -gt 0)
+                $fallbackDetail = if ($runningAfterFallback) {
+                    "heal bundle failed, but fallback relaunch started Codex Desktop: $message"
+                } else {
+                    "heal bundle failed and fallback relaunch did not detect Codex Desktop: $message"
+                }
+                $fallbackStatus = if ($runningAfterFallback) { "healthy" } else { "error" }
+                Update-State -Status $fallbackStatus -Detail $fallbackDetail -CodexRunning $runningAfterFallback
+            } catch {
+                $fallbackMessage = $_.Exception.Message
+                Write-Log "fallback launch failed: $fallbackMessage"
+                Update-State -Status "error" -Detail "heal failed: $message; fallback launch failed: $fallbackMessage" -CodexRunning $false
+            }
+        } else {
+            Update-State -Status "healthy" -Detail "heal bundle failed, but Codex Desktop is running: $message" -CodexRunning $true
+        }
     }
 
     Start-Sleep -Seconds $PollSeconds
