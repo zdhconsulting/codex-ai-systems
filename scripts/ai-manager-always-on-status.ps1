@@ -33,10 +33,35 @@ function Get-GitStatus {
     }
 }
 
+function Read-OptionalJson {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return $null }
+    try {
+        return (Get-Content -Raw -LiteralPath $Path) | ConvertFrom-Json
+    } catch {
+        return $null
+    }
+}
+
+function Test-RecentTimestamp {
+    param(
+        [object]$Value,
+        [int]$MaxAgeMinutes = 3
+    )
+    if (-not (Has-Text $Value)) { return $false }
+    try {
+        $timestamp = [datetimeoffset]::Parse([string]$Value)
+        return ([datetimeoffset](Get-Date) - $timestamp).TotalMinutes -le $MaxAgeMinutes
+    } catch {
+        return $false
+    }
+}
+
 $codexHome = Join-Path $env:USERPROFILE ".codex"
 $backlogPath = Join-Path $codexHome "backlog\ai-manager-always-on-backlog.md"
 $ownerButtonPath = Join-Path $codexHome "scripts\owner-button.cmd"
 $shellStewardScript = Join-Path $codexHome "scripts\codex-shell-steward.ps1"
+$shellStewardStatePath = Join-Path $codexHome "tmp\codex-shell-steward-state.json"
 $automationRoot = Join-Path $codexHome "automations"
 
 $automationFiles = @()
@@ -44,8 +69,21 @@ if (Test-Path -LiteralPath $automationRoot) {
     $automationFiles = @(Get-ChildItem -Path $automationRoot -Recurse -Filter automation.toml -ErrorAction SilentlyContinue)
 }
 
-$shellStewardProcesses = @(Get-CimInstance Win32_Process -Filter "name = 'powershell.exe' or name = 'pwsh.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { ([string]$_.CommandLine) -like "*codex-shell-steward.ps1*" })
+$shellStewardState = Read-OptionalJson -Path $shellStewardStatePath
+$shellStewardStateHealthy = (
+    $null -ne $shellStewardState -and
+    [string]$shellStewardState.status -in @("healthy", "already_running", "cooldown", "healing") -and
+    (Test-RecentTimestamp -Value $shellStewardState.updated_at -MaxAgeMinutes 3)
+)
+
+$shellStewardProcesses = @()
+if (-not $shellStewardStateHealthy) {
+    $shellStewardProcesses = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        try { ([string]$_.Path) -like "*powershell*" -or ([string]$_.Path) -like "*pwsh*" } catch { $false }
+    } | Where-Object {
+        try { ([string]$_.MainWindowTitle) -like "*codex-shell-steward*" } catch { $false }
+    })
+}
 
 $gitStatus = Get-GitStatus -Root $ProjectRoot
 $now = [datetimeoffset](Get-Date)
@@ -53,7 +91,8 @@ $checks = @(
     [pscustomobject]@{ name = "backlog_present"; ok = (Test-Path -LiteralPath $backlogPath); detail = $backlogPath },
     [pscustomobject]@{ name = "owner_button_tool_present"; ok = (Test-Path -LiteralPath $ownerButtonPath); detail = $ownerButtonPath },
     [pscustomobject]@{ name = "shell_steward_script_present"; ok = (Test-Path -LiteralPath $shellStewardScript); detail = $shellStewardScript },
-    [pscustomobject]@{ name = "shell_steward_process_visible"; ok = ($shellStewardProcesses.Count -gt 0); detail = "$($shellStewardProcesses.Count) matching process(es)" },
+    [pscustomobject]@{ name = "shell_steward_state_healthy"; ok = $shellStewardStateHealthy; detail = $(if ($null -ne $shellStewardState) { "state=$($shellStewardState.status), updated_at=$($shellStewardState.updated_at)" } else { $shellStewardStatePath }) },
+    [pscustomobject]@{ name = "shell_steward_process_visible"; ok = ($shellStewardStateHealthy -or $shellStewardProcesses.Count -gt 0); detail = $(if ($shellStewardStateHealthy) { "fresh state file used; skipped unbounded process probe" } else { "$($shellStewardProcesses.Count) matching process(es)" }) },
     [pscustomobject]@{ name = "automation_files_visible"; ok = ($automationFiles.Count -gt 0); detail = "$($automationFiles.Count) automation file(s)" },
     [pscustomobject]@{ name = "project_repo_visible"; ok = $gitStatus.is_repo; detail = $ProjectRoot }
 )

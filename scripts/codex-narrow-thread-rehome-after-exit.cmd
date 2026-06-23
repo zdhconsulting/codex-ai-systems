@@ -1,2 +1,2 @@
 @echo off
-start "Codex narrow thread rehome after exit" /min powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0codex-narrow-thread-rehome-after-exit.ps1" %*
+wscript.exe //B //Nologo "%~dp0run-hidden-powershell.vbs" "%~dp0codex-narrow-thread-rehome-after-exit.ps1" %*
