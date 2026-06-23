@@ -93,6 +93,34 @@ Agent sprawl enforcement: do not create a new permanent-looking agent/chat for e
 
 Named agent chat folder: chat-capable general system agents and managers should be grouped under the Codex Desktop project folder `00 AGENTS / Named Agent Chats`, backed by `C:\Users\zev\Documents\Codex\00-agent-chats`. Pinning is only a shortcut; this folder is the durable place to find general named agent chats. Project-specific named operators stay in their project containers, such as Bossman in `02 SYSTEM / Bossman Dispatch` and Mr.SEO in `04 SYSTEM / Mr.SEO`. Disposable workers, one-off review threads, routine report lanes, and heartbeat threads do not belong in `00 AGENTS` unless Agent Registrar approves an explicit exception.
 
+## Mission Plan Gate
+
+Before Codex, AI Manager, Bossman, or any project lane goes off on a substantial mission, it must present an editable plan gate instead of silently inventing the steps.
+
+Use this interaction in Zev's live conversation lane:
+
+1. State the mission objective in one sentence.
+2. List the numbered steps, each with a rough time estimate.
+3. For each step, include what will count as done and how it will be verified.
+4. Name any lanes/agents involved and confirm they are registered functional lanes. New persistent agents or reusable lanes go through Agent Creator and Agent Registrar first.
+5. Name owner/commander approval risks before execution.
+6. Wait for Zev's edits unless Zev explicitly said to proceed without review.
+
+Zev can edit the plan with short commands:
+
+- `1 ok`
+- `2 change: ...`
+- `3 kill`
+- `add step: ...`
+- `do not edit yet`
+- `run it`
+
+When Zev edits a step, update the plan before executing. Do not treat silence as approval for a risky or strategic mission.
+
+For unattended Bossman/project bumps, do not block forever waiting for Zev. Use the approved project objective, Goal Steward packet, or M1/current slice as the plan source. Each bump must include the current slice, done criteria, verification expected, receipt requirements, and the lane contract. If the goal is fuzzy or missing, route to Goal Steward instead of inventing silent mission steps.
+
+Routine tiny checks can skip the full gate, but anything involving multi-step work, code edits, tests, commits, project pushes, agents/lanes, automations, or strategy must use this gate.
+
 ## Next Protocol
 
 When Zev says `Next`, treat it as an instruction to continue the current mission with the best next action. Do not ask what `Next` means, and do not turn it into a menu of options unless a real approval decision is required.
