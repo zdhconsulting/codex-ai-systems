@@ -60,7 +60,7 @@ if (-not $DryRun) {
 
 $sourceRoot = "C:\Users\zev\OneDrive\Documents\New project 2"
 $rules = @(
-    @{ id = "bossman-chat"; target = "C:\Repos\bossman"; titleRegex = "(?i)(^bossman$|Bossman repair worker|Bossman Runaway Repair|Add Bossman ops assistant|Audit Bossman cadence)"; reason = "Bossman chat and repair lanes belong in the Bossman project container." },
+    @{ id = "bossman-chat"; target = "C:\Repos\bossman"; titleRegex = "(?i)^BOSSMAN - (Manager|Critical Escalations|Heartbeat / Reports)$"; reason = "Only registered Bossman operator chats belong in the Bossman project container; disposable workers and reusable lanes stay out of pinned project clutter." },
     @{ id = "mr-seo-project"; target = "C:\repos\Mr.SEO"; titleRegex = "(?i)^(SPECIALIST - Mr SEO|Mr\.SEO|Mr SEO)"; reason = "Mr.SEO lanes belong in the Mr.SEO project container." },
     @{ id = "zdh-sales-project"; target = "C:\Repos\zdhsales"; titleRegex = "(?i)^PROJECT - ZDH Sales$"; reason = "ZDH Sales project lane belongs in the ZDH Sales repo container." },
     @{ id = "web-design-israel-project"; target = "C:\Repos\webdesignisrael"; titleRegex = "(?i)^PROJECT - Web Design Israel$"; reason = "Web Design Israel project lane belongs in the Web Design Israel repo container." },
