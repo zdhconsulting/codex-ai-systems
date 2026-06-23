@@ -10,7 +10,13 @@ $CodexHome = if ($CodexHome) { $CodexHome } else { Split-Path -Parent $PSScriptR
 $logDir = Join-Path $CodexHome "logs"
 $logPath = Join-Path $logDir "agent-chat-folder-after-exit.log"
 $statePath = Join-Path $CodexHome ".codex-global-state.json"
-$DbPath = if ($DbPath) { $DbPath } else { Join-Path $CodexHome "sqlite\state_5.sqlite" }
+$DbPath = if ($DbPath) {
+    $DbPath
+} elseif (Test-Path -LiteralPath (Join-Path $CodexHome "state_5.sqlite")) {
+    Join-Path $CodexHome "state_5.sqlite"
+} else {
+    Join-Path $CodexHome "sqlite\state_5.sqlite"
+}
 $folder = "C:\Users\zev\Documents\Codex\00-agent-chats"
 $label = "00 AGENTS / Named Agent Chats"
 $bossmanFolder = "C:\Repos\bossman"

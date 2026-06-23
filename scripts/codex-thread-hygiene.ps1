@@ -11,7 +11,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 $CodexHome = if ($CodexHome) { $CodexHome } else { Split-Path -Parent $PSScriptRoot }
-$DbPath = if ($DbPath) { $DbPath } else { Join-Path $CodexHome "sqlite\state_5.sqlite" }
+$DbPath = if ($DbPath) {
+    $DbPath
+} elseif (Test-Path -LiteralPath (Join-Path $CodexHome "state_5.sqlite")) {
+    Join-Path $CodexHome "state_5.sqlite"
+} else {
+    Join-Path $CodexHome "sqlite\state_5.sqlite"
+}
 $logDir = Join-Path $CodexHome "logs"
 $auditPath = Join-Path $logDir "thread-hygiene-last.json"
 

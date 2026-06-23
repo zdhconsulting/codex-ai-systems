@@ -9,7 +9,13 @@ param(
 $ErrorActionPreference = "Stop"
 $CodexHome = if ($CodexHome) { $CodexHome } else { Split-Path -Parent $PSScriptRoot }
 $StatePath = if ($StatePath) { $StatePath } else { Join-Path $CodexHome ".codex-global-state.json" }
-$ThreadsDbPath = if ($ThreadsDbPath) { $ThreadsDbPath } else { Join-Path $CodexHome "sqlite\state_5.sqlite" }
+$ThreadsDbPath = if ($ThreadsDbPath) {
+    $ThreadsDbPath
+} elseif (Test-Path -LiteralPath (Join-Path $CodexHome "state_5.sqlite")) {
+    Join-Path $CodexHome "state_5.sqlite"
+} else {
+    Join-Path $CodexHome "sqlite\state_5.sqlite"
+}
 
 function Write-Utf8NoBomFile {
     param(

@@ -11,8 +11,8 @@ $logPath = Join-Path $logDir "thread-hygiene-after-exit.log"
 $hygieneCmd = Join-Path $CodexHome "scripts\codex-thread-hygiene.cmd"
 $sidebarReconciler = Join-Path $CodexHome "scripts\codex-sidebar-reconciler.ps1"
 $stateDbCandidates = @(
-    (Join-Path $CodexHome "sqlite\state_5.sqlite"),
-    (Join-Path $CodexHome "state_5.sqlite")
+    (Join-Path $CodexHome "state_5.sqlite"),
+    (Join-Path $CodexHome "sqlite\state_5.sqlite")
 )
 
 if (-not (Test-Path -LiteralPath $logDir)) {
