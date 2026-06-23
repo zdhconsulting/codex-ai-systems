@@ -6,7 +6,8 @@ param(
     [int]$MaxWorkerMinutes = 75,
     [int]$StatusMinutes = 10,
     [int]$MaxStartsPerTick = 3,
-    [string]$ProjectScope = "controller,Mr.SEO,ZDH Consulting,ZDH Sales"
+    [string]$ProjectScope = "controller,Mr.SEO,ZDH Consulting,ZDH Sales",
+    [string]$ApprovedSlicesPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,6 +22,9 @@ $lockPath = Join-Path $stateRoot "babysitter.lock"
 $outboxPath = Join-Path $repoRoot "controller-mailbox\outbox\bosswoman-to-ai-manager.jsonl"
 $replyScript = Join-Path $repoRoot "scripts\send-bosswoman-reply.ps1"
 $codexAuto = Join-Path $repoRoot "scripts\codex-auto.ps1"
+if (-not $ApprovedSlicesPath) {
+    $ApprovedSlicesPath = Join-Path $repoRoot "controller-mailbox\bosswoman-approved-slices.json"
+}
 
 New-Item -ItemType Directory -Force -Path $stateRoot, $logDir, $runDir | Out-Null
 $logPath = Join-Path $logDir ("bosswoman-babysitter-{0}.log" -f (Get-Date -Format "yyyyMMdd"))
@@ -389,6 +393,11 @@ try {
     $who = (whoami).Trim()
     if ($hostName -ine "mayhasapc" -or $who -ine "mayhasapc\meira") {
         throw "Refusing babysitter tick on wrong machine/user: host=$hostName user=$who"
+    }
+
+    if (-not (Test-Path -LiteralPath $ApprovedSlicesPath)) {
+        Write-BabysitterLog "Approved slice queue missing at $ApprovedSlicesPath; project starts paused. Pinned chats must be the work surface before re-enabling."
+        exit 0
     }
 
     $state = Read-State

@@ -1,0 +1,34 @@
+[
+  {
+    "project": "ZDH Sales",
+    "repo_path": "C:\\Repos\\zdhsales",
+    "pinned_thread": "ZDH Sales Worker",
+    "slice": "Make the contact form easier to scan without changing the homepage hero or offer positioning.",
+    "authority": "propose_in_pinned_chat_first",
+    "allowed_files": [
+      "index.html",
+      "styles.css"
+    ],
+    "no_touch": [
+      "billing",
+      "DNS",
+      "secrets",
+      "security",
+      "database",
+      "permissions",
+      "production account settings",
+      "homepage hero rewrite without Commander approval"
+    ],
+    "verification": [
+      "README static JS/JSON-LD parse for index.html, thank-you.html, and 404.html",
+      "sitemap XML parse",
+      "git diff --check",
+      "git guard before commit and push"
+    ],
+    "return_surface": [
+      "pinned chat",
+      "Bosswoman mailbox"
+    ],
+    "status": "example_only"
+  }
+]
