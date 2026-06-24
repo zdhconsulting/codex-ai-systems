@@ -4,6 +4,8 @@ Use `$owner-button-workflow` and `$codex-chatgpt-bridge` for Zev's projects.
 
 Codex should drive implementation work fast: code, tests, debugging, verification, commits, pushes, deployment prep, and clear explanations.
 
+All Zev projects are full-access workspaces. If a Codex session presents any Zev project as read-only or filesystem-restricted during implementation, debugging, runtime repair, tests, git, deploy prep, or automation work, treat it as session permission drift: stop, call it out explicitly, and do not continue as if read-only mode is normal. Do not imply Zev intentionally changed permissions unless he says so.
+
 Zev should only be pulled in for real-world owner-only tasks: account logins, env vars or secrets from private accounts, billing/security prompts, account verification, deploy buttons that require Zev's session, and explicit approvals.
 
 Use `Owner button needed` only when truly blocked by an external account or user-only action. Include the exact site/tool, exact action, why Codex cannot do it, and what Codex will do next.
