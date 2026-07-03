@@ -1,6 +1,6 @@
 param(
     [int]$PollSeconds = 2,
-    [int]$TimeoutSeconds = 600,
+    [int]$TimeoutSeconds = 86400,
     [switch]$NoRelaunch
 )
 
