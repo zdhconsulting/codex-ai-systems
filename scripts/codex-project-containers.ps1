@@ -38,6 +38,21 @@ function Remove-PropertyIfPresent {
     }
 }
 
+function Set-NoteProperty {
+    param(
+        [object] $Object,
+        [string] $Name,
+        [object] $Value
+    )
+
+    $property = $Object.PSObject.Properties[$Name]
+    if ($property) {
+        $property.Value = $Value
+    } else {
+        $Object | Add-Member -NotePropertyName $Name -NotePropertyValue $Value
+    }
+}
+
 function Get-ExtendedWindowsPath {
     param([string] $Path)
     if ($Path.StartsWith("\\?\")) { return $Path }
@@ -106,14 +121,14 @@ foreach ($assignment in $validThreadAssignments) {
     $hints | Add-Member -NotePropertyName $assignment.Id -NotePropertyValue $assignment.Path -Force
 }
 
-$state.'electron-saved-workspace-roots' = @($roots)
-$state.'project-order' = @($roots + @("cloud:zdhconsulting/mission-control"))
+Set-NoteProperty -Object $state -Name "electron-saved-workspace-roots" -Value @($roots)
+Set-NoteProperty -Object $state -Name "project-order" -Value @($roots + @("cloud:zdhconsulting/mission-control"))
 
 $labels = [pscustomobject]@{}
 foreach ($item in $existing) {
     $labels | Add-Member -NotePropertyName $item.Path -NotePropertyValue $item.Label
 }
-$state.'electron-workspace-root-labels' = $labels
+Set-NoteProperty -Object $state -Name "electron-workspace-root-labels" -Value $labels
 
 $appearances = [pscustomobject]@{}
 foreach ($item in $existing) {
@@ -123,7 +138,7 @@ foreach ($item in $existing) {
     }
     $appearances | Add-Member -NotePropertyName $item.Path -NotePropertyValue $value
 }
-$state.'project-appearances' = $appearances
+Set-NoteProperty -Object $state -Name "project-appearances" -Value $appearances
 $atom = $state.PSObject.Properties["electron-persisted-atom-state"].Value
 if ($atom) {
     foreach ($name in @(
