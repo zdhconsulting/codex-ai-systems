@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "windowTitle": "Codex",
+  "sidebarClickX": 145,
+  "firstPinnedRowY": 235,
+  "rowHeight": 31,
+  "hotkeyCount": 11,
+  "restoreIfMinimized": true,
+  "logPath": "C:\\Users\\zev\\Documents\\Codex\\hotkeys\\codex-pinned-hotkeys.log"
+}
