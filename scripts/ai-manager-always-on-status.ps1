@@ -57,12 +57,37 @@ function Test-RecentTimestamp {
     }
 }
 
+function Test-RecentFile {
+    param(
+        [string]$Path,
+        [int]$MaxAgeHours = 12
+    )
+    if (-not (Test-Path -LiteralPath $Path)) { return $false }
+    try {
+        return (((Get-Date) - (Get-Item -LiteralPath $Path).LastWriteTime).TotalHours -le $MaxAgeHours)
+    } catch {
+        return $false
+    }
+}
+
+function Get-FileDetail {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return "missing: $Path" }
+    $item = Get-Item -LiteralPath $Path
+    $ageHours = [math]::Round(((Get-Date) - $item.LastWriteTime).TotalHours, 2)
+    return "age_h=$ageHours; path=$Path"
+}
+
 $codexHome = Join-Path $env:USERPROFILE ".codex"
 $backlogPath = Join-Path $codexHome "backlog\ai-manager-always-on-backlog.md"
 $ownerButtonPath = Join-Path $codexHome "scripts\owner-button.cmd"
 $shellStewardScript = Join-Path $codexHome "scripts\codex-shell-steward.ps1"
 $shellStewardStatePath = Join-Path $codexHome "tmp\codex-shell-steward-state.json"
 $automationRoot = Join-Path $codexHome "automations"
+$activeWorkRegistryPath = Join-Path $codexHome "state\active-work-registry.json"
+$commandCenterRoot = Join-Path $env:USERPROFILE "OneDrive\Documents\New project 2\data\command-center"
+$laneLeasesPath = Join-Path $commandCenterRoot "lane-leases.json"
+$commandInboxPath = Join-Path $commandCenterRoot "command-inbox.json"
 
 $automationFiles = @()
 if (Test-Path -LiteralPath $automationRoot) {
@@ -94,6 +119,10 @@ $checks = @(
     [pscustomobject]@{ name = "shell_steward_state_healthy"; ok = $shellStewardStateHealthy; detail = $(if ($null -ne $shellStewardState) { "state=$($shellStewardState.status), updated_at=$($shellStewardState.updated_at)" } else { $shellStewardStatePath }) },
     [pscustomobject]@{ name = "shell_steward_process_visible"; ok = ($shellStewardStateHealthy -or $shellStewardProcesses.Count -gt 0); detail = $(if ($shellStewardStateHealthy) { "fresh state file used; skipped unbounded process probe" } else { "$($shellStewardProcesses.Count) matching process(es)" }) },
     [pscustomobject]@{ name = "automation_files_visible"; ok = ($automationFiles.Count -gt 0); detail = "$($automationFiles.Count) automation file(s)" },
+    [pscustomobject]@{ name = "active_work_registry_visible"; ok = (Test-Path -LiteralPath $activeWorkRegistryPath); detail = (Get-FileDetail -Path $activeWorkRegistryPath) },
+    [pscustomobject]@{ name = "active_work_registry_recent"; ok = (Test-RecentFile -Path $activeWorkRegistryPath -MaxAgeHours 2); detail = (Get-FileDetail -Path $activeWorkRegistryPath) },
+    [pscustomobject]@{ name = "lane_leases_recent"; ok = (Test-RecentFile -Path $laneLeasesPath -MaxAgeHours 24); detail = (Get-FileDetail -Path $laneLeasesPath) },
+    [pscustomobject]@{ name = "command_inbox_recent"; ok = (Test-RecentFile -Path $commandInboxPath -MaxAgeHours 24); detail = (Get-FileDetail -Path $commandInboxPath) },
     [pscustomobject]@{ name = "project_repo_visible"; ok = $gitStatus.is_repo; detail = $ProjectRoot }
 )
 
@@ -104,7 +133,7 @@ $result = [pscustomobject][ordered]@{
     project_root = $ProjectRoot
     severity = if ($failed.Count -eq 0) { "routine" } else { "attention" }
     summary = if ($failed.Count -eq 0) {
-        "DONT_NOTIFY - AI Manager always-on basics are present."
+        "DONT_NOTIFY - AI Manager always-on basics and movement truth are present."
     } else {
         "CHECK - always-on basics need attention: " + (($failed | Select-Object -ExpandProperty name) -join ", ")
     }
