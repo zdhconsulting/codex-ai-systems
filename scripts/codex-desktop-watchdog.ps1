@@ -9,6 +9,7 @@ $ErrorActionPreference = "Stop"
 $CodexHome = "C:\Users\zev\.codex"
 $DesktopAppId = "shell:AppsFolder\OpenAI.Codex_2p2nqsd0c76g0!App"
 $ShellStewardScript = Join-Path $CodexHome "scripts\codex-shell-steward.ps1"
+$ActiveWorkRegistryScript = Join-Path $CodexHome "scripts\codex-active-work-registry.ps1"
 $RunHiddenVbs = Join-Path $CodexHome "scripts\run-hidden-powershell.vbs"
 $BossmanTaskName = "Bossman2RuntimeUser"
 $BossmanHeartbeatPath = "C:\repos\bossman2-architecture-review-yhl582\data\command-center\heartbeat.json"
@@ -80,6 +81,18 @@ function Read-State {
     }
     try {
         return Get-Content -Raw -LiteralPath $StatePath | ConvertFrom-Json
+    } catch {
+        return $null
+    }
+}
+
+function Read-OptionalJson {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return $null
+    }
+    try {
+        return Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json
     } catch {
         return $null
     }
@@ -227,6 +240,18 @@ function Ensure-BossmanRuntime {
     return "healthy heartbeat_age_s=$age"
 }
 
+function Update-ActiveWorkRegistry {
+    if (-not (Test-Path -LiteralPath $ActiveWorkRegistryScript)) {
+        return "missing"
+    }
+    try {
+        & $ActiveWorkRegistryScript -OutputPath $ActiveWorkRegistryPath -Quiet
+        return "refreshed"
+    } catch {
+        return "error $($_.Exception.Message)"
+    }
+}
+
 try {
     $previous = Read-State
     $mainCodex = @(Get-MainCodexProcess)
@@ -257,6 +282,8 @@ try {
     $freeDiskGb = Get-FreeDiskGb
     $freePhysicalGb = Get-FreePhysicalGb
     $largestRecentSessionMb = Get-LargestRecentSessionMb
+    $activeWorkRefreshStatus = Update-ActiveWorkRegistry
+    $activeWorkRegistry = Read-OptionalJson -Path $ActiveWorkRegistryPath
 
     $warnings = @()
     if ($freeDiskGb -ne $null -and $freeDiskGb -lt 25) {
@@ -276,6 +303,12 @@ try {
         $warnings += "active_work_registry_missing"
     } elseif ($activeWorkAgeHours -gt 2) {
         $warnings += "active_work_registry_stale_h=$activeWorkAgeHours"
+    }
+    if ($activeWorkRefreshStatus -notin @("refreshed")) {
+        $warnings += "active_work_registry_refresh=$activeWorkRefreshStatus"
+    }
+    if ($null -ne $activeWorkRegistry -and [string]$activeWorkRegistry.status -ne "healthy") {
+        $warnings += "active_work_registry_status=$($activeWorkRegistry.status)"
     }
     $laneLeaseAgeHours = Get-FileAgeHours -Path $LegacyLaneLeasesPath
     if ($null -ne $laneLeaseAgeHours -and $laneLeaseAgeHours -gt 24) {
@@ -313,6 +346,9 @@ try {
         largest_recent_session_mb = $largestRecentSessionMb
         active_work_registry_path = $ActiveWorkRegistryPath
         active_work_registry_age_h = $activeWorkAgeHours
+        active_work_registry_refresh = $activeWorkRefreshStatus
+        active_work_status = if ($null -ne $activeWorkRegistry) { [string]$activeWorkRegistry.status } else { $null }
+        active_work_count = if ($null -ne $activeWorkRegistry) { [int]$activeWorkRegistry.active_count } else { $null }
         lane_leases_age_h = $laneLeaseAgeHours
         command_inbox_age_h = $commandInboxAgeHours
         warnings = $warnings

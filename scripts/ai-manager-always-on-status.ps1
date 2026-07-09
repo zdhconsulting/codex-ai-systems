@@ -85,6 +85,7 @@ $shellStewardScript = Join-Path $codexHome "scripts\codex-shell-steward.ps1"
 $shellStewardStatePath = Join-Path $codexHome "tmp\codex-shell-steward-state.json"
 $automationRoot = Join-Path $codexHome "automations"
 $activeWorkRegistryPath = Join-Path $codexHome "state\active-work-registry.json"
+$activeWorkRegistry = Read-OptionalJson -Path $activeWorkRegistryPath
 $commandCenterRoot = Join-Path $env:USERPROFILE "OneDrive\Documents\New project 2\data\command-center"
 $laneLeasesPath = Join-Path $commandCenterRoot "lane-leases.json"
 $commandInboxPath = Join-Path $commandCenterRoot "command-inbox.json"
@@ -121,6 +122,7 @@ $checks = @(
     [pscustomobject]@{ name = "automation_files_visible"; ok = ($automationFiles.Count -gt 0); detail = "$($automationFiles.Count) automation file(s)" },
     [pscustomobject]@{ name = "active_work_registry_visible"; ok = (Test-Path -LiteralPath $activeWorkRegistryPath); detail = (Get-FileDetail -Path $activeWorkRegistryPath) },
     [pscustomobject]@{ name = "active_work_registry_recent"; ok = (Test-RecentFile -Path $activeWorkRegistryPath -MaxAgeHours 2); detail = (Get-FileDetail -Path $activeWorkRegistryPath) },
+    [pscustomobject]@{ name = "active_work_registry_healthy"; ok = ($null -ne $activeWorkRegistry -and [string]$activeWorkRegistry.status -eq "healthy"); detail = $(if ($null -ne $activeWorkRegistry) { "status=$($activeWorkRegistry.status); active_count=$($activeWorkRegistry.active_count); issues=$($activeWorkRegistry.issues -join ';')" } else { "missing" }) },
     [pscustomobject]@{ name = "lane_leases_recent"; ok = (Test-RecentFile -Path $laneLeasesPath -MaxAgeHours 24); detail = (Get-FileDetail -Path $laneLeasesPath) },
     [pscustomobject]@{ name = "command_inbox_recent"; ok = (Test-RecentFile -Path $commandInboxPath -MaxAgeHours 24); detail = (Get-FileDetail -Path $commandInboxPath) },
     [pscustomobject]@{ name = "project_repo_visible"; ok = $gitStatus.is_repo; detail = $ProjectRoot }
