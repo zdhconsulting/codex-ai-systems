@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Claude Bridge"
+  short_description: "Send bounded read-only work to Claude"
+  default_prompt: "Use $codex-claude-bridge to ask Claude for a structured read-only review."
