@@ -34,6 +34,14 @@ Copy-Item -Path (Join-Path $codexHome "scripts\*.psm1") `
 Copy-Item -Path (Join-Path $codexHome "scripts\*.mjs") `
     -Destination (Join-Path $RepoPath "scripts") -Force
 
+$scriptVendorSource = Join-Path $codexHome "scripts\vendor"
+if (Test-Path -LiteralPath $scriptVendorSource) {
+    $scriptVendorDestination = Join-Path $RepoPath "scripts\vendor"
+    New-Item -ItemType Directory -Force $scriptVendorDestination | Out-Null
+    Copy-Item -Path (Join-Path $scriptVendorSource "*") `
+        -Destination $scriptVendorDestination -Recurse -Force
+}
+
 Copy-Item -Path (Join-Path $codexHome "*.config.toml") `
     -Destination (Join-Path $RepoPath "profiles") -Force
 
