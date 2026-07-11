@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 
 $requiredVersion = '1.0.6'
 $cacheBase = Join-Path $env:USERPROFILE '.claude\plugins\cache\openai-codex\codex'
-$patchRoot = Join-Path $env:USERPROFILE ".codex\patches\codex-plugin-cc\$requiredVersion\scripts"
+$patchRoot = Join-Path $PSScriptRoot "vendor\codex-plugin-cc\$requiredVersion\scripts"
 $expectedFiles = @(
     [pscustomobject]@{
         RelativePath = 'lib\codex.mjs'
