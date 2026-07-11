@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Messenger"
+  short_description: "Route bounded work across named AI project channels"
+  default_prompt: "Use $ai-messenger to register this project channel and prepare a bounded message for the correct AI conversation."
