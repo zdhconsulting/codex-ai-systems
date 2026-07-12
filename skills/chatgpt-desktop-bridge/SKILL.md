@@ -1,6 +1,6 @@
 ---
 name: chatgpt-desktop-bridge
-description: Route bounded creative, research, writing, image, or design work from Codex to one registered existing ChatGPT Chat/Work conversation in the same desktop app without opening Chrome. Use when Zev says to have ChatGPT do something, asks for ChatGPT graphic design or custom icons, targets a specific current ChatGPT project/conversation, or asks Codex to import the result and continue local implementation.
+description: Prepare, inspect, or troubleshoot a Chrome-free handoff from Codex to a registered existing ChatGPT Chat/Work conversation, and use it only when a supported write-capable endpoint is ready. Use when Zev asks whether desktop ChatGPT can receive work, targets a specific ChatGPT project/conversation, or needs the current desktop bridge status and safe fallback.
 ---
 
 # ChatGPT Desktop Bridge
@@ -8,11 +8,18 @@ description: Route bounded creative, research, writing, image, or design work fr
 Use AI Messenger as the source of truth. This skill never drives Chrome, injects into private app
 state, or silently creates a ChatGPT conversation.
 
+## Current Status
+
+The file-only ChatGPT Work listener is **not operational on this setup**. ChatGPT Work declined the
+local write and required a Codex handoff, so `chatgpt-design-desktop` is `unaddressable`. Do not
+activate or publish to it until an official native cross-mode tool or an approved write-capable app
+proves a real receipt round trip.
+
 ## Route Work
 
 1. Keep code, repo changes, tests, git, deployment, and final QA in Codex.
-2. Route detachable creative work to a registered ChatGPT desktop endpoint: graphic design, custom
-   icon concepts, image generation, moodboards, polished copy, research, or critique.
+2. Route detachable creative work to a registered ChatGPT desktop endpoint only when its status is
+   `ready` and its transport has passed a live round trip.
 3. Resolve the exact endpoint alias. Require `existing_only=true` and `create_if_missing=false`.
 4. If the endpoint is absent, offline, or unacknowledged, queue the request and report the one-time
    listener setup. Do not fall back to Chrome unless Zev explicitly asks.
@@ -42,10 +49,8 @@ is true, and AI Messenger's live gate is on.
 
 ## Attach One Existing Work Conversation
 
-Run `setup`, grant the existing ChatGPT Work conversation access to the returned mailbox folder,
-then tell it to read `LISTENER_INSTRUCTIONS.md` in that folder. After it writes the
-challenge-matching acknowledgement and Zev confirms the standing route, run
-`activate --approve-live`. This is a one-time attachment, not a new conversation per request.
+The `setup` and `activate` commands are retained for a future supported listener. Do not ask Zev to
+repeat the failed folder attachment on the current Work surface.
 
 ## Fail Closed
 

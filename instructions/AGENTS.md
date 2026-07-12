@@ -271,13 +271,13 @@ When the optimizer sends work to ChatGPT, bring the result back by copying the C
 
 ## Browser Preference
 
-For all chats and projects, use Chrome or Chromium instead of Microsoft Edge for actual browser work by default: local previews, browser automation, screenshots, responsive checks, and web app verification. ChatGPT desktop handoffs are not browser work; use `$chatgpt-desktop-bridge` first and keep Chrome as an explicit fallback. Do not launch Edge unless Zev explicitly asks for Edge, Chrome is unavailable, or the task specifically requires Edge compatibility testing.
+For all chats and projects, use Chrome or Chromium instead of Microsoft Edge for actual browser work by default: local previews, browser automation, screenshots, responsive checks, and web app verification. ChatGPT desktop handoffs are not browser work. Check `$chatgpt-desktop-bridge`, but use it only when an exact endpoint is `ready`; the current file-only Work listener is `unaddressable`. Do not launch Edge unless Zev explicitly asks for Edge, Chrome is unavailable, or the task specifically requires Edge compatibility testing.
 
 ## ChatGPT Usage Routing
 
-Prefer `$chatgpt-desktop-bridge` for a registered existing ChatGPT Chat/Work conversation in the same desktop app. It uses AI Messenger's typed local mailbox, does not launch Chrome, and must enforce `existing_only=true` plus `create_if_missing=false`. If the requested desktop endpoint is offline or unregistered, queue the request and surface the one-time listener setup; do not silently create a conversation or fall back to Chrome. Use `$codex-chatgpt-bridge` and the existing Chrome scripts only as an explicit or unavailable-desktop fallback.
+Use `$chatgpt-desktop-bridge` only for a registered existing ChatGPT Chat/Work endpoint whose status is `ready` and whose transport has passed a real round trip. The current file-only Work endpoint is `unaddressable` because Work requires a Codex handoff for local writes. Do not repeat the failed folder-listener setup, silently create a conversation, or claim direct cross-mode delivery. Until OpenAI exposes a supported route, use an explicit manual in-app handoff or `$codex-chatgpt-bridge` with Chrome when Zev permits it.
 
-Agent Creator and Agent Registrar should seed `$chatgpt-desktop-bridge` into new project/operator skill bundles when the lane may need writing, research, design, custom icons, image generation, or creative critique. Project channels must bind an exact registered ChatGPT endpoint before dispatch.
+Agent Creator and Agent Registrar may seed `$chatgpt-desktop-bridge` for capability discovery, but must not mark ChatGPT desktop dispatch available without a `ready` exact endpoint and live receipt proof. Project channels must bind an exact registered endpoint before dispatch.
 
 To save Codex usage, route work away from Codex when it does not need local repo access, terminal commands, filesystem edits, tests, git, deployment/debugging, browser verification, app connectors, or owner-button queue state.
 
@@ -306,9 +306,9 @@ When a task should leave Codex manually, say `ChatGPT route recommended - brief 
 
 `C:\Users\zev\.codex\scripts\chatgpt-route.cmd "TASK"`
 
-Default to the registered ChatGPT desktop endpoint when it is ready. Its existing Work conversation reads typed requests from its local mailbox and returns typed receipts and assets. Use the Chrome browser route only when Zev explicitly chooses it or the desktop endpoint is unavailable and the route is allowed to fall back. Do not ask Zev to paste/copy unless both transports are unavailable or ChatGPT itself requires login, CAPTCHA, payment, account verification, safety confirmation, or another true owner-only action.
+Use a registered ChatGPT desktop endpoint only when it is `ready` and proven. The current endpoint is not. For now, use an explicit manual in-app handoff or the Chrome browser route when Zev chooses it. Do not ask Zev to paste/copy unless no supported transport is available or ChatGPT itself requires login, CAPTCHA, payment, account verification, safety confirmation, or another true owner-only action.
 
-For ChatGPT image generation, Codex is the orchestrator: prepare an IP-safe prompt, route it to the registered ChatGPT desktop design endpoint, import the validated artifact receipt, save or integrate the selected asset in the project, visually inspect it, and return the local file link plus image preview. Avoid exact copyrighted characters, logos, brand trade dress, and real-person face reinterpretation unless the user supplies allowed source material and exact preservation is possible.
+For ChatGPT image generation, Codex is the orchestrator: prepare an IP-safe prompt, use a transport Zev explicitly selected and that is actually available, import or receive the asset, save or integrate it in the project, visually inspect it, and return the local file link plus image preview. Avoid exact copyrighted characters, logos, brand trade dress, and real-person face reinterpretation unless the user supplies allowed source material and exact preservation is possible.
 
 Manual fallback: this copies a ChatGPT-ready prompt to the clipboard, opens ChatGPT, and asks ChatGPT to end with a `CODEX_RETURN_PACKET`. Do not claim the current Desktop chat has switched models. The current Codex session is only dispatching; ChatGPT does the routed work.
 

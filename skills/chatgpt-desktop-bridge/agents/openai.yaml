@@ -1,6 +1,6 @@
 interface:
   display_name: "ChatGPT Desktop Bridge"
-  short_description: "Route work to existing desktop ChatGPT"
-  default_prompt: "Use $chatgpt-desktop-bridge to send this bounded task to my registered existing ChatGPT conversation and return the validated result to Codex."
+  short_description: "Check or use supported desktop ChatGPT route"
+  default_prompt: "Use $chatgpt-desktop-bridge to check whether my registered ChatGPT desktop endpoint is supported and route this task only if it is ready."
 policy:
   allow_implicit_invocation: true

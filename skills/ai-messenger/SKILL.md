@@ -47,8 +47,9 @@ approves more. Do not include credentials, private browser history, or unrelated
 - **Codex:** target a saved project task by session ID. Do not resume an actively writing task.
 - **Claude Code:** target a managed CLI session ID. Default to plan/read-only authority.
 - **Claude Desktop:** treat it as unaddressable until its local adapter registers a real listener.
-- **ChatGPT Desktop:** use `$chatgpt-desktop-bridge` with a challenge-acknowledged existing Work
-  conversation. Require typed mailbox receipts and never open or create another conversation.
+- **ChatGPT Desktop:** use `$chatgpt-desktop-bridge` only when a supported write-capable endpoint is
+  `ready`. The current file-only Work listener is `unaddressable` because local writes require a
+  Codex handoff; do not retry that setup or imply it is live.
 - **ChatGPT/DeepSeek Chrome:** use the existing exact-URL bridge only as an explicit fallback.
 
 If a provider is offline, leave the message queued. Do not create repeated workers or visible shell
