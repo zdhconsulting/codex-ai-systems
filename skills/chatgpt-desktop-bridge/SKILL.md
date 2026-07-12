@@ -42,10 +42,10 @@ is true, and AI Messenger's live gate is on.
 
 ## Attach One Existing Work Conversation
 
-Run `setup`, then give the existing ChatGPT Work conversation the listener contract at
-`references/listener-contract.md`. After it writes the challenge-matching acknowledgement and Zev
-confirms the standing route, run `activate --approve-live`. This is a one-time attachment, not a new
-conversation per request.
+Run `setup`, grant the existing ChatGPT Work conversation access to the returned mailbox folder,
+then tell it to read `LISTENER_INSTRUCTIONS.md` in that folder. After it writes the
+challenge-matching acknowledgement and Zev confirms the standing route, run
+`activate --approve-live`. This is a one-time attachment, not a new conversation per request.
 
 ## Fail Closed
 

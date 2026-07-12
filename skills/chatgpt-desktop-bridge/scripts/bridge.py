@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -61,9 +62,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "setup":
             result = prepare_mailbox(store, args.endpoint)
-            result["listener_contract"] = str(
-                Path(__file__).resolve().parents[1] / "references" / "listener-contract.md"
-            )
+            contract = Path(__file__).resolve().parents[1] / "references" / "listener-contract.md"
+            mailbox_contract = Path(result["mailbox_root"]) / "LISTENER_INSTRUCTIONS.md"
+            shutil.copyfile(contract, mailbox_contract)
+            result["listener_contract"] = str(mailbox_contract)
             emit({"ok": True, **result})
         elif args.command == "activate":
             emit({"ok": True, **activate_mailbox(store, args.endpoint, approve_live=args.approve_live)})
