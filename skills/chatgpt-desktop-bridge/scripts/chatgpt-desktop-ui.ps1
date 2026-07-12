@@ -357,7 +357,8 @@ function Open-ExactChatPanel {
     }
     if ($state.Composer.Count -eq 0 -and $state.AddToTask.Count -eq 0 -and $state.History.Count -eq 0) {
         $chatWord = Find-OcrWord $snapshot 'Chat' 250 320
-        Invoke-VerifiedClick $snapshot $chatWord.BoundingRect
+        $chatBounds = $chatWord.BoundingRect
+        Invoke-VerifiedPoint $snapshot ($chatBounds.X - 18) ($chatBounds.Y + ($chatBounds.Height / 2))
         for ($attempt = 0; $attempt -lt 6; $attempt++) {
             Start-Sleep -Milliseconds 600
             $snapshot = Get-WindowSnapshot $Process
@@ -366,9 +367,25 @@ function Open-ExactChatPanel {
                 break
             }
         }
+        if ($state.Composer.Count -eq 0 -and $state.AddToTask.Count -eq 0 -and $state.History.Count -eq 0) {
+            $recentMatches = @(Get-OcrLinePatternMatches $snapshot ("(?i)^{0}$" -f [regex]::Escape($Title)) 180 650 80 600)
+            if ($recentMatches.Count -eq 1) {
+                Invoke-VerifiedClick $snapshot $recentMatches[0].Bounds
+                for ($attempt = 0; $attempt -lt 7; $attempt++) {
+                    Start-Sleep -Milliseconds 600
+                    $snapshot = Get-WindowSnapshot $Process
+                    $state = Get-ChatPanelState $snapshot $Title
+                    if ($state.Composer.Count -gt 0 -or $state.AddToTask.Count -gt 0 -or $state.History.Count -gt 0) {
+                        break
+                    }
+                }
+            } elseif ($recentMatches.Count -gt 1) {
+                throw "Recent Chat list contains more than one exact '$Title' entry."
+            }
+        }
     }
     if ($state.Composer.Count -eq 0 -and $state.AddToTask.Count -eq 0 -and $state.History.Count -eq 0) {
-        throw 'Chat panel did not expose a verified header control, history header, or composer.'
+        throw "Chat panel did not expose a verified header control, history header, or composer. Last screenshot: $($snapshot.Path)"
     }
 
     if ($state.History.Count -eq 0 -and $state.Title.Count -eq 1 -and $state.AddToTask.Count -eq 1) {

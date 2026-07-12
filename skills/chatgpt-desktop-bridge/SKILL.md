@@ -8,6 +8,14 @@ description: Route bounded creative, design, writing, strategy, or second-opinio
 Use the fixed existing ChatGPT Work conversation `Design Studio`. Keep Codex responsible for local
 files, code, tests, git, browser QA, deployment, and final integration.
 
+## Current Status
+
+The response-copy path is proven, but the ChatGPT Work drawer opener is not reliable across the
+current Desktop layouts. The endpoint must remain `live_send_enabled=false` and
+`selection_proven=false`. Do not invoke `send-receive` for ordinary work or claim direct delivery
+until a bounded round trip proves exact selection, send, and return without touching another app
+control.
+
 ## Endpoint Contract
 
 Read `references/design-studio-endpoint.json` before sending. Require:

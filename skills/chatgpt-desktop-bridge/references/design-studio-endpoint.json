@@ -5,10 +5,10 @@
   "transport": "desktop_ocr_ui",
   "existing_only": true,
   "create_if_missing": false,
-  "selection_proven": true,
+  "selection_proven": false,
   "response_copy_proven": true,
   "live_send_enabled": false,
   "send_roundtrip_proven": false,
   "maximum_rounds": 1,
-  "block_reason": "The current Design Studio composer contains an unsent user draft; live smoke must wait until it is empty."
+  "block_reason": "Repeated bounded tests could not open the ChatGPT Work drawer reliably across current layouts; the final selector opened the wrong app control. No prompt was sent."
 }
