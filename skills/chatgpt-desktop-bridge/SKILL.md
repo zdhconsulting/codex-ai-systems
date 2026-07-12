@@ -1,61 +1,76 @@
 ---
 name: chatgpt-desktop-bridge
-description: Prepare, inspect, or troubleshoot a Chrome-free handoff from Codex to a registered existing ChatGPT Chat/Work conversation, and use it only when a supported write-capable endpoint is ready. Use when Zev asks whether desktop ChatGPT can receive work, targets a specific ChatGPT project/conversation, or needs the current desktop bridge status and safe fallback.
+description: Route bounded creative, design, writing, strategy, or second-opinion work from a Codex task to Zev's exact existing ChatGPT Work conversation named Design Studio, then retrieve and validate its typed response without Chrome or a new chat. Use when Zev says to ask ChatGPT, use Design Studio, hand work to the existing ChatGPT chat, or bring a ChatGPT result back into Codex.
 ---
 
 # ChatGPT Desktop Bridge
 
-Use AI Messenger as the source of truth. This skill never drives Chrome, injects into private app
-state, or silently creates a ChatGPT conversation.
+Use the fixed existing ChatGPT Work conversation `Design Studio`. Keep Codex responsible for local
+files, code, tests, git, browser QA, deployment, and final integration.
 
-## Current Status
+## Endpoint Contract
 
-The file-only ChatGPT Work listener is **not operational on this setup**. ChatGPT Work declined the
-local write and required a Codex handoff, so `chatgpt-design-desktop` is `unaddressable`. Do not
-activate or publish to it until an official native cross-mode tool or an approved write-capable app
-proves a real receipt round trip.
+Read `references/design-studio-endpoint.json` before sending. Require:
 
-## Route Work
+- `alias=chatgpt-design-studio`
+- `mode=Work`
+- `target_title=Design Studio`
+- `existing_only=true`
+- `create_if_missing=false`
+- `live_send_enabled=true`
 
-1. Keep code, repo changes, tests, git, deployment, and final QA in Codex.
-2. Route detachable creative work to a registered ChatGPT desktop endpoint only when its status is
-   `ready` and its transport has passed a live round trip.
-3. Resolve the exact endpoint alias. Require `existing_only=true` and `create_if_missing=false`.
-4. If the endpoint is absent, offline, or unacknowledged, queue the request and report the one-time
-   listener setup. Do not fall back to Chrome unless Zev explicitly asks.
-5. Import only a typed receipt whose message, correlation, endpoint, and artifact paths validate.
-6. Inspect returned assets before integrating them locally.
+Do not bypass a false live-send gate during ordinary work. `-SmokeTestOverride` is only for the one
+explicitly authorized bounded proof that enables the endpoint.
 
-## Commands
+## Send And Retrieve
 
-Use the deterministic helper:
+Run the deterministic helper:
 
 ```powershell
-python C:\Users\zev\.codex\skills\chatgpt-desktop-bridge\scripts\bridge.py status `
-  --endpoint chatgpt-design-desktop
-
-python C:\Users\zev\.codex\skills\chatgpt-desktop-bridge\scripts\bridge.py send `
-  --channel ai-messenger-control `
-  --source codex-cto-current `
-  --target chatgpt-design-desktop `
-  --body "Create six custom icon concepts and return the assets."
-
-python C:\Users\zev\.codex\skills\chatgpt-desktop-bridge\scripts\bridge.py receive `
-  --endpoint chatgpt-design-desktop
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  C:\Users\zev\.codex\skills\chatgpt-desktop-bridge\scripts\chatgpt-desktop-ui.ps1 `
+  -Action send-receive `
+  -TargetTitle 'Design Studio' `
+  -PromptPath 'C:\absolute\path\to\bounded-prompt.txt' `
+  -TimeoutSeconds 240
 ```
 
-`send` queues safely. Add `--publish` only when the endpoint is ready, its standing live approval
-is true, and AI Messenger's live gate is on.
+The helper must:
 
-## Attach One Existing Work Conversation
+1. Switch to ChatGPT Work through OCR-verified labels.
+2. Open Chat and select the exact existing `Design Studio` History entry.
+3. Require the paired `Add to task` header control so main-task text cannot impersonate the panel.
+4. Refuse to send while ChatGPT is busy or the composer is not provably empty.
+5. Paste once, verify the unique request token, and press Enter once.
+6. Wait only for the matching completion marker.
+7. Use the response's native copy control and validate the matching `CHATGPT_RETURN_PACKET`.
+8. Return to the originating Codex task through `CODEX_THREAD_ID`.
 
-The `setup` and `activate` commands are retained for a future supported listener. Do not ask Zev to
-repeat the failed folder attachment on the current Work surface.
+Use `-Prompt` only for short bounded requests. Prefer `-PromptPath` for substantial work.
+
+## Read-Only Checks
+
+Use these while troubleshooting; they never send:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  C:\Users\zev\.codex\skills\chatgpt-desktop-bridge\scripts\chatgpt-desktop-ui.ps1 `
+  -Action open-chat -TargetTitle 'Design Studio'
+
+powershell -NoProfile -ExecutionPolicy Bypass -File `
+  C:\Users\zev\.codex\skills\chatgpt-desktop-bridge\scripts\chatgpt-desktop-ui.ps1 `
+  -Action copy-latest -TargetTitle 'Design Studio' -ExpectedMarker 'VISIBLE UNIQUE MARKER'
+```
 
 ## Fail Closed
 
-- Never claim that sharing one desktop app creates a direct Codex-to-ChatGPT task API.
-- Never use keyboard simulation, private app databases, generated conversation IDs, or tab order.
-- Never cross project channels without an explicit endpoint binding.
-- Never accept artifacts outside the endpoint mailbox's `artifacts` directory.
-- Never run an unbounded AI-to-AI loop; the channel's maximum rounds still applies.
+- Never create, fork, rename, or silently switch ChatGPT conversations.
+- Never overwrite or clear an existing user draft.
+- Never stack work while Design Studio is thinking.
+- Never retry after Enter if visual sent-state verification fails.
+- Never use global command-menu shortcuts, private app databases, auth tokens, or Chrome for this route.
+- Never run an unbounded AI-to-AI loop; one request receives one typed return packet.
+- If the renderer is blank, the title/control pair is ambiguous, or the composer is not empty, return
+  to Codex and report blocked without sending.
+
+Inspect all returned text and assets before applying them locally.

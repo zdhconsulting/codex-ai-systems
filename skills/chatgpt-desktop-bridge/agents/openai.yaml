@@ -1,6 +1,6 @@
 interface:
   display_name: "ChatGPT Desktop Bridge"
-  short_description: "Check or use supported desktop ChatGPT route"
-  default_prompt: "Use $chatgpt-desktop-bridge to check whether my registered ChatGPT desktop endpoint is supported and route this task only if it is ready."
+  short_description: "Route work to the existing Design Studio chat"
+  default_prompt: "Use $chatgpt-desktop-bridge to send this bounded request to my existing ChatGPT Design Studio conversation and bring the validated result back."
 policy:
   allow_implicit_invocation: true
