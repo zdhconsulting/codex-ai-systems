@@ -27,8 +27,10 @@ python scripts/messenger.py add-endpoint --endpoint ENDPOINT-ID --provider codex
 python scripts/messenger.py bind --channel PROJECT-SLUG --endpoint ENDPOINT-ID --role coordinator
 ```
 
-Register browser endpoints by exact conversation URL, never by tab number or title. A ChatGPT URL
-must contain `/c/`; a DeepSeek URL must contain `/a/chat/s/`.
+Prefer one registered ChatGPT Desktop Work mailbox endpoint with `existing_only=true` and
+`create_if_missing=false`. Register browser fallbacks by exact conversation URL, never by tab
+number or title. A ChatGPT browser URL must contain `/c/`; a DeepSeek URL must contain
+`/a/chat/s/`.
 
 ## Queue work
 
@@ -45,8 +47,9 @@ approves more. Do not include credentials, private browser history, or unrelated
 - **Codex:** target a saved project task by session ID. Do not resume an actively writing task.
 - **Claude Code:** target a managed CLI session ID. Default to plan/read-only authority.
 - **Claude Desktop:** treat it as unaddressable until its local adapter registers a real listener.
-- **ChatGPT/DeepSeek Chrome:** prepare through the existing Codex Chrome bridge and exact URL.
-  Browser plans are not live sends in v1.
+- **ChatGPT Desktop:** use `$chatgpt-desktop-bridge` with a challenge-acknowledged existing Work
+  conversation. Require typed mailbox receipts and never open or create another conversation.
+- **ChatGPT/DeepSeek Chrome:** use the existing exact-URL bridge only as an explicit fallback.
 
 If a provider is offline, leave the message queued. Do not create repeated workers or visible shell
 windows to wake it.
@@ -60,4 +63,3 @@ windows to wake it.
 
 Read [references/protocol.md](references/protocol.md) when adding an adapter, changing state
 transitions, or diagnosing a stuck delivery.
-
