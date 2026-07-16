@@ -10,7 +10,11 @@ $ScriptPath = Join-Path $CodexHome "scripts\codex-narrow-thread-rehome.ps1"
 function Get-CodexDesktopProcess {
     Get-Process -ErrorAction SilentlyContinue | Where-Object {
         try {
-            ($_.ProcessName -in @("Codex", "codex")) -and ($_.Path -match "\\WindowsApps\\OpenAI\.Codex_.*\\app\\")
+            $path = $_.Path
+            $isPackagedApp = $path -match "\\WindowsApps\\OpenAI\.Codex_[^\\]+\\app\\"
+            $isUnifiedDesktop = ($_.ProcessName -ieq "ChatGPT") -and ($path -match "\\app\\ChatGPT\.exe$")
+            $isLegacyDesktop = ($_.ProcessName -ieq "Codex") -and ($path -match "\\app\\Codex\.exe$")
+            $isPackagedApp -and ($isUnifiedDesktop -or $isLegacyDesktop)
         } catch {
             $false
         }

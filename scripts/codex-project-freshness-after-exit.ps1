@@ -22,9 +22,13 @@ function Write-Log {
 }
 
 function Get-CodexDesktopProcess {
-    Get-Process -Name "Codex" -ErrorAction SilentlyContinue | Where-Object {
+    Get-Process -ErrorAction SilentlyContinue | Where-Object {
         try {
-            $_.Path -match "\\WindowsApps\\OpenAI\.Codex_.*\\app\\Codex\.exe$"
+            $path = $_.Path
+            $isPackagedApp = $path -match "\\WindowsApps\\OpenAI\.Codex_[^\\]+\\app\\"
+            $isUnifiedDesktop = ($_.ProcessName -ieq "ChatGPT") -and ($path -match "\\app\\ChatGPT\.exe$")
+            $isLegacyDesktop = ($_.ProcessName -ieq "Codex") -and ($path -match "\\app\\Codex\.exe$")
+            $isPackagedApp -and ($isUnifiedDesktop -or $isLegacyDesktop)
         } catch {
             $false
         }
@@ -63,4 +67,3 @@ if (-not $NoRelaunch) {
     Write-Log "relaunching Codex Desktop"
     Start-Process -FilePath "explorer.exe" -ArgumentList "shell:AppsFolder\OpenAI.Codex_2p2nqsd0c76g0!App"
 }
-

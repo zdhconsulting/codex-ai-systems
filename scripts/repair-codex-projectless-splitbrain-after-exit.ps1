@@ -18,11 +18,17 @@ function Write-Log {
 }
 
 function Get-CodexDesktopProcess {
-    Get-Process -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.ProcessName -ieq "Codex" -or
-            ($_.ProcessName -ieq "codex" -and $_.Path -like "*WindowsApps*OpenAI.Codex*")
+    Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        try {
+            $path = $_.Path
+            $isPackagedApp = $path -match "\\WindowsApps\\OpenAI\.Codex_[^\\]+\\app\\"
+            $isUnifiedDesktop = ($_.ProcessName -ieq "ChatGPT") -and ($path -match "\\app\\ChatGPT\.exe$")
+            $isLegacyDesktop = ($_.ProcessName -ieq "Codex") -and ($path -match "\\app\\Codex\.exe$")
+            $isPackagedApp -and ($isUnifiedDesktop -or $isLegacyDesktop)
+        } catch {
+            $false
         }
+    }
 }
 
 $codexPath = $null

@@ -3,7 +3,11 @@ param(
     [string] $StatePath = "",
     [string] $ThreadsDbPath = "",
     [switch] $NoPatchThreadAssignments,
-    [switch] $Json
+    [switch] $Json,
+    [ValidateRange(1, 20)]
+    [int] $MaxStateBackups = 2,
+    [ValidateRange(1, 2048)]
+    [int] $MaxStateFileMB = 256
 )
 
 $ErrorActionPreference = "Stop"
@@ -62,10 +66,35 @@ function Get-ExtendedWindowsPath {
 function Get-CodexDesktopProcess {
     Get-Process -ErrorAction SilentlyContinue | Where-Object {
         try {
-            ($_.ProcessName -in @("Codex", "codex")) -and ($_.Path -match "\\WindowsApps\\OpenAI\.Codex_.*\\app\\")
+            $path = $_.Path
+            $isPackagedApp = $path -match "\\WindowsApps\\OpenAI\.Codex_[^\\]+\\app\\"
+            $isUnifiedDesktop = ($_.ProcessName -ieq "ChatGPT") -and ($path -match "\\app\\ChatGPT\.exe$")
+            $isLegacyDesktop = ($_.ProcessName -ieq "Codex") -and ($path -match "\\app\\Codex\.exe$")
+            $isPackagedApp -and ($isUnifiedDesktop -or $isLegacyDesktop)
         } catch {
             $false
         }
+    }
+}
+
+function Remove-OldStateBackups {
+    param([int] $Keep)
+
+    $stateDirectory = [IO.Path]::GetFullPath((Split-Path -Parent $StatePath))
+    $stateFileName = Split-Path -Leaf $StatePath
+    $backupPrefix = "$stateFileName.bak-project-containers-"
+    $backups = @(Get-ChildItem -LiteralPath $stateDirectory -Force -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name.StartsWith($backupPrefix, [StringComparison]::OrdinalIgnoreCase) } |
+        Sort-Object Name -Descending)
+    $toRemove = if ($Keep -le 0) { $backups } else { @($backups | Select-Object -Skip $Keep) }
+
+    foreach ($candidate in $toRemove) {
+        $candidateDirectory = [IO.Path]::GetFullPath($candidate.DirectoryName)
+        if ($candidateDirectory -ne $stateDirectory -or
+            -not $candidate.Name.StartsWith($backupPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to remove unexpected backup path: $($candidate.FullName)"
+        }
+        Remove-Item -LiteralPath $candidate.FullName -Force
     }
 }
 
@@ -104,10 +133,29 @@ $threadAssignments = @(
     @{ Id = "019eb30e-9405-7690-9b47-e4e9f4b2a704"; Path = "C:\repos\book"; Label = "zdhbook" }
 )
 
+$desktopProcesses = @(Get-CodexDesktopProcess)
+if ($desktopProcesses.Count -gt 0) {
+    throw "Refusing to modify Codex global state while the Desktop app is running. Detected process ids: $($desktopProcesses.Id -join ', ')"
+}
+
 $existing = @($desired | Where-Object { Test-Path -LiteralPath $_.Path })
 $roots = @($existing | ForEach-Object { $_.Path })
+$stateInfo = Get-Item -LiteralPath $StatePath -Force
+$maxStateBytes = [int64]$MaxStateFileMB * 1MB
+if ($stateInfo.Length -gt $maxStateBytes) {
+    throw "Refusing automatic state mutation because $StatePath is $([math]::Round($stateInfo.Length / 1MB, 1)) MB; safety limit is $MaxStateFileMB MB."
+}
+
+Remove-OldStateBackups -Keep ([math]::Max(0, $MaxStateBackups - 1))
+$driveInfo = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($stateInfo.FullName))
+$requiredFreeBytes = [math]::Max([int64](5GB), [int64]($stateInfo.Length * 2))
+if ($driveInfo.AvailableFreeSpace -lt $requiredFreeBytes) {
+    throw "Refusing state backup because only $([math]::Round($driveInfo.AvailableFreeSpace / 1GB, 2)) GB is free; at least $([math]::Round($requiredFreeBytes / 1GB, 2)) GB is required."
+}
+
 $backup = "$StatePath.bak-project-containers-$(Get-Date -Format 'yyyyMMddHHmmss')"
 Copy-Item -LiteralPath $StatePath -Destination $backup -Force
+Remove-OldStateBackups -Keep $MaxStateBackups
 
 $state = Get-Content -Raw -LiteralPath $StatePath | ConvertFrom-Json
 $validThreadAssignments = @($threadAssignments | Where-Object { Test-Path -LiteralPath $_.Path })
