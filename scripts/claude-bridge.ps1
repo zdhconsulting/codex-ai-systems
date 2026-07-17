@@ -582,13 +582,15 @@ END_TASK_PACKET
 
     $runtimeSchema = New-RuntimeReceiptSchema -TaskPacket $taskPacket
     $runtimeSchemaJson = $runtimeSchema | ConvertTo-Json -Depth 30 -Compress
+    $emptyMcpConfigPath = Join-Path $directory "mcp-empty.json"
+    Write-Utf8NoBom -Path $emptyMcpConfigPath -Content '{"mcpServers":{}}'
     $sessionName = ConvertTo-SafeSlug -Value ("codex-claude-{0}-{1}" -f $Project, $AttemptId) -Fallback "codex-claude-review"
     $claudeArguments = New-Object System.Collections.Generic.List[string]
     foreach ($prefix in $ClaudePrefixArgument) { $claudeArguments.Add($prefix) }
     foreach ($argument in @(
         "--safe-mode", "--permission-mode", "plan", "--tools", "Read,Glob,Grep",
         "--allowedTools", "Read,Glob,Grep", "--disallowedTools", "Bash,Edit,Write,WebFetch,WebSearch,NotebookEdit,Task",
-        "--strict-mcp-config", "--mcp-config", "{}", "--no-chrome", "--no-session-persistence",
+        "--strict-mcp-config", "--mcp-config", $emptyMcpConfigPath, "--no-chrome", "--no-session-persistence",
         "--model", $Model, "--name", $sessionName, "--output-format", "json", "--json-schema", $runtimeSchemaJson, "-p"
     )) { $claudeArguments.Add("$argument") }
     $claudeArguments.Add("--add-dir")
