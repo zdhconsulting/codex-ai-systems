@@ -2,13 +2,16 @@
   "alias": "chatgpt-design-studio",
   "mode": "Work",
   "target_title": "Design Studio",
-  "transport": "desktop_ocr_ui",
+  "transport": "unified_desktop_uia",
+  "app_generation": "unified-chatgpt-desktop-2026-07",
   "existing_only": true,
   "create_if_missing": false,
-  "selection_proven": false,
+  "selection_proven": true,
   "response_copy_proven": true,
-  "live_send_enabled": false,
-  "send_roundtrip_proven": false,
+  "live_send_enabled": true,
+  "send_roundtrip_proven": true,
   "maximum_rounds": 1,
-  "block_reason": "Repeated bounded tests could not open the ChatGPT Work drawer reliably across current layouts; the final selector opened the wrong app control. No prompt was sent."
+  "last_verified_at": "2026-07-20T14:19:00Z",
+  "last_verified_request_id": "02D66E06F75C",
+  "block_reason": null
 }
