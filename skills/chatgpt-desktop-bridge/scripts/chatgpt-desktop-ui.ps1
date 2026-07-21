@@ -6,6 +6,7 @@ param(
     [string]$ExpectedMarker = '',
     [string]$Prompt = '',
     [string]$PromptPath = '',
+    [switch]$PromptFromStdin,
     [ValidateRange(15, 900)]
     [int]$TimeoutSeconds = 180,
     [string]$OriginThreadId = $env:CODEX_THREAD_ID,
@@ -639,14 +640,21 @@ try {
         $requestToken = "DSREQ-$requestId"
         $completionMarker = "DSDONE-$requestId"
         try {
-            if (-not [string]::IsNullOrWhiteSpace($Prompt) -and -not [string]::IsNullOrWhiteSpace($PromptPath)) {
-                throw 'Use Prompt or PromptPath, not both.'
+            $promptSourceCount = @(
+                -not [string]::IsNullOrWhiteSpace($Prompt),
+                -not [string]::IsNullOrWhiteSpace($PromptPath),
+                [bool]$PromptFromStdin
+            ).Where({ $_ }).Count
+            if ($promptSourceCount -gt 1) {
+                throw 'Use exactly one of Prompt, PromptPath, or PromptFromStdin.'
             }
             $taskText = if (-not [string]::IsNullOrWhiteSpace($PromptPath)) {
                 if (-not (Test-Path -LiteralPath $PromptPath -PathType Leaf)) {
                     throw "PromptPath does not exist: $PromptPath"
                 }
                 Get-Content -Raw -LiteralPath $PromptPath
+            } elseif ($PromptFromStdin) {
+                [Console]::In.ReadToEnd()
             } else {
                 $Prompt
             }

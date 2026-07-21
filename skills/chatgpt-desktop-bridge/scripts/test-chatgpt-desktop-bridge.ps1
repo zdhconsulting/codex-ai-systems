@@ -43,7 +43,8 @@ foreach ($required in @(
     'View chat history, current chat:',
     "Current.Name -eq 'Copy'",
     'Local\ZevChatGptDesignStudioBridge',
-    'unified_desktop_uia'
+    'unified_desktop_uia',
+    'PromptFromStdin'
 )) {
     if ($uiText -notmatch [regex]::Escape($required)) {
         throw "Desktop helper is missing required UIA contract text: $required"
