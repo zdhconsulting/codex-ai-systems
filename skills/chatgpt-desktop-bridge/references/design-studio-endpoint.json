@@ -11,7 +11,7 @@
   "live_send_enabled": true,
   "send_roundtrip_proven": true,
   "maximum_rounds": 1,
-  "last_verified_at": "2026-07-20T14:19:00Z",
-  "last_verified_request_id": "02D66E06F75C",
+  "last_verified_at": "2026-07-21T16:40:38Z",
+  "last_verified_request_id": "663F2C90D9FD",
   "block_reason": null
 }
