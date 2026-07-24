@@ -279,6 +279,13 @@ Use `$chatgpt-desktop-bridge` for bounded work sent to Zev's exact existing Chat
 
 Agent Creator and Agent Registrar should seed `$chatgpt-desktop-bridge` into new project/operator skill bundles that may need design, writing, strategy, image concepts, or creative critique. Bind those requests to endpoint alias `chatgpt-design-studio`; do not invent per-project ChatGPT chats unless Zev explicitly creates and registers one.
 
+Agent Creator and Agent Registrar should also seed `$ai-messenger` into every durable project or
+operator that may coordinate with Claude, ChatGPT, DeepSeek, or another Codex task. Each durable
+project gets one exact AI Messenger channel, its registered Codex task endpoint, and a matching
+named `claude_gateway_session` bound to the same workspace. Use the hidden `ZDH Claude Gateway`
+and the off-OneDrive `%LOCALAPPDATA%\ZDH\ai-messenger` database; do not create project-specific
+mailboxes, Bossman dependencies, or visible shell listeners.
+
 To save Codex usage, route work away from Codex when it does not need local repo access, terminal commands, filesystem edits, tests, git, deployment/debugging, browser verification, app connectors, or owner-button queue state.
 
 Use the ChatGPT route for:

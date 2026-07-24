@@ -10,23 +10,34 @@ Bossman dependency, or ad hoc thread-message loop.
 
 ## Start safely
 
-1. Set `$env:PYTHONPATH = 'C:\Repos\ai-messenger\src'`, then run
-   `python -m ai_messenger --db C:\Repos\ai-messenger\data\ai-messenger.db status`.
+1. Run `python C:\Users\zev\.codex\skills\ai-messenger\scripts\messenger.py gateway-status`.
+   The authoritative database is
+   `%LOCALAPPDATA%\ZDH\ai-messenger\ai-messenger.db`, outside OneDrive and project repos.
 2. Identify the exact named project channel and its workspace root.
 3. Use an endpoint already bound to that channel, or register and bind a new exact endpoint.
 4. Queue one bounded message with a correlation ID and expected typed return.
-5. Run `python scripts/messenger.py plan-next` and inspect the destination before any send.
+5. Run `python C:\Users\zev\.codex\skills\ai-messenger\scripts\messenger.py gateway-plan-next`
+   and inspect the destination before any send.
 
 Never route a project through an unrelated Codex task merely because that task is open. Each Codex
 endpoint needs its own session ID and matching project workspace.
 
 ## Register a project task
 
+Register the exact Codex endpoint first, then give the project a persistent Claude endpoint:
+
 ```powershell
-python -m ai_messenger --db C:\Repos\ai-messenger\data\ai-messenger.db add-channel --channel PROJECT-SLUG --project PROJECT-SLUG --workspace-root "ABSOLUTE_PROJECT_ROOT" --authority read_only --max-rounds 2
-python -m ai_messenger --db C:\Repos\ai-messenger\data\ai-messenger.db add-endpoint --endpoint ENDPOINT-ID --provider codex --kind codex_cli_session --address-json '{"session_id":"TASK_ID","cwd":"ABSOLUTE_PROJECT_ROOT","executable":"C:\\Users\\zev\\AppData\\Local\\OpenAI\\Codex\\bin\\CURRENT\\codex.exe"}' --status ready
-python -m ai_messenger --db C:\Repos\ai-messenger\data\ai-messenger.db bind --channel PROJECT-SLUG --endpoint ENDPOINT-ID --role coordinator
+python C:\Users\zev\.codex\skills\ai-messenger\scripts\messenger.py register-claude-project `
+  --channel PROJECT-SLUG `
+  --project PROJECT-SLUG `
+  --workspace-root "ABSOLUTE_PROJECT_ROOT" `
+  --source-endpoint EXISTING-CODEX-ENDPOINT `
+  --claude-endpoint claude-PROJECT-SLUG `
+  --session-name "ZDH - PROJECT NAME"
 ```
+
+This creates no chat traffic. The first queued delivery creates the named Claude session; later
+deliveries resume the exact session UUID.
 
 Prefer one registered ChatGPT Desktop Work mailbox endpoint with `existing_only=true` and
 `create_if_missing=false`. Register browser fallbacks by exact conversation URL, never by tab
@@ -36,8 +47,8 @@ number or title. A ChatGPT browser URL must contain `/c/`; a DeepSeek URL must c
 ## Queue work
 
 ```powershell
-python -m ai_messenger --db C:\Repos\ai-messenger\data\ai-messenger.db enqueue --channel PROJECT-SLUG --source SOURCE-ENDPOINT --target TARGET-ENDPOINT --correlation-id STABLE-ID --body "BOUNDED TASK AND RETURN REQUIREMENTS"
-python -m ai_messenger --db C:\Repos\ai-messenger\data\ai-messenger.db plan-next --provider PROVIDER
+python C:\Users\zev\.codex\skills\ai-messenger\scripts\messenger.py enqueue --channel PROJECT-SLUG --source SOURCE-ENDPOINT --target TARGET-ENDPOINT --correlation-id STABLE-ID --idempotency-key STABLE-KEY --body "BOUNDED TASK AND RETURN REQUIREMENTS"
+python C:\Users\zev\.codex\skills\ai-messenger\scripts\messenger.py gateway-plan-next
 ```
 
 Repeated work must reuse an explicit `--idempotency-key`. Keep `max_rounds` at 2 unless Zev
@@ -46,7 +57,9 @@ approves more. Do not include credentials, private browser history, or unrelated
 ## Provider rules
 
 - **Codex:** target a saved project task by session ID. Do not resume an actively writing task.
-- **Claude Code:** target a managed CLI session ID. Default to plan/read-only authority.
+- **Claude Code:** target a `claude_gateway_session`. The hidden gateway creates or resumes one
+  named session per project, defaults to plan/read-only authority, and validates a typed receipt
+  locally.
 - **Claude Desktop:** treat it as unaddressable until its local adapter registers a real listener.
 - **ChatGPT Desktop:** use `$chatgpt-desktop-bridge` and endpoint `chatgpt-design-desktop` for the
   exact existing `Design Studio` conversation. Its active kind is `chatgpt_desktop_uia`; do not
@@ -54,14 +67,17 @@ approves more. Do not include credentials, private browser history, or unrelated
   existing-only, one-round, and typed-receipt validated.
 - **ChatGPT/DeepSeek Chrome:** use the existing exact-URL bridge only as an explicit fallback.
 
-If a provider is offline, leave the message queued. Do not create repeated workers or visible shell
-windows to wake it.
+The gateway itself must remain running as the hidden `ZDH Claude Gateway` task. Individual Claude
+processes may be idle. During provider or network interruption, leave messages queued and report
+`degraded/recovering`; never create repeated workers or visible shell windows to wake it.
 
 ## Gates
 
-- Never run `live-gate on` without Commander approval for the bounded smoke test.
+- Never install startup, enable a new write-capable route, or run the first live provider smoke test
+  without Commander approval. Existing approved read-only project routes may enqueue bounded work.
 - Use `kill-switch on` for wrong routing, popup/noise regression, duplicate delivery, or unsafe state.
-- Accept a receipt only when its `message_id` and `correlation_id` match the queued message.
+- Accept a receipt only when its message/channel/project/correlation/attempt IDs and Claude session
+  ID match the durable dispatch.
 - Keep one in-flight delivery per endpoint/channel pair.
 
 Read [references/protocol.md](references/protocol.md) when adding an adapter, changing state

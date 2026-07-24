@@ -17,8 +17,4 @@ from ai_messenger.cli import main  # noqa: E402
 
 
 if __name__ == "__main__":
-    arguments = list(sys.argv[1:])
-    if "--db" not in arguments:
-        arguments = ["--db", str(REPO / "data" / "ai-messenger.db"), *arguments]
-    raise SystemExit(main(arguments))
-
+    raise SystemExit(main(list(sys.argv[1:])))
